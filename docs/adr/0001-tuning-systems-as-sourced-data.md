@@ -1,0 +1,3 @@
+# Tuning Systems are sourced data, 72 moria by default
+
+Byzantine chant is taught with different interval tables (Patriarchal Music Committee 1881 at 72 moria per octave, Chrysanthos at 68, and school-specific variants), so no single table is "correct". We store every Tuning System as a data table where each interval value cites its source, and we ship the 72-moria PMC 1881 system as the default. Code never hard-codes an interval size; it always reads from the active Tuning System, so adding 68 moria or a school's variant is a data change, not a code change. A reviewer checks every table before release.
