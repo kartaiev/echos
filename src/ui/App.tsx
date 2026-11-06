@@ -8,8 +8,11 @@ import { loadPitchSettings, savePitchSettings } from "./storedSettings";
 
 type View = "practice" | "settings";
 
+/** Plain "#name" hashes only: they survive being opened inside claude.ai and other embeds. */
+const SETTINGS_HASH = "#pitch";
+
 function viewFromHash(): View {
-  return location.hash === "#/settings" ? "settings" : "practice";
+  return location.hash === SETTINGS_HASH ? "settings" : "practice";
 }
 
 export function App() {
@@ -39,9 +42,9 @@ export function App() {
           <p>{t("app.tagline")}</p>
         </div>
         {view === "practice" ? (
-          <a className="header-link" href="#/settings">{t("nav.settings")}</a>
+          <a className="header-link" href={SETTINGS_HASH}>{t("nav.settings")}</a>
         ) : (
-          <a className="header-link" href="#/">{t("nav.practice")}</a>
+          <a className="header-link" href="#practice">{t("nav.practice")}</a>
         )}
       </header>
 
@@ -52,7 +55,7 @@ export function App() {
           <h2>{t(`genus.${ladder.genus}`)}</h2>
           <p className="practice__hint">
             {t("ladder.hint")}{" "}
-            <a href="#/settings">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</a>
+            <a href={SETTINGS_HASH}>{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</a>
           </p>
           <Ladder ladder={ladder} onPlayDegree={(id) => session.playDegree(id)} />
           <p className="practice__source" title={ladder.source}>

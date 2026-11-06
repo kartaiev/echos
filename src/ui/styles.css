@@ -6,12 +6,13 @@
   --line: #d9d1c4;
   --cinnabar: #b5331f;
   --cinnabar-soft: #f3ddd7;
-  color-scheme: light dark;
+  color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Dark palette: follows the system unless a host page or a later theme switch sets data-theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #15120f;
     --surface: #211d19;
     --text: #efe8dd;
@@ -19,7 +20,19 @@
     --line: #3a332c;
     --cinnabar: #e0614a;
     --cinnabar-soft: #3d221c;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15120f;
+  --surface: #211d19;
+  --text: #efe8dd;
+  --muted: #a59a8c;
+  --line: #3a332c;
+  --cinnabar: #e0614a;
+  --cinnabar-soft: #3d221c;
+  color-scheme: dark;
 }
 
 * {
@@ -35,7 +48,9 @@ body {
 .practice {
   max-width: 480px;
   margin: 0 auto;
-  padding: 16px;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
 .practice__header {
