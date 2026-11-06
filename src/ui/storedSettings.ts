@@ -1,5 +1,5 @@
 import { isIsonVoice, type IsonVoice } from "../core/practice/isonVoice";
-import { isModeVariantChoice, type ModeVariantChoice } from "../core/theory/modeVariants";
+import { isModeVariantKey, type ModeVariantKey } from "../core/theory/modeVariants";
 import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
 
 const PITCH_KEY = "echos.pitchSettings.v1";
@@ -30,6 +30,6 @@ export const loadPitchSettings = () => load(PITCH_KEY, isPitchSettings);
 export const savePitchSettings = (settings: PitchSettings) => save(PITCH_KEY, settings);
 export const loadIsonVoice = () => load(ISON_VOICE_KEY, isIsonVoice);
 export const saveIsonVoice = (voice: IsonVoice) => save(ISON_VOICE_KEY, voice);
-/** null means the student left the Mode Variant to choose a Genus by hand. */
-export const loadModeVariant = () => load(MODE_VARIANT_KEY, isModeVariantChoice) ?? null;
-export const saveModeVariant = (choice: ModeVariantChoice | null) => save(MODE_VARIANT_KEY, choice);
+/** null is saved when the student leaves the Mode Variant; it loads as no Mode Variant. */
+export const loadModeVariant = () => load(MODE_VARIANT_KEY, isModeVariantKey);
+export const saveModeVariant = (key: ModeVariantKey | null) => save(MODE_VARIANT_KEY, key);

@@ -1,9 +1,9 @@
-import { MELOS_IDS, MODE_IDS, type ModeId, type ModeVariantChoice } from "../core/theory/modeVariants";
+import { MELOS_IDS, MODE_IDS, type ModeId, type ModeVariantKey } from "../core/theory/modeVariants";
 import { t } from "../i18n/translations";
 
 interface ModePickerProps {
-  choice: ModeVariantChoice | null;
-  onChoose: (choice: ModeVariantChoice) => void;
+  choice: ModeVariantKey | null;
+  onChoose: (choice: ModeVariantKey) => void;
   onLeave: () => void;
 }
 

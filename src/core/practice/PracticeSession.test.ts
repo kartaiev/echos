@@ -410,4 +410,16 @@ describe("Practice Session: Mode Variants", () => {
     expect(audio.sounds.map((s) => s.kind)).toEqual(["degree"]);
     expect(audio.sounds[0]?.frequency).toBeCloseTo(211.69, 2);
   });
+
+  it("can be left: the Genus stays, the Ison keeps sounding, no Degree is marked", () => {
+    const { audio, session } = setup();
+
+    session.setModeVariant({ mode: "second", melos: "sticheraric" });
+    session.leaveModeVariant();
+
+    expect(session.modeVariant()).toBeNull();
+    expect(session.ladder().genus).toBe("soft-chromatic");
+    expect(session.ladder().degrees.some((d) => d.isBase || d.isDominant)).toBe(false);
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", false]]);
+  });
 });

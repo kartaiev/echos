@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createWebAudioOutput } from "../audio/webAudioOutput";
-import { createPracticeSession, type IsonVoice, type ModeVariantChoice, type PitchSettings } from "../core/practice/PracticeSession";
+import { createPracticeSession, type IsonVoice, type PitchSettings } from "../core/practice/PracticeSession";
+import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
 import { IsonPanel } from "./IsonPanel";
@@ -63,19 +64,17 @@ export function App() {
       savePitchSettings({ referencePitch, register });
     });
 
-  const chooseModeVariant = (choice: ModeVariantChoice | null) =>
+  /** Runs a command that may change the Mode Variant, then remembers whatever the session now has. */
+  const actOnModeVariant = (command: () => void) =>
     act(() => {
-      if (choice) session.setModeVariant(choice);
-      // Leaving the Mode Variant keeps its Genus, now chosen by hand.
-      else session.setGenus(session.ladder().genus);
-      saveModeVariant(choice);
+      command();
+      saveModeVariant(session.modeVariant());
     });
 
-  const changeGenus = (genus: GenusId) =>
-    act(() => {
-      session.setGenus(genus);
-      saveModeVariant(null);
-    });
+  const chooseModeVariant = (key: ModeVariantKey | null) =>
+    actOnModeVariant(() => (key ? session.setModeVariant(key) : session.leaveModeVariant()));
+
+  const changeGenus = (genus: GenusId) => actOnModeVariant(() => session.setGenus(genus));
 
   const changeIsonVoice = (change: Partial<IsonVoice>) =>
     act(() => {
