@@ -19,8 +19,12 @@ One of the seven named positions of the scale: Ni, Pa, Vou, Ga, Di, Ke, Zo, repe
 _Avoid_: note, step, pitch, Bou, Gha, Dhi
 
 **Reference Pitch**:
-The frequency the user assigns to Ni; every other sounding pitch is derived from it.
+The pitch the user assigns to Ni, as a Western note plus a fine adjustment in hertz; with the Register it fixes the frequency of Ni, and every other sounding pitch is derived from that.
 _Avoid_: key, tonic, concert pitch
+
+**Register**:
+Male or female voice; the female Register sounds one octave above the male one.
+_Avoid_: voice type, octave setting
 
 **Genus**:
 A family of interval patterns: Diatonic, Soft Chromatic, Hard Chromatic or Enharmonic.

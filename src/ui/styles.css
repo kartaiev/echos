@@ -6,12 +6,13 @@
   --line: #d9d1c4;
   --cinnabar: #b5331f;
   --cinnabar-soft: #f3ddd7;
-  color-scheme: light dark;
+  color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Dark palette: follows the system unless a host page or a later theme switch sets data-theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #15120f;
     --surface: #211d19;
     --text: #efe8dd;
@@ -19,7 +20,19 @@
     --line: #3a332c;
     --cinnabar: #e0614a;
     --cinnabar-soft: #3d221c;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15120f;
+  --surface: #211d19;
+  --text: #efe8dd;
+  --muted: #a59a8c;
+  --line: #3a332c;
+  --cinnabar: #e0614a;
+  --cinnabar-soft: #3d221c;
+  color-scheme: dark;
 }
 
 * {
@@ -35,7 +48,26 @@ body {
 .practice {
   max-width: 480px;
   margin: 0 auto;
-  padding: 16px;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.practice__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+a {
+  color: var(--cinnabar);
+}
+
+.header-link {
+  padding: 8px 0;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .practice__header h1 {
@@ -113,4 +145,161 @@ body {
   color: var(--muted);
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
+}
+
+.settings h2 {
+  margin: 24px 0 8px;
+  font-size: 1.1rem;
+}
+
+.settings__group {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.settings__group legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.settings__help {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.settings select {
+  min-width: 96px;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.settings input[type="range"] {
+  width: 100%;
+  accent-color: var(--cinnabar);
+}
+
+.settings output {
+  font-variant-numeric: tabular-nums;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.segmented button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.segmented button.is-selected {
+  background: var(--surface);
+  color: var(--cinnabar);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.link-button {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--cinnabar);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.settings__result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.primary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cinnabar);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The way into pitch settings from the practice view: a whole tappable card, not an inline link. */
+.pitch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.pitch-card:hover {
+  border-color: var(--cinnabar);
+}
+
+.pitch-card:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+}
+
+.pitch-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pitch-card__label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.pitch-card__value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pitch-card__action {
+  flex-shrink: 0;
+  color: var(--cinnabar);
+  font-weight: 600;
 }

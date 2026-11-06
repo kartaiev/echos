@@ -1,12 +1,24 @@
 import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
 import { buildScale } from "../theory/scale";
 import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
+import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
+import type { NoteName } from "../theory/westernPitch";
 
-const DEFAULT_REFERENCE_PITCH_HZ = 130.81;
+export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
+
 const DEGREE_DURATION_MS = 1200;
+
+/** Pitch settings plus what they mean in sound, for display. */
+export interface PitchState extends PitchSettings {
+  /** The note Ni sounds at in the current Register, before fine adjustment. */
+  niNote: NoteName;
+  niHz: number;
+}
 
 export interface PracticeSessionOptions {
   audio: AudioOutput;
+  /** Settings restored from the device; defaults to Ni = C3, male register. */
+  pitchSettings?: PitchSettings;
 }
 
 export interface LadderDegree {
@@ -32,11 +44,14 @@ export interface Ladder {
 
 export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
-export function createPracticeSession({ audio }: PracticeSessionOptions) {
+export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SETTINGS }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
   const genus: GenusId = "diatonic";
-  const scale = buildScale({ tuningSystem, genus, referencePitchHz: DEFAULT_REFERENCE_PITCH_HZ });
+  let settings = pitchSettings;
   let currentDegreeSound: PlayingSound | null = null;
+
+  const buildCurrentScale = () => buildScale({ tuningSystem, genus, referencePitchHz: niFrequency(settings) });
+  let scale = buildCurrentScale();
 
   return {
     ladder(): Ladder {
@@ -52,6 +67,14 @@ export function createPracticeSession({ audio }: PracticeSessionOptions) {
         moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
       };
+    },
+    pitchSettings(): PitchState {
+      return { ...settings, niNote: soundingNote(settings.referencePitch.note, settings.register), niHz: niFrequency(settings) };
+    },
+    /** Change the Reference Pitch and/or Register; the next Degree played sounds at the new pitch. */
+    setPitchSettings(change: Partial<PitchSettings>) {
+      settings = { ...settings, ...change };
+      scale = buildCurrentScale();
     },
     playDegree(degreeId: string) {
       const degree = scale.find((d) => d.id === degreeId);
