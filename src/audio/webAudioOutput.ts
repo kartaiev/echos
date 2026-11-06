@@ -1,4 +1,4 @@
-import type { AudioOutput, ToneRequest } from "./AudioOutput";
+import type { AudioOutput, SoundRequest } from "./AudioOutput";
 
 /** Formants of a sung "a" (Hz, gain, Q); a rough vocal colour, not a real voice. */
 const VOWEL_A = [
@@ -11,7 +11,7 @@ const ATTACK_S = 0.06;
 const RELEASE_S = 0.25;
 const PEAK_GAIN = 0.35;
 
-/** Real sound in the browser. The AudioContext is created on the first tone, inside a user gesture. */
+/** Real sound in the browser. The AudioContext is created on the first sound, inside a user gesture. */
 export function createWebAudioOutput(): AudioOutput {
   let context: AudioContext | null = null;
 
@@ -22,20 +22,20 @@ export function createWebAudioOutput(): AudioOutput {
   }
 
   return {
-    playTone(tone: ToneRequest) {
+    playSound(sound: SoundRequest) {
       const ctx = getContext();
       const start = ctx.currentTime;
-      const end = start + tone.durationMs / 1000;
+      const end = start + sound.durationMs / 1000;
 
       const source = ctx.createOscillator();
       source.type = "sawtooth";
-      source.frequency.value = tone.frequency;
+      source.frequency.value = sound.frequency;
 
-      // Gentle vibrato so the tone sounds sung rather than electronic.
+      // Gentle vibrato so the voice sounds sung rather than electronic.
       const vibrato = ctx.createOscillator();
       const vibratoDepth = ctx.createGain();
       vibrato.frequency.value = 5;
-      vibratoDepth.gain.value = tone.frequency * 0.004;
+      vibratoDepth.gain.value = sound.frequency * 0.004;
       vibrato.connect(vibratoDepth).connect(source.frequency);
 
       const envelope = ctx.createGain();

@@ -1,8 +1,8 @@
-/** What kind of sound the Practice Session is asking for. */
-export type ToneKind = "degree";
+/** What kind of sound the Practice Session is asking for ("Tone" is avoided: it means Mode in chant). */
+export type SoundKind = "degree";
 
-export interface ToneRequest {
-  kind: ToneKind;
+export interface SoundRequest {
+  kind: SoundKind;
   frequency: number;
   durationMs: number;
 }
@@ -12,5 +12,5 @@ export interface ToneRequest {
  * The browser uses Web Audio; tests use a recording fake.
  */
 export interface AudioOutput {
-  playTone(tone: ToneRequest): void;
+  playSound(sound: SoundRequest): void;
 }

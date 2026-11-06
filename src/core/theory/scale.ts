@@ -22,9 +22,9 @@ export function buildScale({ tuningSystem, genus, referencePitchHz }: ScaleOptio
   const intervals = tuningSystem.genera[genus].value;
   const degrees: ScaleDegree[] = [];
   let moria = 0;
-  for (let step = 0; step <= intervals.length; step++) {
-    const octave = Math.floor(step / DEGREE_NAMES.length);
-    const name = DEGREE_NAMES[step % DEGREE_NAMES.length]!;
+  for (let degreeIndex = 0; degreeIndex <= intervals.length; degreeIndex++) {
+    const octave = Math.floor(degreeIndex / DEGREE_NAMES.length);
+    const name = DEGREE_NAMES[degreeIndex % DEGREE_NAMES.length]!;
     degrees.push({
       id: name + "'".repeat(octave),
       name,
@@ -32,7 +32,7 @@ export function buildScale({ tuningSystem, genus, referencePitchHz }: ScaleOptio
       moria,
       frequency: referencePitchHz * 2 ** (moria / tuningSystem.moriaPerOctave),
     });
-    moria += intervals[step] ?? 0;
+    moria += intervals[degreeIndex] ?? 0;
   }
   return degrees;
 }

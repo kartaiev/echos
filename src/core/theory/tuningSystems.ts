@@ -9,6 +9,8 @@ export const DEGREE_NAMES: readonly DegreeName[] = ["Ni", "Pa", "Vou", "Ga", "Di
 
 export type GenusId = "diatonic";
 
+export type TuningSystemId = "pmc-1881";
+
 export type ReviewStatus = "unreviewed" | "reviewed";
 
 export interface SourcedValue<T> {
@@ -18,14 +20,14 @@ export interface SourcedValue<T> {
 }
 
 export interface TuningSystem {
-  id: string;
+  id: TuningSystemId;
   name: string;
   moriaPerOctave: number;
   /** Interval sizes in moria for one octave, starting from Ni (Ni-Pa, Pa-Vou, ... Zo-Ni'). */
   genera: Record<GenusId, SourcedValue<readonly number[]>>;
 }
 
-const PMC_1888 =
+const PMC_SOURCE =
   "Patriarchal Music Committee (1881), Στοιχειώδης Διδασκαλία της Εκκλησιαστικής Μουσικής, Constantinople 1888";
 
 export const PMC_1881: TuningSystem = {
@@ -33,6 +35,6 @@ export const PMC_1881: TuningSystem = {
   name: "Patriarchal Music Committee 1881",
   moriaPerOctave: 72,
   genera: {
-    diatonic: { value: [12, 10, 8, 12, 12, 10, 8], source: PMC_1888, reviewStatus: "unreviewed" },
+    diatonic: { value: [12, 10, 8, 12, 12, 10, 8], source: PMC_SOURCE, reviewStatus: "unreviewed" },
   },
 };

@@ -15,11 +15,11 @@ export function App() {
         <p>{t("app.tagline")}</p>
       </header>
       <section className="practice__body">
-        <h2>{t("genus.diatonic")}</h2>
+        <h2>{t(`genus.${ladder.genus}`)}</h2>
         <p className="practice__hint">{t("ladder.hint")}</p>
         <Ladder ladder={ladder} onPlayDegree={(id) => session.playDegree(id)} />
         <p className="practice__source" title={ladder.source}>
-          {t("ladder.tuning", { name: ladder.tuningSystemName, moria: ladder.totalMoria })}
+          {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
         </p>
       </section>
     </main>

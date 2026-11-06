@@ -14,9 +14,9 @@ describe("Practice Session: Diatonic Scale, 72 moria (PMC 1881)", () => {
 
     session.playDegree("Ni");
 
-    expect(audio.tones).toHaveLength(1);
-    expect(audio.tones[0]?.kind).toBe("degree");
-    expect(audio.tones[0]?.frequency).toBeCloseTo(130.81, 2);
+    expect(audio.sounds).toHaveLength(1);
+    expect(audio.sounds[0]?.kind).toBe("degree");
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(130.81, 2);
   });
 
   // Expected frequencies: Ni = 130.81 Hz, positions 0-12-22-30-42-54-64-72 moria
@@ -35,7 +35,7 @@ describe("Practice Session: Diatonic Scale, 72 moria (PMC 1881)", () => {
 
     session.playDegree(degreeId);
 
-    expect(audio.tones[0]?.frequency).toBeCloseTo(expectedHz, 2);
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
   });
 
   it("describes the ladder from Ni to Ni' with the moria between neighbouring Degrees", () => {
@@ -53,7 +53,8 @@ describe("Practice Session: Diatonic Scale, 72 moria (PMC 1881)", () => {
 
     const ladder = session.ladder();
 
-    expect(ladder.tuningSystemName).toBe("Patriarchal Music Committee 1881");
+    expect(ladder.tuningSystemId).toBe("pmc-1881");
+    expect(ladder.moriaPerOctave).toBe(72);
     expect(ladder.source).toMatch(/Patriarchal Music Committee/);
   });
 });

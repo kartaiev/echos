@@ -1,6 +1,6 @@
 import type { AudioOutput } from "../../audio/AudioOutput";
 import { buildScale } from "../theory/scale";
-import { PMC_1881, type DegreeName } from "../theory/tuningSystems";
+import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 
 const DEFAULT_REFERENCE_PITCH_HZ = 130.81;
 const DEGREE_DURATION_MS = 1200;
@@ -21,8 +21,12 @@ export interface LadderDegree {
 
 export interface Ladder {
   degrees: LadderDegree[];
+  genus: GenusId;
+  /** Moria from the lowest to the highest Degree on the ladder; the UI spaces Degrees by it. */
   totalMoria: number;
-  tuningSystemName: string;
+  tuningSystemId: TuningSystemId;
+  moriaPerOctave: number;
+  /** Bibliographic citation of the interval values; shown as written, not translated. */
   source: string;
 }
 
@@ -30,7 +34,7 @@ export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
 export function createPracticeSession({ audio }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
-  const genus = "diatonic";
+  const genus: GenusId = "diatonic";
   const scale = buildScale({ tuningSystem, genus, referencePitchHz: DEFAULT_REFERENCE_PITCH_HZ });
 
   return {
@@ -41,15 +45,17 @@ export function createPracticeSession({ audio }: PracticeSessionOptions) {
       });
       return {
         degrees,
+        genus,
         totalMoria: scale[scale.length - 1]!.moria - scale[0]!.moria,
-        tuningSystemName: tuningSystem.name,
+        tuningSystemId: tuningSystem.id,
+        moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
       };
     },
     playDegree(degreeId: string) {
       const degree = scale.find((d) => d.id === degreeId);
       if (!degree) throw new Error(`Unknown Degree: ${degreeId}`);
-      audio.playTone({ kind: "degree", frequency: degree.frequency, durationMs: DEGREE_DURATION_MS });
+      audio.playSound({ kind: "degree", frequency: degree.frequency, durationMs: DEGREE_DURATION_MS });
     },
   };
 }

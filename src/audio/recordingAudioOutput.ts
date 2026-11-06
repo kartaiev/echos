@@ -1,12 +1,12 @@
-import type { AudioOutput, ToneRequest } from "./AudioOutput";
+import type { AudioOutput, SoundRequest } from "./AudioOutput";
 
-/** Audio output for tests: records every requested tone instead of playing it. */
+/** Audio output for tests: records every requested sound instead of playing it. */
 export function createRecordingAudioOutput() {
-  const tones: ToneRequest[] = [];
-  const output: AudioOutput & { tones: ToneRequest[] } = {
-    tones,
-    playTone(tone) {
-      tones.push(tone);
+  const sounds: SoundRequest[] = [];
+  const output: AudioOutput & { sounds: SoundRequest[] } = {
+    sounds,
+    playSound(sound) {
+      sounds.push(sound);
     },
   };
   return output;
