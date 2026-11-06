@@ -3,10 +3,15 @@ import { buildScale, type DegreePosition, type ScaleDegree } from "../theory/sca
 import { GENUS_IDS, PMC_1881, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
+import { DEFAULT_ISON_VOICE, type IsonVoice } from "./isonVoice";
 
 export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
+export type { IsonVoice, Vowel } from "./isonVoice";
 
 const DEGREE_DURATION_MS = 1200;
+/** Degrees played on the ladder always sing "a" at full volume; only the Ison voice is adjustable. */
+const DEGREE_VOWEL = "a";
+const DEGREE_VOLUME = 1;
 
 /** The ladder covers the range most Modes use: low Ke to high Ga'. */
 const LADDER_LOWEST: DegreePosition = { name: "Ke", octave: -1 };
@@ -23,6 +28,8 @@ export interface PracticeSessionOptions {
   audio: AudioOutput;
   /** Settings restored from the device; defaults to Ni = C3, male register. */
   pitchSettings?: PitchSettings;
+  /** Ison vowel and volume restored from the device. */
+  isonVoice?: IsonVoice;
 }
 
 export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
@@ -52,18 +59,48 @@ export interface Ladder {
   source: string;
 }
 
+export interface IsonState extends IsonVoice {
+  /** The Degree the Ison holds, or null when it is silent. */
+  degreeId: string | null;
+}
+
 export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
-export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SETTINGS }: PracticeSessionOptions) {
+export function createPracticeSession({
+  audio,
+  pitchSettings = DEFAULT_PITCH_SETTINGS,
+  isonVoice = DEFAULT_ISON_VOICE,
+}: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
   let genus: GenusId = "diatonic";
   let settings = pitchSettings;
+  let voice = isonVoice;
   let currentDegreeSound: PlayingSound | null = null;
+  let ison: { degreeId: string; frequency: number; sound: PlayingSound } | null = null;
 
   const buildScaleIn = (g: GenusId) =>
     buildScale({ tuningSystem, genus: g, referencePitchHz: niFrequency(settings), lowest: LADDER_LOWEST, highest: LADDER_HIGHEST });
   const buildCurrentScale = () => buildScaleIn(genus);
   let scale = buildCurrentScale();
+
+  function findDegree(degreeId: string) {
+    const degree = scale.find((d) => d.id === degreeId);
+    if (!degree) throw new Error(`Unknown Degree: ${degreeId}`);
+    return degree;
+  }
+
+  function holdIson(degreeId: string) {
+    const { frequency } = findDegree(degreeId);
+    ison?.sound.stop();
+    const sound = audio.playSound({ kind: "ison", frequency, durationMs: null, vowel: voice.vowel, volume: voice.volume });
+    ison = { degreeId, frequency, sound };
+  }
+
+  /** After the Scale changes, the Ison follows its Degree; it is left alone if that Degree did not move. */
+  function rebuildScale() {
+    scale = buildCurrentScale();
+    if (ison && findDegree(ison.degreeId).frequency !== ison.frequency) holdIson(ison.degreeId);
+  }
 
   const allPositions = GENUS_IDS.flatMap((g) => buildScaleIn(g).map((d) => d.moria));
   const drawingRange: DrawingRange = { lowestMoria: Math.min(...allPositions), highestMoria: Math.max(...allPositions) };
@@ -90,18 +127,42 @@ export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SET
     /** Change the Reference Pitch and/or Register; the next Degree played sounds at the new pitch. */
     setPitchSettings(change: Partial<PitchSettings>) {
       settings = { ...settings, ...change };
-      scale = buildCurrentScale();
+      rebuildScale();
     },
     /** Switch the Scale to another Genus; the next Degree played sounds in it. */
     setGenus(next: GenusId) {
       genus = next;
-      scale = buildCurrentScale();
+      rebuildScale();
     },
     playDegree(degreeId: string) {
-      const degree = scale.find((d) => d.id === degreeId);
-      if (!degree) throw new Error(`Unknown Degree: ${degreeId}`);
+      const degree = findDegree(degreeId);
       currentDegreeSound?.stop();
-      currentDegreeSound = audio.playSound({ kind: "degree", frequency: degree.frequency, durationMs: DEGREE_DURATION_MS });
+      currentDegreeSound = audio.playSound({
+        kind: "degree",
+        frequency: degree.frequency,
+        durationMs: DEGREE_DURATION_MS,
+        vowel: DEGREE_VOWEL,
+        volume: DEGREE_VOLUME,
+      });
+    },
+    /** Hold the Ison on a Degree; it keeps sounding while Degrees are played, until moved or stopped. */
+    setIson(degreeId: string) {
+      holdIson(degreeId);
+    },
+    stopIson() {
+      ison?.sound.stop();
+      ison = null;
+    },
+    ison(): IsonState {
+      return { degreeId: ison?.degreeId ?? null, ...voice };
+    },
+    /** Change the Ison vowel and/or volume; a sounding Ison changes with it. */
+    setIsonVoice(change: Partial<IsonVoice>) {
+      const previous = voice;
+      voice = { ...voice, ...change };
+      if (!ison) return;
+      if (voice.vowel !== previous.vowel) holdIson(ison.degreeId);
+      else if (voice.volume !== previous.volume) ison.sound.setVolume(voice.volume);
     },
   };
 }

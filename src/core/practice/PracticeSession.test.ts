@@ -193,3 +193,114 @@ describe("Practice Session: the four Genera", () => {
     expect(ranges).toEqual(Array(4).fill({ lowestMoria: -24, highestMoria: 106 }));
   });
 });
+
+// Diatonic frequencies from Ni = C3, as above: Ni 130.81, Vou 161.67, Di 196.00, Ke 220.00 Hz.
+describe("Practice Session: Ison", () => {
+  it("holds a sustained tone at the frequency of the chosen Degree", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Di");
+
+    expect(audio.sounds).toHaveLength(1);
+    expect(audio.sounds[0]).toMatchObject({ kind: "ison", durationMs: null, stopped: false });
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(196.0, 2);
+  });
+
+  it("moves to another Degree: the old tone ends and the new one starts", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Di");
+    session.setIson("Ke");
+
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", true], ["ison", false]]);
+    expect(audio.sounds[1]?.frequency).toBeCloseTo(220.0, 2);
+  });
+
+  it("keeps sounding while Degrees are played over it", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Ni");
+    session.playDegree("Pa");
+    session.playDegree("Vou");
+
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", false], ["degree", true], ["degree", false]]);
+  });
+
+  it("stops, and reports which Degree it holds", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Vou");
+    const whileHeld = session.ison().degreeId;
+    session.stopIson();
+
+    expect(whileHeld).toBe("Vou");
+    expect(session.ison().degreeId).toBeNull();
+    expect(audio.sounds[0]).toMatchObject({ kind: "ison", stopped: true });
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(161.67, 2);
+  });
+
+  // Hard Chromatic Vou from the table above: 155.56 Hz; Ni = D3: 146.83 Hz.
+  it("retunes to the new pitch of its Degree when the Genus or the Pitch of Ni changes", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Vou");
+    session.setGenus("hard-chromatic");
+    session.setIson("Ni");
+    session.setPitchSettings({ referencePitch: { note: "D3", fineHz: 0 } });
+
+    expect(audio.sounds.map((s) => s.stopped)).toEqual([true, true, true, false]);
+    expect(audio.sounds.map((s) => s.frequency)).toEqual(
+      [161.67, 155.56, 130.81, 146.83].map((hz) => expect.closeTo(hz, 2)),
+    );
+  });
+
+  it("keeps sounding without a break when the new Genus leaves its Degree in place", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Di");
+    session.setGenus("soft-chromatic");
+    session.setGenus("enharmonic");
+
+    expect(audio.sounds).toHaveLength(1);
+    expect(audio.sounds[0]?.stopped).toBe(false);
+  });
+
+  it("sings the chosen vowel at the chosen volume", () => {
+    const { audio, session } = setup();
+
+    session.setIsonVoice({ vowel: "o", volume: 0.4 });
+    session.setIson("Ni");
+
+    expect(audio.sounds[0]).toMatchObject({ kind: "ison", vowel: "o", volume: 0.4 });
+  });
+
+  it("changes the volume while it sounds, without restarting the tone", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Ni");
+    session.setIsonVoice({ volume: 0.25 });
+
+    expect(audio.sounds).toHaveLength(1);
+    expect(audio.sounds[0]).toMatchObject({ stopped: false, volume: 0.25 });
+  });
+
+  it("changes the vowel while it sounds by restarting the tone on the same Degree", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Di");
+    session.setIsonVoice({ vowel: "ou" });
+
+    expect(audio.sounds.map((s) => [s.vowel, s.stopped])).toEqual([["a", true], ["ou", false]]);
+    expect(audio.sounds[1]?.frequency).toBeCloseTo(196.0, 2);
+  });
+
+  it("starts from the vowel and volume restored from the device", () => {
+    const audio = createRecordingAudioOutput();
+    const session = createPracticeSession({ audio, isonVoice: { vowel: "e", volume: 0.5 } });
+
+    session.setIson("Ni");
+
+    expect(session.ison()).toEqual({ degreeId: "Ni", vowel: "e", volume: 0.5 });
+    expect(audio.sounds[0]).toMatchObject({ vowel: "e", volume: 0.5 });
+  });
+});

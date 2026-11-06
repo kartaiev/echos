@@ -1,5 +1,6 @@
 import type { AudioOutput, SoundRequest } from "./AudioOutput";
 
+/** A requested sound as it is now: volume follows setVolume(), stopped turns true on stop(). */
 export interface RecordedSound extends SoundRequest {
   stopped: boolean;
 }
@@ -15,6 +16,9 @@ export function createRecordingAudioOutput() {
       return {
         stop() {
           recorded.stopped = true;
+        },
+        setVolume(volume) {
+          recorded.volume = volume;
         },
       };
     },

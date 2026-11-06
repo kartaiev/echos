@@ -125,6 +125,10 @@ a {
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
+  /* A long press sets the Ison: no text selection or callout menu on touch screens. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* A short tick joins each Degree to its point on the rail. */
@@ -170,6 +174,30 @@ a {
 
 .ladder__degree.is-playing::after {
   background: var(--cinnabar);
+}
+
+/* The Degree the Ison holds: filled, so it stands out from the Degree last played. */
+.ladder__degree.is-ison {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-color: var(--cinnabar);
+  background: var(--cinnabar);
+  color: var(--surface);
+}
+
+.ladder__degree.is-ison::after {
+  height: 2px;
+  background: var(--cinnabar);
+}
+
+.ladder__ison-mark {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.9;
 }
 
 /* Moria between neighbouring Degrees, sitting on the rail. */
@@ -347,4 +375,70 @@ a {
   flex-shrink: 0;
   color: var(--cinnabar);
   font-weight: 600;
+}
+
+.ison {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.ison.is-sounding {
+  border-color: var(--cinnabar);
+}
+
+.ison__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ison__title {
+  font-weight: 600;
+}
+
+.ison__degree {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.ison__stop {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--cinnabar);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ison__stop:disabled {
+  border-color: var(--line);
+  color: var(--muted);
+  cursor: default;
+}
+
+.segmented--vowel {
+  grid-template-columns: repeat(4, 44px);
+}
+
+.ison__volume {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--cinnabar);
 }
