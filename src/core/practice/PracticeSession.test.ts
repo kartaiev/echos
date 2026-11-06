@@ -38,6 +38,15 @@ describe("Practice Session: Diatonic Scale, 72 moria (PMC 1881)", () => {
     expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
   });
 
+  it("cuts off the previous Degree when another Degree is played, like a single voice", () => {
+    const { audio, session } = setup();
+
+    session.playDegree("Ni");
+    session.playDegree("Pa");
+
+    expect(audio.sounds.map((s) => s.stopped)).toEqual([true, false]);
+  });
+
   it("describes the ladder from Ni to Ni' with the moria between neighbouring Degrees", () => {
     const { session } = setup();
 

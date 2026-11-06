@@ -12,5 +12,10 @@ export interface SoundRequest {
  * The browser uses Web Audio; tests use a recording fake.
  */
 export interface AudioOutput {
-  playSound(sound: SoundRequest): void;
+  playSound(sound: SoundRequest): PlayingSound;
+}
+
+/** A sound that has started; stop() fades it out quickly if it is still sounding. */
+export interface PlayingSound {
+  stop(): void;
 }

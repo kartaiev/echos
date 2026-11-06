@@ -10,6 +10,8 @@ const VOWEL_A = [
 const ATTACK_S = 0.06;
 const RELEASE_S = 0.25;
 const PEAK_GAIN = 0.35;
+/** Fade-out when a sound is cut off by the next one. */
+const CUT_OFF_S = 0.03;
 
 /** Real sound in the browser. The AudioContext is created on the first sound, inside a user gesture. */
 export function createWebAudioOutput(): AudioOutput {
@@ -59,6 +61,19 @@ export function createWebAudioOutput(): AudioOutput {
       vibrato.start(start);
       source.stop(end + RELEASE_S);
       vibrato.stop(end + RELEASE_S);
+
+      return {
+        stop() {
+          const now = ctx.currentTime;
+          if (now >= end + RELEASE_S) return;
+          // Hold the current level, then fade out fast enough to avoid overlap but slow enough to avoid a click.
+          envelope.gain.cancelScheduledValues(now);
+          envelope.gain.setValueAtTime(envelope.gain.value, now);
+          envelope.gain.linearRampToValueAtTime(0, now + CUT_OFF_S);
+          source.stop(now + CUT_OFF_S);
+          vibrato.stop(now + CUT_OFF_S);
+        },
+      };
     },
   };
 }

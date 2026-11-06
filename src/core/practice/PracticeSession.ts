@@ -1,4 +1,4 @@
-import type { AudioOutput } from "../../audio/AudioOutput";
+import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
 import { buildScale } from "../theory/scale";
 import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 
@@ -36,6 +36,7 @@ export function createPracticeSession({ audio }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
   const genus: GenusId = "diatonic";
   const scale = buildScale({ tuningSystem, genus, referencePitchHz: DEFAULT_REFERENCE_PITCH_HZ });
+  let currentDegreeSound: PlayingSound | null = null;
 
   return {
     ladder(): Ladder {
@@ -55,7 +56,8 @@ export function createPracticeSession({ audio }: PracticeSessionOptions) {
     playDegree(degreeId: string) {
       const degree = scale.find((d) => d.id === degreeId);
       if (!degree) throw new Error(`Unknown Degree: ${degreeId}`);
-      audio.playSound({ kind: "degree", frequency: degree.frequency, durationMs: DEGREE_DURATION_MS });
+      currentDegreeSound?.stop();
+      currentDegreeSound = audio.playSound({ kind: "degree", frequency: degree.frequency, durationMs: DEGREE_DURATION_MS });
     },
   };
 }
