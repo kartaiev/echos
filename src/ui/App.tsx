@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createWebAudioOutput } from "../audio/webAudioOutput";
 import { createPracticeSession, type PitchSettings } from "../core/practice/PracticeSession";
+import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
 import { Ladder } from "./Ladder";
 import { SettingsPage } from "./SettingsPage";
@@ -18,6 +19,7 @@ function viewFromHash(): View {
 export function App() {
   const session = useMemo(() => createPracticeSession({ audio: createWebAudioOutput(), pitchSettings: loadPitchSettings() }), []);
   const [pitch, setPitch] = useState(() => session.pitchSettings());
+  const [genus, setGenus] = useState<GenusId>(() => session.ladder().genus);
   const [view, setView] = useState<View>(viewFromHash);
   const ladder = session.ladder();
 
@@ -32,6 +34,11 @@ export function App() {
     const next = session.pitchSettings();
     savePitchSettings({ referencePitch: next.referencePitch, register: next.register });
     setPitch(next);
+  }
+
+  function changeGenus(next: GenusId) {
+    session.setGenus(next);
+    setGenus(next);
   }
 
   return (
@@ -52,8 +59,20 @@ export function App() {
         <SettingsPage pitch={pitch} onChange={changePitch} onPlayNi={() => session.playDegree("Ni")} />
       ) : (
         <section className="practice__body">
-          <h2>{t(`genus.${ladder.genus}`)}</h2>
-          <p className="practice__hint">{t("ladder.hint")}</p>
+          <div className="segmented segmented--genus" role="radiogroup" aria-label={t("ladder.genus")}>
+            {GENUS_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={genus === id}
+                className={genus === id ? "is-selected" : ""}
+                onClick={() => changeGenus(id)}
+              >
+                {t(`genus.${id}`)}
+              </button>
+            ))}
+          </div>
           <a className="pitch-card" href={SETTINGS_HASH}>
             <span className="pitch-card__text">
               <span className="pitch-card__label">{t("settings.referencePitch")}</span>
@@ -61,6 +80,7 @@ export function App() {
             </span>
             <span className="pitch-card__action" aria-hidden="true">{t("ladder.changePitch")} ›</span>
           </a>
+          <p className="practice__hint">{t("ladder.hint")}</p>
           <Ladder ladder={ladder} onPlayDegree={(id) => session.playDegree(id)} />
           <p className="practice__source" title={ladder.source}>
             {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}

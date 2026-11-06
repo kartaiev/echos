@@ -47,14 +47,17 @@ describe("Practice Session: Diatonic Scale, 72 moria (PMC 1881)", () => {
     expect(audio.sounds.map((s) => s.stopped)).toEqual([true, false]);
   });
 
-  it("describes the ladder from Ni to Ni' with the moria between neighbouring Degrees", () => {
+  it("describes the ladder from low Ke to high Ga' with the moria between neighbouring Degrees", () => {
     const { session } = setup();
 
     const ladder = session.ladder();
 
-    expect(ladder.degrees.map((d) => d.id)).toEqual(["Ni", "Pa", "Vou", "Ga", "Di", "Ke", "Zo", "Ni'"]);
-    expect(ladder.degrees.map((d) => d.moriaToNext)).toEqual([12, 10, 8, 12, 12, 10, 8, null]);
-    expect(ladder.totalMoria).toBe(72);
+    // A comma marks the octave below Ni, an apostrophe the octave above.
+    expect(ladder.degrees.map((d) => d.id)).toEqual(
+      ["Ke,", "Zo,", "Ni", "Pa", "Vou", "Ga", "Di", "Ke", "Zo", "Ni'", "Pa'", "Vou'", "Ga'"],
+    );
+    expect(ladder.degrees.map((d) => d.moriaToNext)).toEqual([10, 8, 12, 10, 8, 12, 12, 10, 8, 12, 10, 8, null]);
+    expect(ladder.totalMoria).toBe(120);
   });
 
   it("names the Tuning System and the source of its values", () => {
@@ -136,5 +139,81 @@ describe("Practice Session: Reference Pitch and register", () => {
     session.playDegree("Ni");
 
     expect(audio.sounds[0]?.frequency).toBeCloseTo(293.66, 2);
+  });
+});
+
+// Expected values: Ni = C3 = 130.8128 Hz, Degrees at C3 * 2^(moria/72), positions from the PMC 1881
+// interval tables as taught (unreviewed): Soft Chromatic 8-14-8-12-8-14-8, Hard Chromatic 4-6-20-4-12-6-20,
+// Enharmonic 12-12-6-12-12-6-12.
+describe("Practice Session: the four Genera", () => {
+  it.each([
+    ["Ni", 130.81],
+    ["Pa", 141.29],
+    ["Vou", 161.67],
+    ["Ga", 174.61],
+    ["Di", 196.0],
+    ["Ke", 211.69],
+    ["Zo", 242.23],
+    ["Ni'", 261.63],
+  ])("Soft Chromatic: plays %s at %f Hz", (degreeId, expectedHz) => {
+    const { audio, session } = setup();
+
+    session.setGenus("soft-chromatic");
+    session.playDegree(degreeId);
+
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
+  });
+
+  it.each([
+    ["hard-chromatic", "Pa", 135.95],
+    ["hard-chromatic", "Vou", 144.03],
+    ["hard-chromatic", "Ga", 174.61],
+    ["hard-chromatic", "Di", 181.47],
+    ["hard-chromatic", "Ke", 203.69],
+    ["hard-chromatic", "Zo", 215.8],
+    ["enharmonic", "Pa", 146.83],
+    ["enharmonic", "Vou", 164.81],
+    ["enharmonic", "Ga", 174.61],
+    ["enharmonic", "Di", 196.0],
+    ["enharmonic", "Ke", 220.0],
+    ["enharmonic", "Zo", 233.08],
+  ] as const)("%s: plays %s at %f Hz", (genus, degreeId, expectedHz) => {
+    const { audio, session } = setup();
+
+    session.setGenus(genus);
+    session.playDegree(degreeId);
+
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
+  });
+
+  it.each([
+    ["diatonic", "Ke,", 110.0],
+    ["diatonic", "Zo,", 121.12],
+    ["diatonic", "Pa'", 293.66],
+    ["diatonic", "Vou'", 323.34],
+    ["diatonic", "Ga'", 349.23],
+    ["hard-chromatic", "Ke,", 101.85],
+    ["hard-chromatic", "Zo,", 107.9],
+    ["hard-chromatic", "Pa'", 271.9],
+    ["hard-chromatic", "Vou'", 288.06],
+    ["hard-chromatic", "Ga'", 349.23],
+  ] as const)("%s: plays %s, outside the middle octave, at %f Hz", (genus, degreeId, expectedHz) => {
+    const { audio, session } = setup();
+
+    session.setGenus(genus);
+    session.playDegree(degreeId);
+
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
+  });
+
+  it("respaces the ladder for the chosen Genus", () => {
+    const { session } = setup();
+
+    session.setGenus("hard-chromatic");
+    const ladder = session.ladder();
+
+    expect(ladder.genus).toBe("hard-chromatic");
+    expect(ladder.degrees.map((d) => d.moriaToNext)).toEqual([6, 20, 4, 6, 20, 4, 12, 6, 20, 4, 6, 20, null]);
+    expect(ladder.totalMoria).toBe(128);
   });
 });

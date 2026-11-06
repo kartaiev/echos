@@ -7,7 +7,9 @@ export type DegreeName = "Ni" | "Pa" | "Vou" | "Ga" | "Di" | "Ke" | "Zo";
 
 export const DEGREE_NAMES: readonly DegreeName[] = ["Ni", "Pa", "Vou", "Ga", "Di", "Ke", "Zo"];
 
-export type GenusId = "diatonic";
+export type GenusId = "diatonic" | "soft-chromatic" | "hard-chromatic" | "enharmonic";
+
+export const GENUS_IDS: readonly GenusId[] = ["diatonic", "soft-chromatic", "hard-chromatic", "enharmonic"];
 
 export type TuningSystemId = "pmc-1881";
 
@@ -36,5 +38,8 @@ export const PMC_1881: TuningSystem = {
   moriaPerOctave: 72,
   genera: {
     diatonic: { value: [12, 10, 8, 12, 12, 10, 8], source: PMC_SOURCE, reviewStatus: "unreviewed" },
+    "soft-chromatic": { value: [8, 14, 8, 12, 8, 14, 8], source: PMC_SOURCE, reviewStatus: "unreviewed" },
+    "hard-chromatic": { value: [4, 6, 20, 4, 12, 6, 20], source: PMC_SOURCE, reviewStatus: "unreviewed" },
+    enharmonic: { value: [12, 12, 6, 12, 12, 6, 12], source: PMC_SOURCE, reviewStatus: "unreviewed" },
   },
 };

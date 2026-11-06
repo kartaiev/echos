@@ -1,5 +1,5 @@
 import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
-import { buildScale } from "../theory/scale";
+import { buildScale, type DegreePosition } from "../theory/scale";
 import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
@@ -7,6 +7,10 @@ import type { NoteName } from "../theory/westernPitch";
 export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 
 const DEGREE_DURATION_MS = 1200;
+
+/** The ladder covers the range most Modes use: low Ke to high Ga'. */
+const LADDER_LOWEST: DegreePosition = { name: "Ke", octave: -1 };
+const LADDER_HIGHEST: DegreePosition = { name: "Ga", octave: 1 };
 
 /** Pitch settings plus what they mean in sound, for display. */
 export interface PitchState extends PitchSettings {
@@ -46,11 +50,12 @@ export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
 export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SETTINGS }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
-  const genus: GenusId = "diatonic";
+  let genus: GenusId = "diatonic";
   let settings = pitchSettings;
   let currentDegreeSound: PlayingSound | null = null;
 
-  const buildCurrentScale = () => buildScale({ tuningSystem, genus, referencePitchHz: niFrequency(settings) });
+  const buildCurrentScale = () =>
+    buildScale({ tuningSystem, genus, referencePitchHz: niFrequency(settings), lowest: LADDER_LOWEST, highest: LADDER_HIGHEST });
   let scale = buildCurrentScale();
 
   return {
@@ -74,6 +79,11 @@ export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SET
     /** Change the Reference Pitch and/or Register; the next Degree played sounds at the new pitch. */
     setPitchSettings(change: Partial<PitchSettings>) {
       settings = { ...settings, ...change };
+      scale = buildCurrentScale();
+    },
+    /** Switch the Scale to another Genus; the next Degree played sounds in it. */
+    setGenus(next: GenusId) {
+      genus = next;
       scale = buildCurrentScale();
     },
     playDegree(degreeId: string) {
