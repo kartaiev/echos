@@ -1,12 +1,35 @@
 import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
 import { buildScale } from "../theory/scale";
 import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
+import { noteFrequency, type NoteName } from "../theory/westernPitch";
 
-const DEFAULT_REFERENCE_PITCH_HZ = 130.81;
 const DEGREE_DURATION_MS = 1200;
+
+/** The frequency assigned to Ni, as a Western note plus a fine adjustment in hertz. */
+export interface ReferencePitch {
+  note: NoteName;
+  fineHz: number;
+}
+
+/** The female register sounds one octave above the male one. */
+export type Register = "male" | "female";
+
+export interface PitchSettings {
+  referencePitch: ReferencePitch;
+  register: Register;
+}
+
+export const DEFAULT_PITCH_SETTINGS: PitchSettings = {
+  referencePitch: { note: "C3", fineHz: 0 },
+  register: "male",
+};
+
+export const REGISTER_OCTAVES: Record<Register, number> = { male: 0, female: 1 };
 
 export interface PracticeSessionOptions {
   audio: AudioOutput;
+  /** Settings restored from the device; defaults to Ni = C3, male register. */
+  pitchSettings?: PitchSettings;
 }
 
 export interface LadderDegree {
@@ -32,11 +55,20 @@ export interface Ladder {
 
 export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
-export function createPracticeSession({ audio }: PracticeSessionOptions) {
+export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SETTINGS }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
   const genus: GenusId = "diatonic";
-  const scale = buildScale({ tuningSystem, genus, referencePitchHz: DEFAULT_REFERENCE_PITCH_HZ });
+  let settings = pitchSettings;
   let currentDegreeSound: PlayingSound | null = null;
+
+  const niHz = () =>
+    (noteFrequency(settings.referencePitch.note) + settings.referencePitch.fineHz) * 2 ** REGISTER_OCTAVES[settings.register];
+  let scale = buildScale({ tuningSystem, genus, referencePitchHz: niHz() });
+
+  function updateSettings(next: PitchSettings) {
+    settings = next;
+    scale = buildScale({ tuningSystem, genus, referencePitchHz: niHz() });
+  }
 
   return {
     ladder(): Ladder {
@@ -52,6 +84,15 @@ export function createPracticeSession({ audio }: PracticeSessionOptions) {
         moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
       };
+    },
+    pitchSettings(): PitchSettings & { niHz: number } {
+      return { ...settings, niHz: niHz() };
+    },
+    setReferencePitch(referencePitch: ReferencePitch) {
+      updateSettings({ ...settings, referencePitch });
+    },
+    setRegister(register: Register) {
+      updateSettings({ ...settings, register });
     },
     playDegree(degreeId: string) {
       const degree = scale.find((d) => d.id === degreeId);
