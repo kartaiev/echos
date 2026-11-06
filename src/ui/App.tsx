@@ -53,10 +53,14 @@ export function App() {
       ) : (
         <section className="practice__body">
           <h2>{t(`genus.${ladder.genus}`)}</h2>
-          <p className="practice__hint">
-            {t("ladder.hint")}{" "}
-            <a href={SETTINGS_HASH}>{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</a>
-          </p>
+          <p className="practice__hint">{t("ladder.hint")}</p>
+          <a className="pitch-card" href={SETTINGS_HASH}>
+            <span className="pitch-card__text">
+              <span className="pitch-card__label">{t("settings.referencePitch")}</span>
+              <span className="pitch-card__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>
+            </span>
+            <span className="pitch-card__action" aria-hidden="true">{t("ladder.changePitch")} ›</span>
+          </a>
           <Ladder ladder={ladder} onPlayDegree={(id) => session.playDegree(id)} />
           <p className="practice__source" title={ladder.source}>
             {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
