@@ -7,9 +7,9 @@ export type DegreeName = "Ni" | "Pa" | "Vou" | "Ga" | "Di" | "Ke" | "Zo";
 
 export const DEGREE_NAMES: readonly DegreeName[] = ["Ni", "Pa", "Vou", "Ga", "Di", "Ke", "Zo"];
 
-export type GenusId = "diatonic" | "soft-chromatic" | "hard-chromatic" | "enharmonic";
+export const GENUS_IDS = ["diatonic", "soft-chromatic", "hard-chromatic", "enharmonic"] as const;
 
-export const GENUS_IDS: readonly GenusId[] = ["diatonic", "soft-chromatic", "hard-chromatic", "enharmonic"];
+export type GenusId = (typeof GENUS_IDS)[number];
 
 export type TuningSystemId = "pmc-1881";
 
@@ -29,8 +29,14 @@ export interface TuningSystem {
   genera: Record<GenusId, SourcedValue<readonly number[]>>;
 }
 
+/**
+ * Where the PMC 1881 values in this file come from. They are the committee's intervals as printed in
+ * teaching charts; nobody has checked them against the committee's own publication yet, which is why
+ * every value stays "unreviewed" until the project's reviewer does.
+ */
 const PMC_SOURCE =
-  "Patriarchal Music Committee (1881), Στοιχειώδης Διδασκαλία της Εκκλησιαστικής Μουσικής, Constantinople 1888";
+  "Patriarchal Music Committee (1881) intervals as given in teaching charts; not yet checked against " +
+  "Στοιχειώδης Διδασκαλία της Εκκλησιαστικής Μουσικής, Constantinople 1888";
 
 export const PMC_1881: TuningSystem = {
   id: "pmc-1881",

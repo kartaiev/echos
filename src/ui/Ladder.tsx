@@ -13,8 +13,8 @@ interface LadderProps {
  */
 export function Ladder({ ladder, onPlayDegree }: LadderProps) {
   const [lastPlayed, setLastPlayed] = useState<string | null>(null);
-  const lowestMoria = ladder.degrees[0]?.moria ?? 0;
-  const position = (moria: number) => `${((moria - lowestMoria) / ladder.totalMoria) * 100}%`;
+  const { lowestMoria, highestMoria } = ladder.drawingRange;
+  const position = (moria: number) => `${((moria - lowestMoria) / (highestMoria - lowestMoria)) * 100}%`;
 
   return (
     <div className="ladder" role="group" aria-label={t("ladder.label")}>

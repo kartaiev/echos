@@ -142,69 +142,30 @@ describe("Practice Session: Reference Pitch and register", () => {
   });
 });
 
-// Expected values: Ni = C3 = 130.8128 Hz, Degrees at C3 * 2^(moria/72), positions from the PMC 1881
-// interval tables as taught (unreviewed): Soft Chromatic 8-14-8-12-8-14-8, Hard Chromatic 4-6-20-4-12-6-20,
+// Expected values were worked out separately in Python: Ni = C3 = 130.8128 Hz (A4 = 440 Hz), each Degree at
+// C3 * 2^(moria/72), moria summed from the PMC 1881 interval tables as taught (unreviewed):
+// Diatonic 12-10-8-12-12-10-8, Soft Chromatic 8-14-8-12-8-14-8, Hard Chromatic 4-6-20-4-12-6-20,
 // Enharmonic 12-12-6-12-12-6-12.
+const LADDER_IDS = ["Ke,", "Zo,", "Ni", "Pa", "Vou", "Ga", "Di", "Ke", "Zo", "Ni'", "Pa'", "Vou'", "Ga'"];
+const EXPECTED_HZ = {
+  diatonic: [110.0, 121.12, 130.81, 146.83, 161.67, 174.61, 196.0, 220.0, 242.23, 261.63, 293.66, 323.34, 349.23],
+  "soft-chromatic": [105.84, 121.12, 130.81, 141.29, 161.67, 174.61, 196.0, 211.69, 242.23, 261.63, 282.57, 323.34, 349.23],
+  "hard-chromatic": [101.85, 107.9, 130.81, 135.95, 144.03, 174.61, 181.47, 203.69, 215.8, 261.63, 271.9, 288.06, 349.23],
+  enharmonic: [110.0, 116.54, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 233.08, 261.63, 293.66, 329.63, 349.23],
+} as const;
+
 describe("Practice Session: the four Genera", () => {
-  it.each([
-    ["Ni", 130.81],
-    ["Pa", 141.29],
-    ["Vou", 161.67],
-    ["Ga", 174.61],
-    ["Di", 196.0],
-    ["Ke", 211.69],
-    ["Zo", 242.23],
-    ["Ni'", 261.63],
-  ])("Soft Chromatic: plays %s at %f Hz", (degreeId, expectedHz) => {
-    const { audio, session } = setup();
+  it.each(Object.keys(EXPECTED_HZ) as (keyof typeof EXPECTED_HZ)[])(
+    "%s: plays every Degree from low Ke to high Ga' at the frequency of the source table",
+    (genus) => {
+      const { audio, session } = setup();
 
-    session.setGenus("soft-chromatic");
-    session.playDegree(degreeId);
+      session.setGenus(genus);
+      for (const id of LADDER_IDS) session.playDegree(id);
 
-    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
-  });
-
-  it.each([
-    ["hard-chromatic", "Pa", 135.95],
-    ["hard-chromatic", "Vou", 144.03],
-    ["hard-chromatic", "Ga", 174.61],
-    ["hard-chromatic", "Di", 181.47],
-    ["hard-chromatic", "Ke", 203.69],
-    ["hard-chromatic", "Zo", 215.8],
-    ["enharmonic", "Pa", 146.83],
-    ["enharmonic", "Vou", 164.81],
-    ["enharmonic", "Ga", 174.61],
-    ["enharmonic", "Di", 196.0],
-    ["enharmonic", "Ke", 220.0],
-    ["enharmonic", "Zo", 233.08],
-  ] as const)("%s: plays %s at %f Hz", (genus, degreeId, expectedHz) => {
-    const { audio, session } = setup();
-
-    session.setGenus(genus);
-    session.playDegree(degreeId);
-
-    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
-  });
-
-  it.each([
-    ["diatonic", "Ke,", 110.0],
-    ["diatonic", "Zo,", 121.12],
-    ["diatonic", "Pa'", 293.66],
-    ["diatonic", "Vou'", 323.34],
-    ["diatonic", "Ga'", 349.23],
-    ["hard-chromatic", "Ke,", 101.85],
-    ["hard-chromatic", "Zo,", 107.9],
-    ["hard-chromatic", "Pa'", 271.9],
-    ["hard-chromatic", "Vou'", 288.06],
-    ["hard-chromatic", "Ga'", 349.23],
-  ] as const)("%s: plays %s, outside the middle octave, at %f Hz", (genus, degreeId, expectedHz) => {
-    const { audio, session } = setup();
-
-    session.setGenus(genus);
-    session.playDegree(degreeId);
-
-    expect(audio.sounds[0]?.frequency).toBeCloseTo(expectedHz, 2);
-  });
+      expect(audio.sounds.map((s) => s.frequency)).toEqual(EXPECTED_HZ[genus].map((hz) => expect.closeTo(hz, 2)));
+    },
+  );
 
   it("respaces the ladder for the chosen Genus", () => {
     const { session } = setup();
@@ -215,5 +176,17 @@ describe("Practice Session: the four Genera", () => {
     expect(ladder.genus).toBe("hard-chromatic");
     expect(ladder.degrees.map((d) => d.moriaToNext)).toEqual([6, 20, 4, 6, 20, 4, 12, 6, 20, 4, 6, 20, null]);
     expect(ladder.totalMoria).toBe(128);
+  });
+
+  it("keeps one drawing range for every Genus, so a Degree that does not move stays in place", () => {
+    const { session } = setup();
+
+    const ranges = (["diatonic", "soft-chromatic", "hard-chromatic", "enharmonic"] as const).map((genus) => {
+      session.setGenus(genus);
+      return session.ladder().drawingRange;
+    });
+
+    // Lowest: Hard Chromatic low Ke at -26 moria from Ni; highest: Ga' at 102 in every Genus.
+    expect(ranges).toEqual(Array(4).fill({ lowestMoria: -26, highestMoria: 102 }));
   });
 });
