@@ -154,13 +154,17 @@ export function createPracticeSession({
       genus = next;
       rebuildScale();
     },
-    /** Choose a Mode Variant: the Scale takes its Genus and the Ison sounds on its Base. */
+    /**
+     * Choose a Mode Variant: the Scale takes its Genus. A sounding Ison moves to the Base; a silent one stays
+     * silent, so the student can look through Modes without sound.
+     */
     setModeVariant(next: ModeVariantKey) {
       chosenVariant = next;
       const variant = variantOf(next);
       genus = variant.genus;
       rebuildScale();
-      holdIson(degreeId(variant.base));
+      const baseId = degreeId(variant.base);
+      if (ison && ison.degreeId !== baseId) holdIson(baseId);
     },
     /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked. */
     leaveModeVariant() {

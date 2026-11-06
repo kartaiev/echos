@@ -339,16 +339,19 @@ const MODE_VARIANT_TABLE = [
 ] as const;
 
 describe("Practice Session: Mode Variants", () => {
-  it("Plagal 2nd Heirmologic gives the Soft Chromatic Scale and an Ison at the Base", () => {
+  it("Plagal 2nd Heirmologic gives the Soft Chromatic Scale and moves a sounding Ison to the Base", () => {
     const { audio, session } = setup();
 
+    session.setIson("Ni");
     session.setModeVariant({ mode: "plagal-second", melos: "heirmologic" });
     session.playDegree("Pa");
 
     expect(session.ladder().genus).toBe("soft-chromatic");
-    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", false], ["degree", false]]);
-    // Ison on Vou 161.67 Hz; Soft Chromatic Pa 141.29 Hz.
-    expect(audio.sounds.map((s) => s.frequency)).toEqual([expect.closeTo(161.67, 2), expect.closeTo(141.29, 2)]);
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", true], ["ison", false], ["degree", false]]);
+    // Ison from Ni 130.81 Hz to the Base Vou 161.67 Hz; Soft Chromatic Pa 141.29 Hz.
+    expect(audio.sounds.map((s) => s.frequency)).toEqual(
+      [130.81, 161.67, 141.29].map((hz) => expect.closeTo(hz, 2)),
+    );
   });
 
   it("Plagal 2nd Sticheraric gives the Hard Chromatic Scale", () => {
@@ -358,8 +361,17 @@ describe("Practice Session: Mode Variants", () => {
     session.playDegree("Ga");
 
     expect(session.ladder().genus).toBe("hard-chromatic");
-    // Ison on Pa 146.83 Hz; Hard Chromatic Ga 188.59 Hz.
-    expect(audio.sounds.map((s) => s.frequency)).toEqual([expect.closeTo(146.83, 2), expect.closeTo(188.59, 2)]);
+    // Hard Chromatic Ga 188.59 Hz.
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(188.59, 2);
+  });
+
+  it("makes no sound when chosen while the Ison is silent", () => {
+    const { audio, session } = setup();
+
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+
+    expect(audio.sounds).toEqual([]);
+    expect(session.ison().degreeId).toBeNull();
   });
 
   it.each(MODE_VARIANT_TABLE)(
@@ -367,14 +379,18 @@ describe("Practice Session: Mode Variants", () => {
     (mode, melos, genus, base, baseHz, dominants) => {
       const { audio, session } = setup();
 
+      session.setIson("Ni");
       session.setModeVariant({ mode, melos });
       const ladder = session.ladder();
+      const sounding = audio.sounds.filter((s) => !s.stopped);
 
       expect(ladder.genus).toBe(genus);
       expect(ladder.degrees.filter((d) => d.isBase).map((d) => d.id)).toEqual([base]);
       expect(ladder.degrees.filter((d) => d.isDominant).map((d) => d.id)).toEqual(dominants);
-      expect(audio.sounds[0]).toMatchObject({ kind: "ison", stopped: false });
-      expect(audio.sounds[0]?.frequency).toBeCloseTo(baseHz, 2);
+      expect(session.ison().degreeId).toBe(base);
+      expect(sounding).toHaveLength(1);
+      expect(sounding[0]?.kind).toBe("ison");
+      expect(sounding[0]?.frequency).toBeCloseTo(baseHz, 2);
     },
   );
 
@@ -414,6 +430,7 @@ describe("Practice Session: Mode Variants", () => {
   it("can be left: the Genus stays, the Ison keeps sounding, no Degree is marked", () => {
     const { audio, session } = setup();
 
+    session.setIson("Di");
     session.setModeVariant({ mode: "second", melos: "sticheraric" });
     session.leaveModeVariant();
 
