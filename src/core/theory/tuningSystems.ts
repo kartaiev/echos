@@ -21,31 +21,42 @@ export interface SourcedValue<T> {
   reviewStatus: ReviewStatus;
 }
 
+/**
+ * How a Genus spaces the Degrees: a cycle of intervals in moria that repeats up and down the Scale,
+ * starting on a given Degree. Ni is always at 0 moria. A cycle need not span an octave: the chromatic
+ * Genera repeat a tetrachord plus a tone (42 moria), the Enharmonic every three Degrees (30 moria),
+ * so their upper Ni can differ from an octave above Ni.
+ */
+export interface IntervalCycle {
+  /** The Degree whose interval to the next Degree up is `intervals[0]`, in the octave of Ni. */
+  from: DegreeName;
+  intervals: readonly number[];
+}
+
 export interface TuningSystem {
   id: TuningSystemId;
   name: string;
+  /** Moria that make a frequency ratio of 2:1. */
   moriaPerOctave: number;
-  /** Interval sizes in moria for one octave, starting from Ni (Ni-Pa, Pa-Vou, ... Zo-Ni'). */
-  genera: Record<GenusId, SourcedValue<readonly number[]>>;
+  genera: Record<GenusId, SourcedValue<IntervalCycle>>;
 }
 
 /**
- * Where the PMC 1881 values in this file come from. They are the committee's intervals as printed in
- * teaching charts; nobody has checked them against the committee's own publication yet, which is why
- * every value stays "unreviewed" until the project's reviewer does.
+ * Trisagion School of Byzantine Music, "The Scales" chart. Values are read off the chart; Degrees beyond
+ * its printed range follow the chart's own repeating pattern. Unreviewed until the project's reviewer
+ * checks them.
  */
-const PMC_SOURCE =
-  "Patriarchal Music Committee (1881) intervals as given in teaching charts; not yet checked against " +
-  "Στοιχειώδης Διδασκαλία της Εκκλησιαστικής Μουσικής, Constantinople 1888";
+const TRISAGION_SCALES =
+  "Trisagion School of Byzantine Music, \"The Scales\" chart (Free Resources, trisagionschool.org)";
 
 export const PMC_1881: TuningSystem = {
   id: "pmc-1881",
   name: "Patriarchal Music Committee 1881",
   moriaPerOctave: 72,
   genera: {
-    diatonic: { value: [12, 10, 8, 12, 12, 10, 8], source: PMC_SOURCE, reviewStatus: "unreviewed" },
-    "soft-chromatic": { value: [8, 14, 8, 12, 8, 14, 8], source: PMC_SOURCE, reviewStatus: "unreviewed" },
-    "hard-chromatic": { value: [4, 6, 20, 4, 12, 6, 20], source: PMC_SOURCE, reviewStatus: "unreviewed" },
-    enharmonic: { value: [12, 12, 6, 12, 12, 6, 12], source: PMC_SOURCE, reviewStatus: "unreviewed" },
+    diatonic: { value: { from: "Ni", intervals: [12, 10, 8, 12, 12, 10, 8] }, source: TRISAGION_SCALES, reviewStatus: "unreviewed" },
+    "soft-chromatic": { value: { from: "Ni", intervals: [8, 14, 8, 12] }, source: TRISAGION_SCALES, reviewStatus: "unreviewed" },
+    "hard-chromatic": { value: { from: "Pa", intervals: [6, 20, 4, 12] }, source: TRISAGION_SCALES, reviewStatus: "unreviewed" },
+    enharmonic: { value: { from: "Ni", intervals: [12, 12, 6] }, source: TRISAGION_SCALES, reviewStatus: "unreviewed" },
   },
 };

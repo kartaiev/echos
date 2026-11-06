@@ -30,16 +30,26 @@ function degreeId({ name, octave }: DegreePosition): string {
   return name + (octave < 0 ? ",".repeat(-octave) : "'".repeat(octave));
 }
 
+/** Positions in moria from Ni of every Degree index from `lowest` to `highest` (Ni of octave 0 is index 0). */
+function positions(intervals: readonly number[], from: DegreeName, lowest: number, highest: number): Map<number, number> {
+  const start = DEGREE_NAMES.indexOf(from);
+  const intervalAbove = (index: number) => intervals[(((index - start) % intervals.length) + intervals.length) % intervals.length]!;
+  const moria = new Map([[0, 0]]);
+  for (let index = 0; index < highest; index++) moria.set(index + 1, moria.get(index)! + intervalAbove(index));
+  for (let index = 0; index > lowest; index--) moria.set(index - 1, moria.get(index)! - intervalAbove(index - 1));
+  return moria;
+}
+
 /** The Degrees of a Scale from `lowest` to `highest`, each with its position in moria and its frequency. */
 export function buildScale({ tuningSystem, genus, referencePitchHz, lowest, highest }: ScaleOptions): ScaleDegree[] {
-  const intervals = tuningSystem.genera[genus].value;
-  const moriaAboveNi = intervals.map((_, i) => intervals.slice(0, i).reduce((sum, size) => sum + size, 0));
+  const { from, intervals } = tuningSystem.genera[genus].value;
+  const [low, high] = [degreeIndex(lowest), degreeIndex(highest)];
+  const moriaAt = positions(intervals, from, low, high);
   const degrees: ScaleDegree[] = [];
-  for (let index = degreeIndex(lowest); index <= degreeIndex(highest); index++) {
+  for (let index = low; index <= high; index++) {
     const octave = Math.floor(index / DEGREE_NAMES.length);
-    const withinOctave = index - octave * DEGREE_NAMES.length;
-    const position = { name: DEGREE_NAMES[withinOctave]!, octave };
-    const moria = octave * tuningSystem.moriaPerOctave + moriaAboveNi[withinOctave]!;
+    const position = { name: DEGREE_NAMES[index - octave * DEGREE_NAMES.length]!, octave };
+    const moria = moriaAt.get(index)!;
     degrees.push({
       ...position,
       id: degreeId(position),

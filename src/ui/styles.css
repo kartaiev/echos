@@ -93,9 +93,9 @@ a {
 .ladder {
   position: relative;
   /*
-   * 13 Degrees from low Ke to high Ga' fill the rest of a phone screen. With the PMC 1881 tables the
-   * closest Degrees on one side are 10 moria apart (Hard Chromatic) in a drawing range of 128 moria,
-   * which at 480px still leaves room for a 36px button. A new Tuning System may need a taller ladder.
+   * 13 Degrees from low Ke to high Ga' fill the rest of a phone screen. With the current tables the
+   * closest Degrees on one side are 16 moria apart in a drawing range of 130 moria, which at 480px
+   * leaves room for a 44px button. A new Tuning System may need a taller ladder.
    */
   height: max(480px, min(100svh - 320px, 760px));
   margin: 28px 0 28px;
@@ -114,7 +114,7 @@ a {
 .ladder__degree {
   position: absolute;
   width: min(120px, calc(50% - 24px));
-  height: 36px;
+  height: 44px;
   transform: translateY(50%);
   border: 1px solid var(--line);
   border-radius: 10px;

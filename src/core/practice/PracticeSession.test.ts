@@ -67,7 +67,7 @@ describe("Practice Session: Diatonic Scale, 72 moria (PMC 1881)", () => {
 
     expect(ladder.tuningSystemId).toBe("pmc-1881");
     expect(ladder.moriaPerOctave).toBe(72);
-    expect(ladder.source).toMatch(/Patriarchal Music Committee/);
+    expect(ladder.source).toMatch(/Trisagion School/);
   });
 });
 
@@ -143,15 +143,18 @@ describe("Practice Session: Reference Pitch and register", () => {
 });
 
 // Expected values were worked out separately in Python: Ni = C3 = 130.8128 Hz (A4 = 440 Hz), each Degree at
-// C3 * 2^(moria/72), moria summed from the PMC 1881 interval tables as taught (unreviewed):
-// Diatonic 12-10-8-12-12-10-8, Soft Chromatic 8-14-8-12-8-14-8, Hard Chromatic 4-6-20-4-12-6-20,
-// Enharmonic 12-12-6-12-12-6-12.
+// C3 * 2^(moria/72), moria summed from the intervals of the Trisagion School "The Scales" chart, written out
+// from low Ke to high Ga' (* = beyond the chart's printed range, continuing its repeating pattern):
+// Diatonic        10* 8 | 12 10 8 12 12 10 8 | 12* 10* 8*
+// Soft Chromatic  8* 12* | 8 14 8 12 8 14 8 | 12 8* 14*
+// Hard Chromatic  20 4 | 12 6 20 4 12 6 20 | 4 12 6*
+// Enharmonic      12* 6* | 12 12 6 12 12 6 12 | 12 6 12*
 const LADDER_IDS = ["Ke,", "Zo,", "Ni", "Pa", "Vou", "Ga", "Di", "Ke", "Zo", "Ni'", "Pa'", "Vou'", "Ga'"];
 const EXPECTED_HZ = {
   diatonic: [110.0, 121.12, 130.81, 146.83, 161.67, 174.61, 196.0, 220.0, 242.23, 261.63, 293.66, 323.34, 349.23],
-  "soft-chromatic": [105.84, 121.12, 130.81, 141.29, 161.67, 174.61, 196.0, 211.69, 242.23, 261.63, 282.57, 323.34, 349.23],
-  "hard-chromatic": [101.85, 107.9, 130.81, 135.95, 144.03, 174.61, 181.47, 203.69, 215.8, 261.63, 271.9, 288.06, 349.23],
-  enharmonic: [110.0, 116.54, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 233.08, 261.63, 293.66, 329.63, 349.23],
+  "soft-chromatic": [107.9, 116.54, 130.81, 141.29, 161.67, 174.61, 196.0, 211.69, 242.23, 261.63, 293.66, 317.18, 362.94],
+  "hard-chromatic": [103.83, 125.87, 130.81, 146.83, 155.56, 188.59, 196.0, 220.0, 233.08, 282.57, 293.66, 329.63, 349.23],
+  enharmonic: [110.0, 123.47, 130.81, 146.83, 164.81, 174.61, 196.0, 220.0, 233.08, 261.63, 293.66, 311.13, 349.23],
 } as const;
 
 describe("Practice Session: the four Genera", () => {
@@ -174,8 +177,8 @@ describe("Practice Session: the four Genera", () => {
     const ladder = session.ladder();
 
     expect(ladder.genus).toBe("hard-chromatic");
-    expect(ladder.degrees.map((d) => d.moriaToNext)).toEqual([6, 20, 4, 6, 20, 4, 12, 6, 20, 4, 6, 20, null]);
-    expect(ladder.totalMoria).toBe(128);
+    expect(ladder.degrees.map((d) => d.moriaToNext)).toEqual([20, 4, 12, 6, 20, 4, 12, 6, 20, 4, 12, 6, null]);
+    expect(ladder.totalMoria).toBe(126);
   });
 
   it("keeps one drawing range for every Genus, so a Degree that does not move stays in place", () => {
@@ -186,7 +189,7 @@ describe("Practice Session: the four Genera", () => {
       return session.ladder().drawingRange;
     });
 
-    // Lowest: Hard Chromatic low Ke at -26 moria from Ni; highest: Ga' at 102 in every Genus.
-    expect(ranges).toEqual(Array(4).fill({ lowestMoria: -26, highestMoria: 102 }));
+    // Lowest: Hard Chromatic low Ke, 24 moria below Ni; highest: Soft Chromatic Ga', 106 moria above Ni.
+    expect(ranges).toEqual(Array(4).fill({ lowestMoria: -24, highestMoria: 106 }));
   });
 });
