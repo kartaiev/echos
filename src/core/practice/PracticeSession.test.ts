@@ -74,7 +74,7 @@ describe("Practice Session: Reference Pitch and register", () => {
   it("moves the whole Scale when Ni is set to another note", () => {
     const { audio, session } = setup();
 
-    session.setReferencePitch({ note: "D3", fineHz: 0 });
+    session.setPitchSettings({ referencePitch: { note: "D3", fineHz: 0 } });
     session.playDegree("Ni");
     session.playDegree("Di");
 
@@ -84,7 +84,7 @@ describe("Practice Session: Reference Pitch and register", () => {
   it("adds the fine adjustment in hertz to the note", () => {
     const { audio, session } = setup();
 
-    session.setReferencePitch({ note: "C3", fineHz: 1.5 });
+    session.setPitchSettings({ referencePitch: { note: "C3", fineHz: 1.5 } });
     session.playDegree("Ni");
     session.playDegree("Pa");
 
@@ -94,22 +94,34 @@ describe("Practice Session: Reference Pitch and register", () => {
   it("sounds one octave higher in the female register", () => {
     const { audio, session } = setup();
 
-    session.setRegister("female");
+    session.setPitchSettings({ register: "female" });
     session.playDegree("Ni");
     session.playDegree("Ga");
 
     expect(audio.sounds.map((s) => s.frequency)).toEqual([expect.closeTo(261.63, 2), expect.closeTo(349.23, 2)]);
   });
 
+  it("adds the fine adjustment as heard, also in the female register", () => {
+    const { audio, session } = setup();
+
+    session.setPitchSettings({ referencePitch: { note: "C3", fineHz: 1.5 } });
+    session.setPitchSettings({ register: "female" });
+    session.playDegree("Ni");
+
+    // C4 = 261.63 Hz, plus 1.5 Hz.
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(263.13, 2);
+  });
+
   it("reports the settings and the frequency Ni sounds at", () => {
     const { session } = setup();
 
-    session.setReferencePitch({ note: "A2", fineHz: 0 });
-    session.setRegister("female");
+    session.setPitchSettings({ referencePitch: { note: "A2", fineHz: 0 } });
+    session.setPitchSettings({ register: "female" });
 
     expect(session.pitchSettings()).toEqual({
       referencePitch: { note: "A2", fineHz: 0 },
       register: "female",
+      niNote: "A3",
       niHz: expect.closeTo(220.0, 2),
     });
   });

@@ -1,8 +1,8 @@
-import type { PitchSettings } from "../core/practice/PracticeSession";
+import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
 
 const KEY = "echos.pitchSettings.v1";
 
-/** Settings saved on this device, or undefined when there are none or storage is unavailable. */
+/** Settings saved on this device, or undefined when there are none, they are invalid, or storage is unavailable. */
 export function loadPitchSettings(): PitchSettings | undefined {
   try {
     const raw = localStorage.getItem(KEY);
@@ -20,13 +20,4 @@ export function savePitchSettings(settings: PitchSettings): void {
   } catch {
     // Private mode or blocked storage: the setting simply isn't remembered.
   }
-}
-
-function isPitchSettings(value: unknown): value is PitchSettings {
-  if (typeof value !== "object" || value === null) return false;
-  const { referencePitch, register } = value as Record<string, unknown>;
-  if (register !== "male" && register !== "female") return false;
-  if (typeof referencePitch !== "object" || referencePitch === null) return false;
-  const { note, fineHz } = referencePitch as Record<string, unknown>;
-  return typeof note === "string" && /^[A-G]#?\d$/.test(note) && typeof fineHz === "number" && Math.abs(fineHz) <= 10;
 }

@@ -1,25 +1,16 @@
-import { REGISTER_OCTAVES, type PitchSettings, type Register } from "../core/practice/PracticeSession";
-import { noteRange, transposeNote, type NoteName } from "../core/theory/westernPitch";
-import { t } from "../i18n/translations";
-
-/** Range offered for Ni in the male register; the female register shows the same notes an octave up. */
-const NI_NOTE_CHOICES = noteRange("F2", "A3");
-const REGISTERS: Register[] = ["male", "female"];
-const FINE_HZ_LIMIT = 5;
+import type { PitchSettings, PitchState } from "../core/practice/PracticeSession";
+import { MAX_FINE_ADJUSTMENT_HZ, NI_NOTE_CHOICES, REGISTERS, soundingNote } from "../core/practice/pitchSettings";
+import type { NoteName } from "../core/theory/westernPitch";
+import { noteLabel, t } from "../i18n/translations";
 
 interface SettingsPageProps {
-  settings: PitchSettings & { niHz: number };
-  onChange: (settings: PitchSettings) => void;
+  pitch: PitchState;
+  onChange: (change: Partial<PitchSettings>) => void;
   onPlayNi: () => void;
 }
 
-export function noteLabel(note: NoteName): string {
-  return note.replace("#", "♯");
-}
-
-export function SettingsPage({ settings, onChange, onPlayNi }: SettingsPageProps) {
-  const { referencePitch, register } = settings;
-  const octaveShift = REGISTER_OCTAVES[register];
+export function SettingsPage({ pitch, onChange, onPlayNi }: SettingsPageProps) {
+  const { referencePitch, register } = pitch;
   const choices = NI_NOTE_CHOICES.includes(referencePitch.note) ? NI_NOTE_CHOICES : [...NI_NOTE_CHOICES, referencePitch.note];
   const fine = referencePitch.fineHz;
 
@@ -37,7 +28,7 @@ export function SettingsPage({ settings, onChange, onPlayNi }: SettingsPageProps
               role="radio"
               aria-checked={register === r}
               className={register === r ? "is-selected" : ""}
-              onClick={() => onChange({ referencePitch, register: r })}
+              onClick={() => onChange({ register: r })}
             >
               {t(`register.${r}`)}
             </button>
@@ -52,11 +43,11 @@ export function SettingsPage({ settings, onChange, onPlayNi }: SettingsPageProps
           <span>{t("settings.niNote")}</span>
           <select
             value={referencePitch.note}
-            onChange={(e) => onChange({ register, referencePitch: { note: e.target.value as NoteName, fineHz: fine } })}
+            onChange={(e) => onChange({ referencePitch: { note: e.target.value as NoteName, fineHz: fine } })}
           >
             {choices.map((note) => (
               <option key={note} value={note}>
-                {noteLabel(transposeNote(note, octaveShift))}
+                {noteLabel(soundingNote(note, register))}
               </option>
             ))}
           </select>
@@ -68,22 +59,22 @@ export function SettingsPage({ settings, onChange, onPlayNi }: SettingsPageProps
         </label>
         <input
           type="range"
-          min={-FINE_HZ_LIMIT}
-          max={FINE_HZ_LIMIT}
+          min={-MAX_FINE_ADJUSTMENT_HZ}
+          max={MAX_FINE_ADJUSTMENT_HZ}
           step={0.1}
           value={fine}
           aria-label={t("settings.fineTune")}
-          onChange={(e) => onChange({ register, referencePitch: { note: referencePitch.note, fineHz: Number(e.target.value) } })}
+          onChange={(e) => onChange({ referencePitch: { note: referencePitch.note, fineHz: Number(e.target.value) } })}
         />
         {fine !== 0 && (
-          <button type="button" className="link-button" onClick={() => onChange({ register, referencePitch: { ...referencePitch, fineHz: 0 } })}>
+          <button type="button" className="link-button" onClick={() => onChange({ referencePitch: { ...referencePitch, fineHz: 0 } })}>
             {t("settings.resetFine")}
           </button>
         )}
       </fieldset>
 
       <div className="settings__result">
-        <p>{t("settings.niSoundsAt", { hz: settings.niHz.toFixed(2) })}</p>
+        <p>{t("settings.niSoundsAt", { hz: pitch.niHz.toFixed(2) })}</p>
         <button type="button" className="primary-button" onClick={onPlayNi}>
           {t("settings.playNi")}
         </button>

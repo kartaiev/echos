@@ -1,4 +1,5 @@
 import type { DegreeName } from "../core/theory/tuningSystems";
+import type { NoteName } from "../core/theory/westernPitch";
 
 /** Every UI string goes through this table. Greek arrives in its own ticket. */
 const en = {
@@ -14,15 +15,15 @@ const en = {
   "nav.settings": "Settings",
   "nav.practice": "Practice",
   "settings.title": "Settings",
-  "settings.register": "Voice",
+  "settings.register": "Voice register",
   "settings.registerHelp": "The female voice sounds one octave higher.",
   "register.male": "Male",
   "register.female": "Female",
   "settings.referencePitch": "Pitch of Ni",
   "settings.niNote": "Note",
-  "settings.fineTune": "Fine tuning",
+  "settings.fineTune": "Fine adjustment",
   "settings.fineHz": "{hz} Hz",
-  "settings.resetFine": "Reset fine tuning",
+  "settings.resetFine": "Reset fine adjustment",
   "settings.niSoundsAt": "Ni sounds at {hz} Hz",
   "settings.playNi": "Play Ni",
   "degree.Ni": "Ni",
@@ -42,4 +43,9 @@ export function t(key: TranslationKey, params: Record<string, string | number> =
 
 export function degreeLabel(name: DegreeName, octave: number): string {
   return t(`degree.${name}`) + "′".repeat(octave);
+}
+
+/** Western note for display, with a real sharp sign: "C#3" → "C♯3". */
+export function noteLabel(note: NoteName): string {
+  return note.replace("#", "\u266f");
 }

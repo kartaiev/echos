@@ -1,30 +1,19 @@
 import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
 import { buildScale } from "../theory/scale";
 import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
-import { noteFrequency, type NoteName } from "../theory/westernPitch";
+import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
+import type { NoteName } from "../theory/westernPitch";
+
+export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 
 const DEGREE_DURATION_MS = 1200;
 
-/** The frequency assigned to Ni, as a Western note plus a fine adjustment in hertz. */
-export interface ReferencePitch {
-  note: NoteName;
-  fineHz: number;
+/** Pitch settings plus what they mean in sound, for display. */
+export interface PitchState extends PitchSettings {
+  /** The note Ni sounds at in the current Register, before fine adjustment. */
+  niNote: NoteName;
+  niHz: number;
 }
-
-/** The female register sounds one octave above the male one. */
-export type Register = "male" | "female";
-
-export interface PitchSettings {
-  referencePitch: ReferencePitch;
-  register: Register;
-}
-
-export const DEFAULT_PITCH_SETTINGS: PitchSettings = {
-  referencePitch: { note: "C3", fineHz: 0 },
-  register: "male",
-};
-
-export const REGISTER_OCTAVES: Record<Register, number> = { male: 0, female: 1 };
 
 export interface PracticeSessionOptions {
   audio: AudioOutput;
@@ -61,14 +50,8 @@ export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SET
   let settings = pitchSettings;
   let currentDegreeSound: PlayingSound | null = null;
 
-  const niHz = () =>
-    (noteFrequency(settings.referencePitch.note) + settings.referencePitch.fineHz) * 2 ** REGISTER_OCTAVES[settings.register];
-  let scale = buildScale({ tuningSystem, genus, referencePitchHz: niHz() });
-
-  function updateSettings(next: PitchSettings) {
-    settings = next;
-    scale = buildScale({ tuningSystem, genus, referencePitchHz: niHz() });
-  }
+  const buildCurrentScale = () => buildScale({ tuningSystem, genus, referencePitchHz: niFrequency(settings) });
+  let scale = buildCurrentScale();
 
   return {
     ladder(): Ladder {
@@ -85,14 +68,13 @@ export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SET
         source: tuningSystem.genera[genus].source,
       };
     },
-    pitchSettings(): PitchSettings & { niHz: number } {
-      return { ...settings, niHz: niHz() };
+    pitchSettings(): PitchState {
+      return { ...settings, niNote: soundingNote(settings.referencePitch.note, settings.register), niHz: niFrequency(settings) };
     },
-    setReferencePitch(referencePitch: ReferencePitch) {
-      updateSettings({ ...settings, referencePitch });
-    },
-    setRegister(register: Register) {
-      updateSettings({ ...settings, register });
+    /** Change the Reference Pitch and/or Register; the next Degree played sounds at the new pitch. */
+    setPitchSettings(change: Partial<PitchSettings>) {
+      settings = { ...settings, ...change };
+      scale = buildCurrentScale();
     },
     playDegree(degreeId: string) {
       const degree = scale.find((d) => d.id === degreeId);
