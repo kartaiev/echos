@@ -78,6 +78,7 @@ a {
 }
 
 .practice__header p,
+.practice__genus,
 .practice__hint,
 .practice__source {
   margin: 4px 0 0;
@@ -94,10 +95,10 @@ a {
   position: relative;
   /*
    * 13 Degrees from low Ke to high Ga' fill the rest of a phone screen. With the current tables the
-   * closest Degrees on one side are 16 moria apart in a drawing range of 130 moria, which at 480px
-   * leaves room for a 44px button. A new Tuning System may need a taller ladder.
+   * closest Degrees on one side are 16 moria apart in a drawing range of 130 moria, which at 440px
+   * is 54px: a 44px button plus a gap. A new Tuning System may need a taller ladder.
    */
-  height: max(480px, min(100svh - 320px, 760px));
+  height: max(440px, min(100svh - 372px, 760px));
   margin: 28px 0 28px;
 }
 
@@ -176,12 +177,17 @@ a {
   background: var(--cinnabar);
 }
 
-/* The Degree the Ison holds: filled, so it stands out from the Degree last played. */
+/* Base and Dominant Degrees of the chosen Mode Variant; the Base is filled softly, the Ison fully. */
+.ladder__degree.is-dominant {
+  border: 2px dashed var(--cinnabar);
+}
+
+.ladder__degree.is-base {
+  border: 2px solid var(--cinnabar);
+  background: var(--cinnabar-soft);
+}
+
 .ladder__degree.is-ison {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
   border-color: var(--cinnabar);
   background: var(--cinnabar);
   color: var(--surface);
@@ -192,10 +198,17 @@ a {
   background: var(--cinnabar);
 }
 
-.ladder__ison-mark {
-  font-size: 0.7rem;
+.ladder__name {
+  display: block;
+  line-height: 1.1;
+}
+
+.ladder__marks {
+  display: block;
+  font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.04em;
+  line-height: 1.2;
   text-transform: uppercase;
   opacity: 0.9;
 }
@@ -277,8 +290,25 @@ a {
   background: var(--bg);
 }
 
-.segmented--genus {
+.mode-picker {
+  display: grid;
+  gap: 8px;
   margin-top: 20px;
+}
+
+.mode-picker__mode {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.segmented--genus {
+  margin-top: 8px;
 }
 
 .segmented button {

@@ -1,5 +1,6 @@
 import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
-import { buildScale, type DegreePosition, type ScaleDegree } from "../theory/scale";
+import { MODE_VARIANTS, type ModeVariantKey } from "../theory/modeVariants";
+import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../theory/scale";
 import { GENUS_IDS, PMC_1881, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
@@ -30,11 +31,17 @@ export interface PracticeSessionOptions {
   pitchSettings?: PitchSettings;
   /** Ison vowel and volume restored from the device. */
   isonVoice?: IsonVoice;
+  /** The Mode Variant last chosen on this device; restoring it makes no sound. */
+  modeVariant?: ModeVariantKey;
 }
 
 export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
   /** Size of the interval to the Degree above, or null for the top Degree. */
   moriaToNext: number | null;
+  /** The home Degree of the chosen Mode Variant. */
+  isBase: boolean;
+  /** A Degree of structural weight in the chosen Mode Variant. */
+  isDominant: boolean;
 }
 
 /** Positions in moria from Ni that the ladder is drawn between. */
@@ -64,15 +71,19 @@ export interface IsonState extends IsonVoice {
   degreeId: string | null;
 }
 
+const variantOf = ({ mode, melos }: ModeVariantKey) => MODE_VARIANTS[mode][melos].value;
+
 export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
 export function createPracticeSession({
   audio,
   pitchSettings = DEFAULT_PITCH_SETTINGS,
   isonVoice = DEFAULT_ISON_VOICE,
+  modeVariant,
 }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
-  let genus: GenusId = "diatonic";
+  let chosenVariant: ModeVariantKey | null = modeVariant ?? null;
+  let genus: GenusId = chosenVariant ? variantOf(chosenVariant).genus : "diatonic";
   let settings = pitchSettings;
   let voice = isonVoice;
   let currentDegreeSound: PlayingSound | null = null;
@@ -112,9 +123,12 @@ export function createPracticeSession({
 
   return {
     ladder(): Ladder {
+      const variant = chosenVariant && variantOf(chosenVariant);
+      const baseId = variant ? degreeId(variant.base) : null;
+      const dominantIds = new Set(variant?.dominants.map(degreeId));
       const degrees = scale.map(({ frequency: _, ...d }, i) => {
         const next = scale[i + 1];
-        return { ...d, moriaToNext: next ? next.moria - d.moria : null };
+        return { ...d, moriaToNext: next ? next.moria - d.moria : null, isBase: d.id === baseId, isDominant: dominantIds.has(d.id) };
       });
       return {
         degrees,
@@ -134,10 +148,30 @@ export function createPracticeSession({
       settings = { ...settings, ...change };
       rebuildScale();
     },
-    /** Switch the Scale to another Genus; the next Degree played sounds in it. */
+    /** Switch the Scale to another Genus by hand; this leaves the Mode Variant. */
     setGenus(next: GenusId) {
+      chosenVariant = null;
       genus = next;
       rebuildScale();
+    },
+    /**
+     * Choose a Mode Variant: the Scale takes its Genus. A sounding Ison moves to the Base; a silent one stays
+     * silent, so the student can look through Modes without sound.
+     */
+    setModeVariant(next: ModeVariantKey) {
+      chosenVariant = next;
+      const variant = variantOf(next);
+      genus = variant.genus;
+      rebuildScale();
+      const baseId = degreeId(variant.base);
+      if (ison && ison.degreeId !== baseId) holdIson(baseId);
+    },
+    /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked. */
+    leaveModeVariant() {
+      chosenVariant = null;
+    },
+    modeVariant(): ModeVariantKey | null {
+      return chosenVariant && { ...chosenVariant };
     },
     playDegree(degreeId: string) {
       const degree = findDegree(degreeId);

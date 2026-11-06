@@ -72,10 +72,17 @@ export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: Ladd
       {ladder.degrees.map((degree, index) => {
         const label = degreeLabel(degree.name, degree.octave);
         const isIson = degree.id === isonDegreeId;
+        // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
+        const marks = [
+          degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
+          isIson ? t("ladder.isonMark") : null,
+        ].filter((m): m is string => m !== null);
         const classes = [
           "ladder__degree",
           index % 2 === 0 ? "is-left" : "is-right",
           lastPlayed === degree.id && "is-playing",
+          degree.isDominant && "is-dominant",
+          degree.isBase && "is-base",
           isIson && "is-ison",
         ];
         return (
@@ -84,7 +91,7 @@ export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: Ladd
               type="button"
               className={classes.filter(Boolean).join(" ")}
               style={{ bottom: position(degree.moria) }}
-              aria-label={t(isIson ? "ladder.playIsonDegree" : "ladder.playDegree", { degree: label })}
+              aria-label={[t("ladder.playDegree", { degree: label }), ...marks].join(", ")}
               onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
               onPointerMove={(e) => movePress(e.clientX, e.clientY)}
               onPointerUp={endPress}
@@ -93,8 +100,8 @@ export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: Ladd
               onContextMenu={(e) => e.preventDefault()}
               onClick={() => click(degree.id)}
             >
-              {label}
-              {isIson && <span className="ladder__ison-mark">{t("ladder.isonMark")}</span>}
+              <span className="ladder__name">{label}</span>
+              {marks.length > 0 && <span className="ladder__marks">{marks.join(" · ")}</span>}
             </button>
             {degree.moriaToNext !== null && (
               <span className="ladder__interval" style={{ bottom: position(degree.moria + degree.moriaToNext / 2) }}>

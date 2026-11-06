@@ -26,7 +26,7 @@ function degreeIndex({ name, octave }: DegreePosition): number {
   return octave * DEGREE_NAMES.length + DEGREE_NAMES.indexOf(name);
 }
 
-function degreeId({ name, octave }: DegreePosition): string {
+export function degreeId({ name, octave }: DegreePosition): string {
   return name + (octave < 0 ? ",".repeat(-octave) : "'".repeat(octave));
 }
 

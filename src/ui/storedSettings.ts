@@ -1,8 +1,10 @@
 import { isIsonVoice, type IsonVoice } from "../core/practice/isonVoice";
+import { isModeVariantKey, type ModeVariantKey } from "../core/theory/modeVariants";
 import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
 
 const PITCH_KEY = "echos.pitchSettings.v1";
 const ISON_VOICE_KEY = "echos.isonVoice.v1";
+const MODE_VARIANT_KEY = "echos.modeVariant.v1";
 
 /** A value saved on this device, or undefined when there is none, it is invalid, or storage is unavailable. */
 function load<T>(key: string, isValid: (value: unknown) => value is T): T | undefined {
@@ -28,3 +30,6 @@ export const loadPitchSettings = () => load(PITCH_KEY, isPitchSettings);
 export const savePitchSettings = (settings: PitchSettings) => save(PITCH_KEY, settings);
 export const loadIsonVoice = () => load(ISON_VOICE_KEY, isIsonVoice);
 export const saveIsonVoice = (voice: IsonVoice) => save(ISON_VOICE_KEY, voice);
+/** null is saved when the student leaves the Mode Variant; it loads as no Mode Variant. */
+export const loadModeVariant = () => load(MODE_VARIANT_KEY, isModeVariantKey);
+export const saveModeVariant = (key: ModeVariantKey | null) => save(MODE_VARIANT_KEY, key);

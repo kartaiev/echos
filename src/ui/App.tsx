@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { createWebAudioOutput } from "../audio/webAudioOutput";
 import { createPracticeSession, type IsonVoice, type PitchSettings } from "../core/practice/PracticeSession";
+import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
 import { IsonPanel } from "./IsonPanel";
 import { Ladder } from "./Ladder";
+import { ModePicker } from "./ModePicker";
 import { SettingsPage } from "./SettingsPage";
-import { loadIsonVoice, loadPitchSettings, saveIsonVoice, savePitchSettings } from "./storedSettings";
+import {
+  loadIsonVoice,
+  loadModeVariant,
+  loadPitchSettings,
+  saveIsonVoice,
+  saveModeVariant,
+  savePitchSettings,
+} from "./storedSettings";
 
 type View = "practice" | "settings";
 
@@ -20,14 +29,21 @@ function viewFromHash(): View {
 export function App() {
   const session = useMemo(
     () =>
-      createPracticeSession({ audio: createWebAudioOutput(), pitchSettings: loadPitchSettings(), isonVoice: loadIsonVoice() }),
+      createPracticeSession({
+        audio: createWebAudioOutput(),
+        pitchSettings: loadPitchSettings(),
+        isonVoice: loadIsonVoice(),
+        modeVariant: loadModeVariant(),
+      }),
     [],
   );
-  const [pitch, setPitch] = useState(() => session.pitchSettings());
-  const [genus, setGenus] = useState<GenusId>(() => session.ladder().genus);
-  const [ison, setIson] = useState(() => session.ison());
+  // The Practice Session holds the state; the UI re-reads it after every command.
+  const [, setVersion] = useState(0);
   const [view, setView] = useState<View>(viewFromHash);
+  const pitch = session.pitchSettings();
+  const ison = session.ison();
   const ladder = session.ladder();
+  const modeVariant = session.modeVariant();
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash());
@@ -35,39 +51,37 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  function changePitch(change: Partial<PitchSettings>) {
-    session.setPitchSettings(change);
-    const next = session.pitchSettings();
-    savePitchSettings({ referencePitch: next.referencePitch, register: next.register });
-    setPitch(next);
+  /** Runs a command on the session, then redraws. */
+  function act(command: () => void) {
+    command();
+    setVersion((v) => v + 1);
   }
 
-  function changeGenus(next: GenusId) {
-    session.setGenus(next);
-    setGenus(next);
-  }
+  const changePitch = (change: Partial<PitchSettings>) =>
+    act(() => {
+      session.setPitchSettings(change);
+      const { referencePitch, register } = session.pitchSettings();
+      savePitchSettings({ referencePitch, register });
+    });
 
-  function holdIson(degreeId: string) {
-    session.setIson(degreeId);
-    setIson(session.ison());
-  }
+  /** Runs a command that may change the Mode Variant, then remembers whatever the session now has. */
+  const actOnModeVariant = (command: () => void) =>
+    act(() => {
+      command();
+      saveModeVariant(session.modeVariant());
+    });
 
-  function stopIson() {
-    session.stopIson();
-    setIson(session.ison());
-  }
+  const chooseModeVariant = (key: ModeVariantKey | null) =>
+    actOnModeVariant(() => (key ? session.setModeVariant(key) : session.leaveModeVariant()));
 
-  function toggleIson(degreeId: string) {
-    session.toggleIson(degreeId);
-    setIson(session.ison());
-  }
+  const changeGenus = (genus: GenusId) => actOnModeVariant(() => session.setGenus(genus));
 
-  function changeIsonVoice(change: Partial<IsonVoice>) {
-    session.setIsonVoice(change);
-    const { degreeId: _, ...voice } = session.ison();
-    saveIsonVoice(voice);
-    setIson(session.ison());
-  }
+  const changeIsonVoice = (change: Partial<IsonVoice>) =>
+    act(() => {
+      session.setIsonVoice(change);
+      const { vowel, volume } = session.ison();
+      saveIsonVoice({ vowel, volume });
+    });
 
   return (
     <main className="practice">
@@ -87,20 +101,26 @@ export function App() {
         <SettingsPage pitch={pitch} onChange={changePitch} onPlayNi={() => session.playDegree("Ni")} />
       ) : (
         <section className="practice__body">
-          <div className="segmented segmented--genus" role="radiogroup" aria-label={t("ladder.genus")}>
-            {GENUS_IDS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={genus === id}
-                className={genus === id ? "is-selected" : ""}
-                onClick={() => changeGenus(id)}
-              >
-                {t(`genus.${id}`)}
-              </button>
-            ))}
-          </div>
+          <ModePicker choice={modeVariant} onChoose={chooseModeVariant} onLeave={() => chooseModeVariant(null)} />
+          {modeVariant ? (
+            // The Mode Variant sets the Genus; choosing "No Mode" brings back the Genus buttons.
+            <p className="practice__genus">{t("ladder.genusOf", { genus: t(`genus.${ladder.genus}`) })}</p>
+          ) : (
+            <div className="segmented segmented--genus" role="radiogroup" aria-label={t("ladder.genus")}>
+              {GENUS_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={ladder.genus === id}
+                  className={ladder.genus === id ? "is-selected" : ""}
+                  onClick={() => changeGenus(id)}
+                >
+                  {t(`genus.${id}`)}
+                </button>
+              ))}
+            </div>
+          )}
           <a className="pitch-card" href={SETTINGS_HASH}>
             <span className="pitch-card__text">
               <span className="pitch-card__label">{t("settings.referencePitch")}</span>
@@ -113,13 +133,13 @@ export function App() {
             ladder={ladder}
             isonDegreeId={ison.degreeId}
             onPlayDegree={(id) => session.playDegree(id)}
-            onLongPress={toggleIson}
+            onLongPress={(id) => act(() => session.toggleIson(id))}
           />
           <IsonPanel
             ison={ison}
             degrees={ladder.degrees}
-            onSetIson={holdIson}
-            onStop={stopIson}
+            onSetIson={(id) => act(() => session.setIson(id))}
+            onStop={() => act(() => session.stopIson())}
             onChangeVoice={changeIsonVoice}
           />
           <p className="practice__source" title={ladder.source}>
