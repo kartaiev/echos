@@ -1,0 +1,116 @@
+:root {
+  --bg: #f7f4ee;
+  --surface: #ffffff;
+  --text: #1f1b16;
+  --muted: #6b6258;
+  --line: #d9d1c4;
+  --cinnabar: #b5331f;
+  --cinnabar-soft: #f3ddd7;
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15120f;
+    --surface: #211d19;
+    --text: #efe8dd;
+    --muted: #a59a8c;
+    --line: #3a332c;
+    --cinnabar: #e0614a;
+    --cinnabar-soft: #3d221c;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.practice {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.practice__header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--cinnabar);
+  letter-spacing: 0.02em;
+}
+
+.practice__header p,
+.practice__hint,
+.practice__source {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.practice__body h2 {
+  margin: 24px 0 0;
+  font-size: 1.1rem;
+}
+
+.ladder {
+  position: relative;
+  /* The smallest interval (8 of 72 moria) must leave room for a 44px button. */
+  height: max(420px, min(64vh, 560px));
+  margin: 40px 0 40px;
+}
+
+.ladder__rail {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+
+.ladder__degree {
+  position: absolute;
+  left: 50%;
+  width: 120px;
+  height: 44px;
+  transform: translate(-50%, 50%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ladder__degree:hover {
+  border-color: var(--cinnabar);
+}
+
+.ladder__degree:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+}
+
+.ladder__degree.is-playing {
+  background: var(--cinnabar-soft);
+  border-color: var(--cinnabar);
+  color: var(--cinnabar);
+}
+
+.ladder__interval {
+  position: absolute;
+  left: calc(50% + 76px);
+  transform: translateY(50%);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
