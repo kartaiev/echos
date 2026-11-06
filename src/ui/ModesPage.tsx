@@ -10,6 +10,7 @@ interface ModesPageProps {
 }
 
 const label = ({ name, octave }: DegreePosition) => degreeLabel(name, octave);
+const Missing = () => <span className="mode-card__missing">{t("modes.noSource")}</span>;
 const keyOf = ({ mode, melos }: ModeVariantKey) => `${mode}/${melos}`;
 
 /** A card for every Mode Variant: its theory, its Intonation, and the way to practise it. */
@@ -48,22 +49,24 @@ export function ModesPage({ onPlayIntonation, onPractise }: ModesPageProps) {
                   <dt>{t("modes.dominants")}</dt>
                   <dd>{variant.dominants.map(label).join(", ")}</dd>
                   <dt>{t("modes.cadences")}</dt>
-                  <dd className="mode-card__missing">{t("modes.noSource")}</dd>
+                  <dd>
+                    <Missing />
+                  </dd>
                   <dt>{t("modes.intonation")}</dt>
                   <dd>
                     {variant.intonation ? (
-                      <span className={"mode-card__intonation" + (isPlaying ? " is-playing" : "")} aria-live="polite">
+                      <span className={"mode-card__intonation" + (isPlaying ? " is-playing" : "")}>
                         {variant.intonation.text}
                       </span>
                     ) : (
-                      <span className="mode-card__missing">{t("modes.noSource")}</span>
+                      <Missing />
                     )}
                   </dd>
                 </dl>
                 <div className="mode-card__actions">
                   {variant.intonation && (
                     <button type="button" className="secondary-button" onClick={() => playIntonation(key)}>
-                      ▶ {t("modes.playIntonation")}
+                      ▶ {t("modes.intonation")}
                     </button>
                   )}
                   <button type="button" className="primary-button" onClick={() => onPractise(key)}>

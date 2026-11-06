@@ -23,16 +23,16 @@ export interface ModeVariantKey {
   melos: MelosId;
 }
 
-/** One sung note of an Intonation: a Degree held for a number of beats. */
-export interface IntonationNote {
+/** One step of an Intonation: a Degree held for a number of chronoi. */
+export interface IntonationStep {
   degree: DegreePosition;
-  beats: number;
+  chronoi: number;
 }
 
 /** The short sung formula that announces a Mode Variant, with the syllables it is sung on. */
 export interface Intonation {
   text: string;
-  notes: readonly IntonationNote[];
+  steps: readonly IntonationStep[];
 }
 
 /** Cadences (ADR-0002) arrive when a source for them is found. */
@@ -52,10 +52,10 @@ const MELLING =
 /** A Degree in the middle octave (Ni to Zo), or in the octave below with octave -1. */
 const degree = (name: DegreeName, octave = 0): DegreePosition => ({ name, octave });
 
-/** Intonation notes as [Degree, beats] pairs, all in the middle octave. */
-const intonation = (text: string, notes: [DegreeName, number][]): Intonation => ({
+/** An Intonation from [Degree, chronoi] pairs, all in the middle octave. */
+const sungAs = (text: string, steps: [DegreeName, number][]): Intonation => ({
   text,
-  notes: notes.map(([name, beats]) => ({ degree: degree(name), beats })),
+  steps: steps.map(([name, chronoi]) => ({ degree: degree(name), chronoi })),
 });
 
 function sourcedVariant(
@@ -63,60 +63,60 @@ function sourcedVariant(
   genus: GenusId,
   base: DegreePosition,
   dominants: DegreePosition[],
-  intonationOrNull: Intonation | null = null,
+  intonation: Intonation | null = null,
 ): SourcedValue<ModeVariant> {
-  return { value: { genus, base, dominants, intonation: intonationOrNull }, source, reviewStatus: "unreviewed" };
+  return { value: { genus, base, dominants, intonation }, source, reviewStatus: "unreviewed" };
 }
 
 /**
  * Mode Variants per Mode and Melos. Heirmologic follows the Trisagion chart: its "Structural Notes" are our
  * Dominant Degrees, and its Intonations are drawn as boxes whose width gives the length (half, one, one and a
- * half or two beats). Sticheraric follows Melling (ADR-0004), who gives no Intonations.
+ * half or two chronoi). Sticheraric follows Melling (ADR-0004), who gives no Intonations. See ADR-0005.
  */
 export const MODE_VARIANTS: Record<ModeId, Record<MelosId, SourcedValue<ModeVariant>>> = {
   first: {
     heirmologic: sourcedVariant(TRISAGION_101, "diatonic", degree("Pa"), [degree("Pa"), degree("Di")],
-      intonation("Ah-nah-nes", [["Ni", 1.5], ["Pa", 0.5], ["Pa", 2]])),
+      sungAs("Ah-nah-nes", [["Ni", 1.5], ["Pa", 0.5], ["Pa", 2]])),
     sticheraric: sourcedVariant(MELLING, "diatonic", degree("Pa"), [degree("Pa"), degree("Ga")]),
   },
   second: {
     heirmologic: sourcedVariant(TRISAGION_101, "hard-chromatic", degree("Pa"), [degree("Pa"), degree("Di")],
-      intonation("Neh-ah-nes", [["Ga", 1], ["Di", 1], ["Ga", 1], ["Vou", 1], ["Pa", 2]])),
+      sungAs("Neh-ah-nes", [["Ga", 1], ["Di", 1], ["Ga", 1], ["Vou", 1], ["Pa", 2]])),
     sticheraric: sourcedVariant(MELLING, "soft-chromatic", degree("Di"), [degree("Ni"), degree("Vou"), degree("Di")]),
   },
   third: {
     heirmologic: sourcedVariant(TRISAGION_101, "enharmonic", degree("Ga"), [degree("Pa"), degree("Ga"), degree("Ke")],
-      intonation("Na-na", [["Ni", 1], ["Ga", 1], ["Ga", 2]])),
+      sungAs("Na-na", [["Ni", 1], ["Ga", 1], ["Ga", 2]])),
     sticheraric: sourcedVariant(MELLING, "enharmonic", degree("Ga"), [degree("Pa"), degree("Ga"), degree("Ke")]),
   },
   fourth: {
     heirmologic: sourcedVariant(TRISAGION_101, "diatonic", degree("Vou"), [degree("Pa"), degree("Vou"), degree("Di")],
-      intonation("Leh-geh-tos", [["Di", 1], ["Ga", 1], ["Vou", 2]])),
+      sungAs("Leh-geh-tos", [["Di", 1], ["Ga", 1], ["Vou", 2]])),
     // Slow Sticheric.
     sticheraric: sourcedVariant(MELLING, "diatonic", degree("Pa"), [degree("Pa"), degree("Vou"), degree("Di")]),
   },
   "plagal-first": {
     heirmologic: sourcedVariant(TRISAGION_101, "diatonic", degree("Pa"), [degree("Pa"), degree("Ga")],
-      intonation("Ah-neh-ah-nes", [["Pa", 1], ["Ga", 1], ["Vou", 1], ["Pa", 1]])),
+      sungAs("Ah-neh-ah-nes", [["Pa", 1], ["Ga", 1], ["Vou", 1], ["Pa", 1]])),
     // Slow styles: Melling gives "Pa or Ke"; the first is taken.
     sticheraric: sourcedVariant(MELLING, "diatonic", degree("Pa"), [degree("Pa"), degree("Di"), degree("Ke")]),
   },
   "plagal-second": {
     // Trisagion's Structural Note Zo' is the Zo above Ke.
     heirmologic: sourcedVariant(TRISAGION_101, "soft-chromatic", degree("Di"), [degree("Vou"), degree("Di"), degree("Zo")],
-      intonation("Neh-heh-ah-nes", [["Vou", 1], ["Di", 1.5], ["Ga", 1], ["Vou", 1.5], ["Ga", 0.5], ["Di", 2]])),
+      sungAs("Neh-heh-ah-nes", [["Vou", 1], ["Di", 1.5], ["Ga", 1], ["Vou", 1.5], ["Ga", 0.5], ["Di", 2]])),
     // Slow Sticheric and Ornate.
     sticheraric: sourcedVariant(MELLING, "hard-chromatic", degree("Pa"), [degree("Pa"), degree("Di"), degree("Ke")]),
   },
   grave: {
     heirmologic: sourcedVariant(TRISAGION_101, "enharmonic", degree("Ga"), [degree("Pa"), degree("Ga"), degree("Di")],
-      intonation("Ah-nes", [["Ga", 1.5], ["Vou", 0.5], ["Ga", 2]])),
+      sungAs("Ah-nes", [["Ga", 1.5], ["Vou", 0.5], ["Ga", 2]])),
     // Diatonic modes on the low Zo (Melling's "Zo"); his lowered upper Zo is left to Attractions.
     sticheraric: sourcedVariant(MELLING, "diatonic", degree("Zo", -1), [degree("Pa"), degree("Ga"), degree("Di"), degree("Zo")]),
   },
   "plagal-fourth": {
     heirmologic: sourcedVariant(TRISAGION_101, "diatonic", degree("Ni"), [degree("Ni"), degree("Vou"), degree("Di")],
-      intonation("Neh-ah-yee-eh", [["Ni", 1], ["Pa", 1], ["Vou", 1], ["Ni", 1], ["Ni", 2]])),
+      sungAs("Neh-ah-yee-eh", [["Ni", 1], ["Pa", 1], ["Vou", 1], ["Ni", 1], ["Ni", 2]])),
     // Melling gives an Octave-System mode on Ni and a Tetrachordal one on Ga for all styles; Ni is taken.
     sticheraric: sourcedVariant(MELLING, "diatonic", degree("Ni"), [degree("Ni"), degree("Vou"), degree("Di")]),
   },

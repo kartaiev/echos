@@ -54,7 +54,6 @@ const en = {
   "modes.cadences": "Cadences",
   "modes.intonation": "Intonation",
   "modes.noSource": "No source yet",
-  "modes.playIntonation": "Intonation",
   "modes.practise": "Practise",
   "settings.title": "Settings",
   "settings.register": "Voice register",

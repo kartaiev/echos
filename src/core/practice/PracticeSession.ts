@@ -10,8 +10,8 @@ export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 export type { IsonVoice } from "./isonVoice";
 
 const DEGREE_DURATION_MS = 1200;
-/** One beat of an Intonation: Melling's Medium tempo, 100 beats a minute. */
-const INTONATION_BEAT_MS = 600;
+/** One Chronos of an Intonation: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
+const INTONATION_CHRONOS_MS = 600;
 /** Degrees and Intonations always sing "a" at full volume; only the Ison voice is adjustable. */
 const SUNG_VOWEL = "a";
 const SUNG_VOLUME = 1;
@@ -185,9 +185,9 @@ export function createPracticeSession({
       intonationSounds.forEach((sound) => sound.stop());
       const variantScale = buildScaleIn(variant.genus);
       let startMs = 0;
-      intonationSounds = variant.intonation.notes.map(({ degree, beats }) => {
+      intonationSounds = variant.intonation.steps.map(({ degree, chronoi }) => {
         const { frequency } = variantScale.find((d) => d.id === degreeId(degree))!;
-        const durationMs = beats * INTONATION_BEAT_MS;
+        const durationMs = chronoi * INTONATION_CHRONOS_MS;
         const sound = audio.playSound({ kind: "intonation", frequency, startMs, durationMs, vowel: SUNG_VOWEL, volume: SUNG_VOLUME });
         startMs += durationMs;
         return sound;

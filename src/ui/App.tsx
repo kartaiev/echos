@@ -21,11 +21,10 @@ import {
 /** Plain "#name" hashes only: they survive being opened inside claude.ai and other embeds. */
 const VIEW_HASHES = { practice: "#practice", modes: "#modes", settings: "#pitch" } as const;
 type View = keyof typeof VIEW_HASHES;
-const SETTINGS_HASH = VIEW_HASHES.settings;
+const VIEWS = Object.keys(VIEW_HASHES) as View[];
 
 function viewFromHash(): View {
-  const found = (Object.keys(VIEW_HASHES) as View[]).find((view) => VIEW_HASHES[view] === location.hash);
-  return found ?? "practice";
+  return VIEWS.find((view) => VIEW_HASHES[view] === location.hash) ?? "practice";
 }
 
 export function App() {
@@ -93,7 +92,7 @@ export function App() {
           <p>{t("app.tagline")}</p>
         </div>
         <nav className="header-nav">
-          {(Object.keys(VIEW_HASHES) as View[]).map((v) => (
+          {VIEWS.map((v) => (
             <a key={v} className="header-link" href={VIEW_HASHES[v]} aria-current={view === v ? "page" : undefined}>
               {t(`nav.${v}`)}
             </a>
@@ -133,7 +132,7 @@ export function App() {
               ))}
             </div>
           )}
-          <a className="pitch-card" href={SETTINGS_HASH}>
+          <a className="pitch-card" href={VIEW_HASHES.settings}>
             <span className="pitch-card__text">
               <span className="pitch-card__label">{t("settings.referencePitch")}</span>
               <span className="pitch-card__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>

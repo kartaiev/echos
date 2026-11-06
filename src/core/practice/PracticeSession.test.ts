@@ -442,10 +442,10 @@ describe("Practice Session: Mode Variants", () => {
   });
 });
 
-// Intonations from the Trisagion chart (ByzB-101, Heirmologic Genre), one beat = 600 ms (Melling's Medium tempo,
-// 100 beats a minute). Frequencies from Ni = C3 in the Genus of the Mode Variant, as above.
+// Intonations from the Trisagion chart (ByzB-101, Heirmologic Genre), one Chronos = 600 ms (Melling's Medium tempo,
+// 100 chronoi a minute). Frequencies from Ni = C3 in the Genus of the Mode Variant, as above.
 describe("Practice Session: Intonations", () => {
-  it("sings the 1st Mode Heirmologic Intonation note by note with its lengths, and reports its text", () => {
+  it("sings the 1st Mode Heirmologic Intonation Degree by Degree with its lengths, and reports its text", () => {
     const { audio, session } = setup();
 
     const played = session.playIntonation({ mode: "first", melos: "heirmologic" });
@@ -465,7 +465,7 @@ describe("Practice Session: Intonations", () => {
 
     session.playIntonation({ mode: "plagal-second", melos: "heirmologic" });
 
-    // Vou 161.67, Di 196.00, Ga 174.61, Vou, Ga, Di; lengths 1, 1.5, 1, 1.5, 0.5, 2 beats.
+    // Vou 161.67, Di 196.00, Ga 174.61, Vou, Ga, Di; lengths 1, 1.5, 1, 1.5, 0.5, 2 chronoi.
     expect(audio.sounds.map((s) => s.frequency)).toEqual(
       [161.67, 196.0, 174.61, 161.67, 174.61, 196.0].map((hz) => expect.closeTo(hz, 2)),
     );

@@ -1,13 +1,13 @@
-# Mode Variant data: Trisagion for Heirmologic, Melling for Sticheraric
+# Mode Variant data: Trisagion for Heirmologic, Melling for Sticheraric (supersedes ADR-0004 for Heirmologic)
 
-**Heirmologic.** The Heirmologic Mode Variants follow the Trisagion School course chart ByzB-101 "Modal Theory Review", Heirmologic Genre, which is what the project's reviewer's school teaches. It gives the Genus, the Base, the "Structural Notes" (our Dominant Degrees) and the Intonation of each Mode. The chart draws each Intonation as coloured boxes: the height of a box is the Degree and its width is the length. We read the widths as half, one, one and a half or two beats.
+**Heirmologic.** The Heirmologic Mode Variants follow the Trisagion School course chart ByzB-101 "Modal Theory Review", Heirmologic Genre, which is what the project's reviewer's school teaches. It gives the Genus, the Base, the "Structural Notes" (our Dominant Degrees) and the Intonation of each Mode. The chart draws each Intonation as coloured boxes: the height of a box is the Degree and its width is the length. We read the widths as half, one, one and a half or two chronoi, sung at Melling's Medium tempo of 100 chronoi a minute.
 
 The chart differs from Melling for four Modes:
 
 | Mode | Trisagion chart | Melling |
 | --- | --- | --- |
-| Plagal 1st | Base Pa | Base on the low Ke |
-| Plagal 2nd | Base Di | Base on Vou |
+| Plagal 1st | Base Pa; Structural Notes Pa, Ga | Base on the low Ke; Dominant Degrees Ke, Ni, Pa |
+| Plagal 2nd | Base Di; Structural Notes Vou, Di, Zo | Base on Vou; Dominant Degrees Vou, Di |
 | Grave | Structural Notes Pa, Ga, Di | Dominant Degrees Ga, Di, Zo |
 | 4th | adds Pa to Di and Vou | Di and Vou |
 
