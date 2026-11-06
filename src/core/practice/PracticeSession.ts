@@ -10,9 +10,11 @@ export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 export type { IsonVoice } from "./isonVoice";
 
 const DEGREE_DURATION_MS = 1200;
-/** Degrees played on the ladder always sing "a" at full volume; only the Ison voice is adjustable. */
-const DEGREE_VOWEL = "a";
-const DEGREE_VOLUME = 1;
+/** One beat of an Intonation: Melling's Medium tempo, 100 beats a minute. */
+const INTONATION_BEAT_MS = 600;
+/** Degrees and Intonations always sing "a" at full volume; only the Ison voice is adjustable. */
+const SUNG_VOWEL = "a";
+const SUNG_VOLUME = 1;
 
 /** The ladder covers the range most Modes use: low Ke to high Ga'. */
 const LADDER_LOWEST: DegreePosition = { name: "Ke", octave: -1 };
@@ -66,6 +68,12 @@ export interface Ladder {
   source: string;
 }
 
+/** What an Intonation shows while it plays. */
+export interface PlayedIntonation {
+  text: string;
+  durationMs: number;
+}
+
 export interface IsonState extends IsonVoice {
   /** The Degree the Ison holds, or null when it is silent. */
   degreeId: string | null;
@@ -87,6 +95,7 @@ export function createPracticeSession({
   let settings = pitchSettings;
   let voice = isonVoice;
   let currentDegreeSound: PlayingSound | null = null;
+  let intonationSounds: PlayingSound[] = [];
   let ison: { degreeId: string; frequency: number; sound: PlayingSound } | null = null;
 
   const buildScaleIn = (g: GenusId) =>
@@ -166,6 +175,25 @@ export function createPracticeSession({
       const baseId = degreeId(variant.base);
       if (ison && ison.degreeId !== baseId) holdIson(baseId);
     },
+    /**
+     * Sing the Intonation of a Mode Variant in its Genus, without changing the practice screen. The Ison keeps
+     * sounding; an Intonation still playing stops. Returns null where the source gives no Intonation.
+     */
+    playIntonation(key: ModeVariantKey): PlayedIntonation | null {
+      const variant = variantOf(key);
+      if (!variant.intonation) return null;
+      intonationSounds.forEach((sound) => sound.stop());
+      const variantScale = buildScaleIn(variant.genus);
+      let startMs = 0;
+      intonationSounds = variant.intonation.notes.map(({ degree, beats }) => {
+        const { frequency } = variantScale.find((d) => d.id === degreeId(degree))!;
+        const durationMs = beats * INTONATION_BEAT_MS;
+        const sound = audio.playSound({ kind: "intonation", frequency, startMs, durationMs, vowel: SUNG_VOWEL, volume: SUNG_VOLUME });
+        startMs += durationMs;
+        return sound;
+      });
+      return { text: variant.intonation.text, durationMs: startMs };
+    },
     /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked. */
     leaveModeVariant() {
       chosenVariant = null;
@@ -180,8 +208,8 @@ export function createPracticeSession({
         kind: "degree",
         frequency: degree.frequency,
         durationMs: DEGREE_DURATION_MS,
-        vowel: DEGREE_VOWEL,
-        volume: DEGREE_VOLUME,
+        vowel: SUNG_VOWEL,
+        volume: SUNG_VOLUME,
       });
     },
     /** Hold the Ison on a Degree; it keeps sounding while Degrees are played, until moved or stopped. */

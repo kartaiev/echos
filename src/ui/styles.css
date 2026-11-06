@@ -64,6 +64,15 @@ a {
   color: var(--cinnabar);
 }
 
+.header-nav {
+  display: flex;
+  gap: 14px;
+}
+
+.header-link[aria-current="page"] {
+  color: var(--text);
+}
+
 .header-link {
   padding: 8px 0;
   font-weight: 600;
@@ -471,4 +480,89 @@ a {
   min-width: 0;
   margin: 0;
   accent-color: var(--cinnabar);
+}
+
+.modes h2 {
+  margin: 20px 0 8px;
+  font-size: 1.1rem;
+}
+
+.mode-card {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.mode-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--cinnabar);
+}
+
+.mode-card__variant + .mode-card__variant {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.mode-card h4 {
+  margin: 8px 0 6px;
+  font-size: 0.95rem;
+}
+
+.mode-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.mode-card dt {
+  color: var(--muted);
+}
+
+.mode-card dd {
+  margin: 0;
+}
+
+.mode-card__missing {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.mode-card__intonation {
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.mode-card__intonation.is-playing {
+  color: var(--cinnabar);
+  font-size: 1.15rem;
+}
+
+.mode-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--cinnabar);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-card__source {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
 }
