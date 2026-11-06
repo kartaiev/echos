@@ -21,6 +21,8 @@ Melling separates "Irmic and short Sticheric" melodies from "slow Sticheric" one
 
 He gives the Enharmonic on Ga for both kinds of 3rd Mode melody, so the Diatonic 3rd mentioned in ADR-0002 is not in release 1.
 
+**Licensing.** The first version of the spec ruled out material from Trisagion School and other paid courses. The project owner decided to follow the school instead, since it is the reviewer's school, and the spec now says so (#1). Every value taken from a Trisagion chart names that chart as its source. Note that the theory data is published under CC BY-SA 4.0, so permission from the school is worth having before a public release.
+
 **Not yet in either source.** Neither source gives Cadences per Mode Variant, so the cards say so until one is found.
 
 **Review.** Every Mode Variant stays `unreviewed` (ADR-0001) until a reviewer signs it off, and changing any of these choices is a data change only.
