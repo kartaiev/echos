@@ -6,8 +6,12 @@ const en = {
   "app.title": "Echos",
   "app.tagline": "Byzantine chant practice",
   "genus.diatonic": "Diatonic",
+  "genus.soft-chromatic": "Soft Chromatic",
+  "genus.hard-chromatic": "Hard Chromatic",
+  "genus.enharmonic": "Enharmonic",
   "ladder.label": "Scale ladder",
   "ladder.hint": "Tap a Degree to hear it.",
+  "ladder.genus": "Genus",
   "ladder.playDegree": "Play {degree}",
   "ladder.tuning": "Tuning System: {name}, {moria} moria per octave",
   "ladder.niPitch": "{note} · {hz} Hz",
@@ -42,8 +46,9 @@ export function t(key: TranslationKey, params: Record<string, string | number> =
   return en[key].replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`));
 }
 
+/** Degree name with an octave mark: "Ke͵" an octave below Ni, "Ni′" an octave above. */
 export function degreeLabel(name: DegreeName, octave: number): string {
-  return t(`degree.${name}`) + "′".repeat(octave);
+  return t(`degree.${name}`) + (octave < 0 ? "\u0375".repeat(-octave) : "\u2032".repeat(octave));
 }
 
 /** Western note for display, with a real sharp sign: "C#3" → "C♯3". */

@@ -7,21 +7,27 @@ interface LadderProps {
   onPlayDegree: (degreeId: string) => void;
 }
 
-/** Vertical Scale ladder: Ni at the bottom, distances in proportion to moria. */
+/**
+ * Vertical Scale ladder, lowest Degree at the bottom, distances in proportion to moria.
+ * Degrees alternate left and right of the rail so that small intervals (4 moria) still leave room to tap.
+ */
 export function Ladder({ ladder, onPlayDegree }: LadderProps) {
   const [lastPlayed, setLastPlayed] = useState<string | null>(null);
-  const position = (moria: number) => `${(moria / ladder.totalMoria) * 100}%`;
+  const { lowestMoria, highestMoria } = ladder.drawingRange;
+  const position = (moria: number) => `${((moria - lowestMoria) / (highestMoria - lowestMoria)) * 100}%`;
 
   return (
     <div className="ladder" role="group" aria-label={t("ladder.label")}>
       <div className="ladder__rail" />
-      {ladder.degrees.map((degree) => {
+      {ladder.degrees.map((degree, index) => {
         const label = degreeLabel(degree.name, degree.octave);
         return (
           <div key={degree.id}>
             <button
               type="button"
-              className={"ladder__degree" + (lastPlayed === degree.id ? " is-playing" : "")}
+              className={
+                "ladder__degree" + (index % 2 === 0 ? " is-left" : " is-right") + (lastPlayed === degree.id ? " is-playing" : "")
+              }
               style={{ bottom: position(degree.moria) }}
               aria-label={t("ladder.playDegree", { degree: label })}
               onClick={() => {

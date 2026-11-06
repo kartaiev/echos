@@ -1,0 +1,3 @@
+# Genera are stored as repeating interval cycles, not octave tables
+
+The chromatic and enharmonic Genera do not repeat at the octave: the Soft and Hard Chromatic repeat a tetrachord plus a tone (42 moria) and the Enharmonic repeats every three Degrees (30 moria), so for example the upper Ni of the Hard Chromatic sits 80 moria above Ni, not 72 (Trisagion School, "The Scales" chart). We therefore store each Genus as a cycle of intervals and the Degree it starts on, with Ni fixed at 0 moria; the Scale is built by walking that cycle up and down from Ni. An octave table would have forced every Genus to repeat at 72 moria and moved Pa and Di in the Hard Chromatic, which teachers do not do.

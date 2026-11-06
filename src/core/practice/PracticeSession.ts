@@ -1,12 +1,16 @@
 import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
-import { buildScale } from "../theory/scale";
-import { PMC_1881, type DegreeName, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
+import { buildScale, type DegreePosition, type ScaleDegree } from "../theory/scale";
+import { GENUS_IDS, PMC_1881, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
 
 export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 
 const DEGREE_DURATION_MS = 1200;
+
+/** The ladder covers the range most Modes use: low Ke to high Ga'. */
+const LADDER_LOWEST: DegreePosition = { name: "Ke", octave: -1 };
+const LADDER_HIGHEST: DegreePosition = { name: "Ga", octave: 1 };
 
 /** Pitch settings plus what they mean in sound, for display. */
 export interface PitchState extends PitchSettings {
@@ -21,21 +25,27 @@ export interface PracticeSessionOptions {
   pitchSettings?: PitchSettings;
 }
 
-export interface LadderDegree {
-  id: string;
-  name: DegreeName;
-  octave: number;
-  /** Distance from Ni in moria; the UI spaces Degrees in proportion to it. */
-  moria: number;
+export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
   /** Size of the interval to the Degree above, or null for the top Degree. */
   moriaToNext: number | null;
+}
+
+/** Positions in moria from Ni that the ladder is drawn between. */
+export interface DrawingRange {
+  lowestMoria: number;
+  highestMoria: number;
 }
 
 export interface Ladder {
   degrees: LadderDegree[];
   genus: GenusId;
-  /** Moria from the lowest to the highest Degree on the ladder; the UI spaces Degrees by it. */
+  /** Moria from the lowest to the highest Degree on the ladder in this Genus. */
   totalMoria: number;
+  /**
+   * The same for every Genus of the Tuning System, so that switching Genus moves only the Degrees that
+   * change; the UI draws the ladder between these positions.
+   */
+  drawingRange: DrawingRange;
   tuningSystemId: TuningSystemId;
   moriaPerOctave: number;
   /** Bibliographic citation of the interval values; shown as written, not translated. */
@@ -46,23 +56,29 @@ export type PracticeSession = ReturnType<typeof createPracticeSession>;
 
 export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SETTINGS }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
-  const genus: GenusId = "diatonic";
+  let genus: GenusId = "diatonic";
   let settings = pitchSettings;
   let currentDegreeSound: PlayingSound | null = null;
 
-  const buildCurrentScale = () => buildScale({ tuningSystem, genus, referencePitchHz: niFrequency(settings) });
+  const buildScaleIn = (g: GenusId) =>
+    buildScale({ tuningSystem, genus: g, referencePitchHz: niFrequency(settings), lowest: LADDER_LOWEST, highest: LADDER_HIGHEST });
+  const buildCurrentScale = () => buildScaleIn(genus);
   let scale = buildCurrentScale();
+
+  const allPositions = GENUS_IDS.flatMap((g) => buildScaleIn(g).map((d) => d.moria));
+  const drawingRange: DrawingRange = { lowestMoria: Math.min(...allPositions), highestMoria: Math.max(...allPositions) };
 
   return {
     ladder(): Ladder {
-      const degrees = scale.map((d, i) => {
+      const degrees = scale.map(({ frequency: _, ...d }, i) => {
         const next = scale[i + 1];
-        return { id: d.id, name: d.name, octave: d.octave, moria: d.moria, moriaToNext: next ? next.moria - d.moria : null };
+        return { ...d, moriaToNext: next ? next.moria - d.moria : null };
       });
       return {
         degrees,
         genus,
         totalMoria: scale[scale.length - 1]!.moria - scale[0]!.moria,
+        drawingRange,
         tuningSystemId: tuningSystem.id,
         moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
@@ -74,6 +90,11 @@ export function createPracticeSession({ audio, pitchSettings = DEFAULT_PITCH_SET
     /** Change the Reference Pitch and/or Register; the next Degree played sounds at the new pitch. */
     setPitchSettings(change: Partial<PitchSettings>) {
       settings = { ...settings, ...change };
+      scale = buildCurrentScale();
+    },
+    /** Switch the Scale to another Genus; the next Degree played sounds in it. */
+    setGenus(next: GenusId) {
+      genus = next;
       scale = buildCurrentScale();
     },
     playDegree(degreeId: string) {
