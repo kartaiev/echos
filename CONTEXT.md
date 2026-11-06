@@ -86,6 +86,10 @@ _Avoid_: apichima, apechema, echema
 A sustained tone on a Degree held under the melody.
 _Avoid_: drone, pedal
 
+**Ison Voice**:
+The vowel the Ison is sung on (a, e, o or ou) and its volume, chosen by the student so it blends with their own voice.
+_Avoid_: drone sound, timbre
+
 **Parallage**:
 Singing a melody or scale on Degree names instead of the text.
 _Avoid_: solfège, solfa

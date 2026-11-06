@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createWebAudioOutput } from "../audio/webAudioOutput";
-import { createPracticeSession, type PitchSettings } from "../core/practice/PracticeSession";
+import { createPracticeSession, type IsonVoice, type PitchSettings } from "../core/practice/PracticeSession";
 import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
+import { IsonPanel } from "./IsonPanel";
 import { Ladder } from "./Ladder";
 import { SettingsPage } from "./SettingsPage";
-import { loadPitchSettings, savePitchSettings } from "./storedSettings";
+import { loadIsonVoice, loadPitchSettings, saveIsonVoice, savePitchSettings } from "./storedSettings";
 
 type View = "practice" | "settings";
 
@@ -17,9 +18,14 @@ function viewFromHash(): View {
 }
 
 export function App() {
-  const session = useMemo(() => createPracticeSession({ audio: createWebAudioOutput(), pitchSettings: loadPitchSettings() }), []);
+  const session = useMemo(
+    () =>
+      createPracticeSession({ audio: createWebAudioOutput(), pitchSettings: loadPitchSettings(), isonVoice: loadIsonVoice() }),
+    [],
+  );
   const [pitch, setPitch] = useState(() => session.pitchSettings());
   const [genus, setGenus] = useState<GenusId>(() => session.ladder().genus);
+  const [ison, setIson] = useState(() => session.ison());
   const [view, setView] = useState<View>(viewFromHash);
   const ladder = session.ladder();
 
@@ -39,6 +45,28 @@ export function App() {
   function changeGenus(next: GenusId) {
     session.setGenus(next);
     setGenus(next);
+  }
+
+  function holdIson(degreeId: string) {
+    session.setIson(degreeId);
+    setIson(session.ison());
+  }
+
+  function stopIson() {
+    session.stopIson();
+    setIson(session.ison());
+  }
+
+  function toggleIson(degreeId: string) {
+    session.toggleIson(degreeId);
+    setIson(session.ison());
+  }
+
+  function changeIsonVoice(change: Partial<IsonVoice>) {
+    session.setIsonVoice(change);
+    const { degreeId: _, ...voice } = session.ison();
+    saveIsonVoice(voice);
+    setIson(session.ison());
   }
 
   return (
@@ -81,7 +109,19 @@ export function App() {
             <span className="pitch-card__action" aria-hidden="true">{t("ladder.changePitch")} ›</span>
           </a>
           <p className="practice__hint">{t("ladder.hint")}</p>
-          <Ladder ladder={ladder} onPlayDegree={(id) => session.playDegree(id)} />
+          <Ladder
+            ladder={ladder}
+            isonDegreeId={ison.degreeId}
+            onPlayDegree={(id) => session.playDegree(id)}
+            onLongPress={toggleIson}
+          />
+          <IsonPanel
+            ison={ison}
+            degrees={ladder.degrees}
+            onSetIson={holdIson}
+            onStop={stopIson}
+            onChangeVoice={changeIsonVoice}
+          />
           <p className="practice__source" title={ladder.source}>
             {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
           </p>
