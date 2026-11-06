@@ -57,11 +57,16 @@ export function App() {
     setIson(session.ison());
   }
 
+  function toggleIson(degreeId: string) {
+    session.toggleIson(degreeId);
+    setIson(session.ison());
+  }
+
   function changeIsonVoice(change: Partial<IsonVoice>) {
     session.setIsonVoice(change);
-    const next = session.ison();
-    saveIsonVoice({ vowel: next.vowel, volume: next.volume });
-    setIson(next);
+    const { degreeId: _, ...voice } = session.ison();
+    saveIsonVoice(voice);
+    setIson(session.ison());
   }
 
   return (
@@ -108,7 +113,7 @@ export function App() {
             ladder={ladder}
             isonDegreeId={ison.degreeId}
             onPlayDegree={(id) => session.playDegree(id)}
-            onLongPress={(id) => (id === ison.degreeId ? stopIson() : holdIson(id))}
+            onLongPress={toggleIson}
           />
           <IsonPanel
             ison={ison}

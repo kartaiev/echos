@@ -1,7 +1,5 @@
 import { VOWELS, type Vowel } from "../../audio/AudioOutput";
 
-export { VOWELS, type Vowel };
-
 /** How the Ison sounds: the vowel it sings and its loudness from 0 to 1. */
 export interface IsonVoice {
   vowel: Vowel;

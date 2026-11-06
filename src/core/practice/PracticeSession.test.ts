@@ -196,7 +196,7 @@ describe("Practice Session: the four Genera", () => {
 
 // Diatonic frequencies from Ni = C3, as above: Ni 130.81, Vou 161.67, Di 196.00, Ke 220.00 Hz.
 describe("Practice Session: Ison", () => {
-  it("holds a sustained tone at the frequency of the chosen Degree", () => {
+  it("holds a sustained sound at the frequency of the chosen Degree", () => {
     const { audio, session } = setup();
 
     session.setIson("Di");
@@ -206,7 +206,7 @@ describe("Practice Session: Ison", () => {
     expect(audio.sounds[0]?.frequency).toBeCloseTo(196.0, 2);
   });
 
-  it("moves to another Degree: the old tone ends and the new one starts", () => {
+  it("moves to another Degree: the old sound ends and the new one starts", () => {
     const { audio, session } = setup();
 
     session.setIson("Di");
@@ -240,7 +240,7 @@ describe("Practice Session: Ison", () => {
   });
 
   // Hard Chromatic Vou from the table above: 155.56 Hz; Ni = D3: 146.83 Hz.
-  it("retunes to the new pitch of its Degree when the Genus or the Pitch of Ni changes", () => {
+  it("retunes to the new pitch of its Degree when the Genus or the Reference Pitch changes", () => {
     const { audio, session } = setup();
 
     session.setIson("Vou");
@@ -274,7 +274,7 @@ describe("Practice Session: Ison", () => {
     expect(audio.sounds[0]).toMatchObject({ kind: "ison", vowel: "o", volume: 0.4 });
   });
 
-  it("changes the volume while it sounds, without restarting the tone", () => {
+  it("changes the volume while it sounds, without restarting the sound", () => {
     const { audio, session } = setup();
 
     session.setIson("Ni");
@@ -284,7 +284,7 @@ describe("Practice Session: Ison", () => {
     expect(audio.sounds[0]).toMatchObject({ stopped: false, volume: 0.25 });
   });
 
-  it("changes the vowel while it sounds by restarting the tone on the same Degree", () => {
+  it("changes the vowel while it sounds by restarting the sound on the same Degree", () => {
     const { audio, session } = setup();
 
     session.setIson("Di");
@@ -302,5 +302,17 @@ describe("Practice Session: Ison", () => {
 
     expect(session.ison()).toEqual({ degreeId: "Ni", vowel: "e", volume: 0.5 });
     expect(audio.sounds[0]).toMatchObject({ vowel: "e", volume: 0.5 });
+  });
+
+  it("toggles: holding the Degree it already holds stops it, holding another Degree moves it there", () => {
+    const { audio, session } = setup();
+
+    session.toggleIson("Ni");
+    session.toggleIson("Di");
+    session.toggleIson("Di");
+
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", true], ["ison", true]]);
+    expect(audio.sounds.map((s) => s.frequency)).toEqual([expect.closeTo(130.81, 2), expect.closeTo(196.0, 2)]);
+    expect(session.ison().degreeId).toBeNull();
   });
 });

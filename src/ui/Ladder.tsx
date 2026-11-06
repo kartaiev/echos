@@ -2,31 +2,34 @@ import { useRef, useState } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
 
-/** How long a Degree must be held to set the Ison instead of playing it. */
+/** How long a Degree must be held to count as a long press instead of a tap. */
 const LONG_PRESS_MS = 500;
+/** A finger that slides further than this is not holding the Degree. */
+const MOVE_TOLERANCE_PX = 10;
 
 interface LadderProps {
   ladder: LadderModel;
   isonDegreeId: string | null;
   onPlayDegree: (degreeId: string) => void;
-  /** Sets the Ison, or stops it when held on the Degree it already holds. */
   onLongPress: (degreeId: string) => void;
 }
 
 /**
  * Vertical Scale ladder, lowest Degree at the bottom, distances in proportion to moria.
  * Degrees alternate left and right of the rail so that small intervals (4 moria) still leave room to tap.
- * A tap plays a Degree; a long press sets the Ison on it, or stops the Ison held there.
+ * A tap plays a Degree; a long press is reported separately (it sets or stops the Ison).
  */
 export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: LadderProps) {
   const [lastPlayed, setLastPlayed] = useState<string | null>(null);
-  const press = useRef<{ timer: number; longPressed: boolean } | null>(null);
+  const press = useRef<{ timer: number; x: number; y: number; longPressed: boolean } | null>(null);
   const { lowestMoria, highestMoria } = ladder.drawingRange;
   const position = (moria: number) => `${((moria - lowestMoria) / (highestMoria - lowestMoria)) * 100}%`;
 
-  function startPress(degreeId: string) {
+  function startPress(degreeId: string, x: number, y: number) {
     cancelPress();
     const current = {
+      x,
+      y,
       longPressed: false,
       timer: window.setTimeout(() => {
         current.longPressed = true;
@@ -39,6 +42,16 @@ export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: Ladd
 
   function cancelPress() {
     if (press.current) window.clearTimeout(press.current.timer);
+  }
+
+  /** The click that ends a long press arrives right after this; forget the press once it has been handled. */
+  function endPress() {
+    cancelPress();
+    window.setTimeout(() => (press.current = null), 0);
+  }
+
+  function movePress(x: number, y: number) {
+    if (press.current && Math.hypot(x - press.current.x, y - press.current.y) > MOVE_TOLERANCE_PX) cancelPress();
   }
 
   function click(degreeId: string) {
@@ -72,10 +85,11 @@ export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: Ladd
               className={classes.filter(Boolean).join(" ")}
               style={{ bottom: position(degree.moria) }}
               aria-label={t(isIson ? "ladder.playIsonDegree" : "ladder.playDegree", { degree: label })}
-              onPointerDown={(e) => e.button === 0 && startPress(degree.id)}
-              onPointerUp={cancelPress}
-              onPointerLeave={cancelPress}
-              onPointerCancel={cancelPress}
+              onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
+              onPointerMove={(e) => movePress(e.clientX, e.clientY)}
+              onPointerUp={endPress}
+              onPointerLeave={endPress}
+              onPointerCancel={endPress}
               onContextMenu={(e) => e.preventDefault()}
               onClick={() => click(degree.id)}
             >

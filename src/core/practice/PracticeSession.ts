@@ -6,7 +6,7 @@ import type { NoteName } from "../theory/westernPitch";
 import { DEFAULT_ISON_VOICE, type IsonVoice } from "./isonVoice";
 
 export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
-export type { IsonVoice, Vowel } from "./isonVoice";
+export type { IsonVoice } from "./isonVoice";
 
 const DEGREE_DURATION_MS = 1200;
 /** Degrees played on the ladder always sing "a" at full volume; only the Ison voice is adjustable. */
@@ -96,6 +96,11 @@ export function createPracticeSession({
     ison = { degreeId, frequency, sound };
   }
 
+  function stopIson() {
+    ison?.sound.stop();
+    ison = null;
+  }
+
   /** After the Scale changes, the Ison follows its Degree; it is left alone if that Degree did not move. */
   function rebuildScale() {
     scale = buildCurrentScale();
@@ -146,12 +151,12 @@ export function createPracticeSession({
       });
     },
     /** Hold the Ison on a Degree; it keeps sounding while Degrees are played, until moved or stopped. */
-    setIson(degreeId: string) {
-      holdIson(degreeId);
-    },
-    stopIson() {
-      ison?.sound.stop();
-      ison = null;
+    setIson: holdIson,
+    stopIson,
+    /** Stop the Ison if it already holds this Degree, otherwise hold it there (the long press on the ladder). */
+    toggleIson(degreeId: string) {
+      if (ison?.degreeId === degreeId) stopIson();
+      else holdIson(degreeId);
     },
     ison(): IsonState {
       return { degreeId: ison?.degreeId ?? null, ...voice };

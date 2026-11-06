@@ -41,18 +41,32 @@ const CUT_OFF_S = 0.03;
 /** How quickly a volume change settles (time constant). */
 const VOLUME_GLIDE_S = 0.05;
 
-/** Real sound in the browser. The AudioContext is created inside a user gesture, as browsers require. */
-export function createWebAudioOutput(): AudioOutput {
-  let context: AudioContext | null = null;
+/** One AudioContext for the whole page, created and resumed inside a user gesture, as browsers require. */
+let context: AudioContext | null = null;
 
-  function getContext() {
-    context ??= new AudioContext();
-    if (context.state === "suspended") void context.resume();
-    return context;
+function getContext() {
+  context ??= new AudioContext();
+  if (context.state === "suspended") void context.resume();
+  return context;
+}
+
+let unlockListening = false;
+
+/**
+ * A long press starts the Ison from a timer, outside any gesture. Touch browsers only allow audio on the
+ * gesture that lifts the finger, so audio is also unlocked then: a sound started while suspended begins on lift.
+ */
+function listenForUnlock() {
+  if (unlockListening) return;
+  unlockListening = true;
+  for (const type of ["pointerdown", "pointerup", "touchend", "keydown"]) {
+    window.addEventListener(type, getContext, { capture: true });
   }
+}
 
-  // A long press starts the Ison from a timer, outside the gesture; unlock audio when the finger goes down.
-  window.addEventListener("pointerdown", getContext, { capture: true });
+/** Real sound in the browser. */
+export function createWebAudioOutput(): AudioOutput {
+  listenForUnlock();
 
   return {
     playSound(sound: SoundRequest) {

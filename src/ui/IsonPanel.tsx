@@ -1,5 +1,5 @@
 import type { IsonState, IsonVoice, LadderDegree } from "../core/practice/PracticeSession";
-import { VOWELS } from "../core/practice/isonVoice";
+import { VOWELS } from "../audio/AudioOutput";
 import { degreeLabel, t } from "../i18n/translations";
 
 interface IsonPanelProps {
