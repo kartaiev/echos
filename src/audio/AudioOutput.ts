@@ -23,6 +23,25 @@ export interface SoundRequest {
  */
 export interface AudioOutput {
   playSound(sound: SoundRequest): PlayingSound;
+  /** Starts a metronome click that repeats until stopped; the first click is accented and sounds at once. */
+  playClickTrack(track: ClickTrackRequest): PlayingClickTrack;
+}
+
+export interface ClickTrackRequest {
+  /** Time from one click to the next. */
+  intervalMs: number;
+  /** Every how many clicks the accent falls, counting the first click as accented. */
+  accentEvery: number;
+}
+
+/** A click track that has started. */
+export interface PlayingClickTrack {
+  stop(): void;
+  /**
+   * Time since the first click was heard, on the audio clock, so a visual count can follow the sound;
+   * negative before it is heard.
+   */
+  elapsedMs(): number;
 }
 
 /** A sound that has started. */

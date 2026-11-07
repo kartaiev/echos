@@ -1,10 +1,12 @@
 import { isIsonVoice, type IsonVoice } from "../core/practice/isonVoice";
 import { isModeVariantKey, type ModeVariantKey } from "../core/theory/modeVariants";
 import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
+import { isMetronomeSettings, type MetronomeSettings } from "../core/practice/metronomeSettings";
 
 const PITCH_KEY = "echos.pitchSettings.v1";
 const ISON_VOICE_KEY = "echos.isonVoice.v1";
 const MODE_VARIANT_KEY = "echos.modeVariant.v1";
+const METRONOME_KEY = "echos.metronome.v1";
 
 /** A value saved on this device, or undefined when there is none, it is invalid, or storage is unavailable. */
 function load<T>(key: string, isValid: (value: unknown) => value is T): T | undefined {
@@ -33,3 +35,5 @@ export const saveIsonVoice = (voice: IsonVoice) => save(ISON_VOICE_KEY, voice);
 /** null is saved when the student leaves the Mode Variant; it loads as no Mode Variant. */
 export const loadModeVariant = () => load(MODE_VARIANT_KEY, isModeVariantKey);
 export const saveModeVariant = (key: ModeVariantKey | null) => save(MODE_VARIANT_KEY, key);
+export const loadMetronomeSettings = () => load(METRONOME_KEY, isMetronomeSettings);
+export const saveMetronomeSettings = (settings: MetronomeSettings) => save(METRONOME_KEY, settings);

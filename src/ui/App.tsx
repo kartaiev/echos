@@ -1,19 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createWebAudioOutput } from "../audio/webAudioOutput";
-import { createPracticeSession, type IsonVoice, type PitchSettings } from "../core/practice/PracticeSession";
+import {
+  createPracticeSession,
+  type IsonVoice,
+  type MetronomeSettings,
+  type PitchSettings,
+  type TempoPresetId,
+} from "../core/practice/PracticeSession";
 import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
 import { IsonPanel } from "./IsonPanel";
 import { Ladder } from "./Ladder";
+import { MetronomePanel } from "./MetronomePanel";
 import { ModePicker } from "./ModePicker";
 import { ModesPage } from "./ModesPage";
 import { SettingsPage } from "./SettingsPage";
 import {
   loadIsonVoice,
+  loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
   saveIsonVoice,
+  saveMetronomeSettings,
   saveModeVariant,
   savePitchSettings,
 } from "./storedSettings";
@@ -35,6 +44,7 @@ export function App() {
         pitchSettings: loadPitchSettings(),
         isonVoice: loadIsonVoice(),
         modeVariant: loadModeVariant(),
+        metronome: loadMetronomeSettings(),
       }),
     [],
   );
@@ -45,6 +55,8 @@ export function App() {
   const ison = session.ison();
   const ladder = session.ladder();
   const modeVariant = session.modeVariant();
+  const metronome = session.metronome();
+  const readCount = useCallback(() => session.metronome().count, [session]);
 
   useEffect(() => {
     const onHashChange = () => setView(viewFromHash());
@@ -83,6 +95,17 @@ export function App() {
       const { vowel, volume } = session.ison();
       saveIsonVoice({ vowel, volume });
     });
+
+  /** Runs a command that may change tempo or grouping, then remembers them. */
+  const actOnMetronome = (command: () => void) =>
+    act(() => {
+      command();
+      const { chronoiPerMinute, grouping } = session.metronome();
+      saveMetronomeSettings({ chronoiPerMinute, grouping });
+    });
+
+  const changeMetronome = (change: Partial<MetronomeSettings>) => actOnMetronome(() => session.setMetronome(change));
+  const chooseTempoPreset = (id: TempoPresetId) => actOnMetronome(() => session.chooseTempoPreset(id));
 
   return (
     <main className="practice">
@@ -152,6 +175,15 @@ export function App() {
             onSetIson={(id) => act(() => session.setIson(id))}
             onStop={() => act(() => session.stopIson())}
             onChangeVoice={changeIsonVoice}
+          />
+          <MetronomePanel
+            metronome={metronome}
+            presets={session.tempoPresets()}
+            readCount={readCount}
+            onStart={() => act(() => session.startMetronome())}
+            onStop={() => act(() => session.stopMetronome())}
+            onChange={changeMetronome}
+            onChoosePreset={chooseTempoPreset}
           />
           <p className="practice__source" title={ladder.source}>
             {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}

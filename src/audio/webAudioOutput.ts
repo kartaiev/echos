@@ -1,4 +1,4 @@
-import type { AudioOutput, SoundRequest, Vowel } from "./AudioOutput";
+import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, SoundRequest, Vowel } from "./AudioOutput";
 
 interface Formant {
   frequency: number;
@@ -41,6 +41,22 @@ const CUT_OFF_S = 0.03;
 /** How quickly a volume change settles (time constant). */
 const VOLUME_GLIDE_S = 0.05;
 
+/** Clicks are short wooden-sounding blips; the accent is higher and louder. */
+const CLICK_HZ = 1320;
+const ACCENT_HZ = 1760;
+const CLICK_GAIN = 0.3;
+const ACCENT_GAIN = 0.55;
+const CLICK_DECAY_S = 0.04;
+/** The first click waits a moment so its attack is not cut off. */
+const FIRST_CLICK_DELAY_S = 0.05;
+/**
+ * Clicks are placed on the audio clock a little ahead of time, from a timer that wakes every 25 ms; timers can
+ * be late, the audio clock never is. Hidden pages wake their timers about once a second, so they look further ahead.
+ */
+const SCHEDULER_INTERVAL_MS = 25;
+const LOOKAHEAD_S = 0.2;
+const HIDDEN_LOOKAHEAD_S = 1.5;
+
 /** One AudioContext for the whole page, created and resumed inside a user gesture, as browsers require. */
 let context: AudioContext | null = null;
 
@@ -64,11 +80,66 @@ function listenForUnlock() {
   }
 }
 
+function scheduleClick(ctx: AudioContext, output: AudioNode, at: number, accent: boolean) {
+  const osc = ctx.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.value = accent ? ACCENT_HZ : CLICK_HZ;
+  const envelope = ctx.createGain();
+  envelope.gain.setValueAtTime(0, at);
+  envelope.gain.linearRampToValueAtTime(accent ? ACCENT_GAIN : CLICK_GAIN, at + 0.002);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, at + CLICK_DECAY_S);
+  osc.connect(envelope).connect(output);
+  osc.start(at);
+  osc.stop(at + CLICK_DECAY_S + 0.01);
+}
+
+/** The metronome: its own output node, so it never touches the voices that sound beside it. */
+function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): PlayingClickTrack {
+  const ctx = getContext();
+  const interval = intervalMs / 1000;
+  const first = ctx.currentTime + FIRST_CLICK_DELAY_S;
+  const output = ctx.createGain();
+  output.connect(ctx.destination);
+  let index = 0;
+
+  function schedule() {
+    const horizon = ctx.currentTime + (document.hidden ? HIDDEN_LOOKAHEAD_S : LOOKAHEAD_S);
+    // Each click time is counted from the first, so small timer delays never add up to drift.
+    for (let at = first + index * interval; at < horizon; at = first + index * interval) {
+      scheduleClick(ctx, output, at, index % accentEvery === 0);
+      index += 1;
+    }
+  }
+
+  schedule();
+  const timer = setInterval(schedule, SCHEDULER_INTERVAL_MS);
+  let stopped = false;
+
+  return {
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      clearInterval(timer);
+      // Silence clicks already placed ahead, then let go of the node.
+      const now = ctx.currentTime;
+      output.gain.setValueAtTime(output.gain.value, now);
+      output.gain.linearRampToValueAtTime(0, now + 0.01);
+      setTimeout(() => output.disconnect(), (HIDDEN_LOOKAHEAD_S + 0.1) * 1000);
+    },
+    elapsedMs() {
+      // What is heard now left the audio clock one output latency ago.
+      const latency = ctx.outputLatency || ctx.baseLatency || 0;
+      return (ctx.currentTime - latency - first) * 1000;
+    },
+  };
+}
+
 /** Real sound in the browser. */
 export function createWebAudioOutput(): AudioOutput {
   listenForUnlock();
 
   return {
+    playClickTrack,
     playSound(sound: SoundRequest) {
       const ctx = getContext();
       const start = ctx.currentTime + (sound.startMs ?? 0) / 1000;
