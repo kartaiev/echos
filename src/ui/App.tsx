@@ -136,6 +136,7 @@ export function App() {
         <SettingsPage pitch={pitch} onChange={changePitch} onPlayNi={() => session.playDegree("Ni")} />
       ) : view === "modes" ? (
         <ModesPage
+          describe={(key) => session.describeModeVariant(key)}
           onPlayIntonation={(key) => session.playIntonation(key)}
           onPractise={(key) => {
             chooseModeVariant(key);
