@@ -3,6 +3,8 @@ import type { CadenceKind, ModeVariantDescription, PlayedIntonation } from "../c
 import { MELOS_IDS, MODE_IDS, type ModeVariantKey } from "../core/theory/modeVariants";
 import type { DegreePosition } from "../core/theory/scale";
 import { degreeLabel, t } from "../i18n/translations";
+import { ModeName } from "./ModeName";
+import { intonationText } from "./intonationText";
 
 interface ModesPageProps {
   describe: (key: ModeVariantKey) => ModeVariantDescription;
@@ -34,7 +36,9 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
       <h2>{t("modes.title")}</h2>
       {MODE_IDS.map((mode) => (
         <article key={mode} className="mode-card">
-          <h3>{t(`mode.${mode}`)}</h3>
+          <h3>
+            <ModeName mode={mode} />
+          </h3>
           {MELOS_IDS.map((melos) => {
             const key = { mode, melos };
             const variant = describe(key);
@@ -65,7 +69,7 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
                   <dd>
                     {variant.intonation ? (
                       <span className={"mode-card__intonation" + (isPlaying ? " is-playing" : "")}>
-                        {variant.intonation.text}
+                        {intonationText(variant.intonation)}
                       </span>
                     ) : (
                       <Missing />

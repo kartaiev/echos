@@ -1,7 +1,7 @@
 import type { DegreeName } from "../core/theory/tuningSystems";
 import type { NoteName } from "../core/theory/westernPitch";
 
-/** Every UI string goes through this table. Greek arrives in its own ticket. */
+/** Every UI string goes through these tables; domain terms follow CONTEXT.md in both languages. */
 const en = {
   "app.title": "Echos",
   "app.tagline": "Byzantine chant practice",
@@ -112,6 +112,9 @@ const en = {
   "settings.resetFine": "Reset fine adjustment",
   "settings.niSoundsAt": "Ni sounds at {hz} Hz",
   "settings.playNi": "Play Ni",
+  "settings.language": "Language",
+  "language.en": "English",
+  "language.el": "Ελληνικά",
   "degree.Ni": "Ni",
   "degree.Pa": "Pa",
   "degree.Vou": "Vou",
@@ -123,8 +126,155 @@ const en = {
 
 export type TranslationKey = keyof typeof en;
 
+/** Greek. Degree, Genus and Mode names are the ones Greek chant books use; sources stay as written. */
+const el: Record<TranslationKey, string> = {
+  "app.title": "Echos",
+  "app.tagline": "Μελέτη βυζαντινής μουσικής",
+  "genus.diatonic": "Διατονικό",
+  "genus.soft-chromatic": "Μαλακό χρωματικό",
+  "genus.hard-chromatic": "Σκληρό χρωματικό",
+  "genus.enharmonic": "Εναρμόνιο",
+  "ladder.label": "Κλίμακα",
+  "ladder.hint": "Πατήστε έναν φθόγγο για να τον ακούσετε. Κρατήστε τον πατημένο για να ξεκινήσει ή να σταματήσει εκεί το ίσον.",
+  "ladder.genus": "Γένος",
+  "ladder.layout": "Κλίμακα",
+  "layout.vertical": "Κάθετη",
+  "layout.horizontal": "Οριζόντια",
+  "ladder.genusOf": "Γένος: {genus}",
+  "ladder.playDegree": "Ακρόαση: {degree}",
+  "ladder.isonMark": "Ίσον",
+  "ladder.baseMark": "Βάση",
+  "ladder.dominantMark": "Δεσπόζων",
+  "ladder.loweredMark": "Ύφεση",
+  "ladder.raisedMark": "Δίεση",
+  "attractions.title": "Έλξεις",
+  "attraction.zo-lowered": "Ζω σε ύφεση, 4 μόρια",
+  "modePicker.mode": "Ήχος",
+  "modePicker.none": "Χωρίς ήχο: επιλέξτε γένος",
+  "modePicker.melos": "Μέλος",
+  "mode.first": "Ήχος Α΄",
+  "mode.second": "Ήχος Β΄",
+  "mode.third": "Ήχος Γ΄",
+  "mode.fourth": "Ήχος Δ΄",
+  "mode.plagal-first": "Πλάγιος του Α΄",
+  "mode.plagal-second": "Πλάγιος του Β΄",
+  "mode.grave": "Βαρύς",
+  "mode.plagal-fourth": "Πλάγιος του Δ΄",
+  "melos.heirmologic": "Ειρμολογικό",
+  "melos.sticheraric": "Στιχηραρικό",
+  "ison.title": "Ίσον",
+  "ison.degree": "Φθόγγος του ίσου",
+  "ison.off": "Χωρίς ίσον",
+  "ison.stop": "Διακοπή",
+  "ison.vowel": "Φωνήεν",
+  "ison.volume": "Ένταση",
+  "metronome.title": "Μετρονόμος",
+  "metronome.start": "Έναρξη",
+  "metronome.stop": "Διακοπή",
+  "metronome.tempo": "Αγωγή",
+  "metronome.cpm": "{n} χρόνοι / λεπτό",
+  "metronome.slower": "Πιο αργά",
+  "metronome.faster": "Πιο γρήγορα",
+  "metronome.presets": "Αγωγές",
+  "metronome.grouping": "Χρόνοι ανά ομάδα",
+  "metronome.groupOf": "{n}",
+  "metronome.count": "Χρόνος {count} από {grouping}",
+  "metronome.presetsSource": "Όρια αγωγών κατά {source}",
+  "tempo.bradeia": "Βραδεία",
+  "tempo.mesi": "Μέση",
+  "tempo.metria": "Μετρία",
+  "tempo.tacheia": "Ταχεία",
+  "tempo.tachytati": "Ταχυτάτη",
+  "vowel.a": "α",
+  "vowel.e": "ε",
+  "vowel.o": "ο",
+  "vowel.ou": "ου",
+  "ladder.tuning": "Σύστημα: {name}, {moria} μόρια στη διαπασών",
+  "ladder.niPitch": "{note} · {hz} Hz",
+  "ladder.changePitch": "Αλλαγή",
+  "tuning.pmc-1881": "Πατριαρχική Μουσική Επιτροπή 1881",
+  "nav.settings": "Ρυθμίσεις",
+  "nav.practice": "Μελέτη",
+  "nav.modes": "Ήχοι",
+  "nav.tables": "Πίνακες",
+  "tables.title": "Θεωρητικοί πίνακες",
+  "tables.intro": "Κάθε τιμή που η εφαρμογή ψάλλει ή δείχνει, από τα δικά της δεδομένα, με την πηγή και την κατάσταση ελέγχου. Ακούστε, ελέγξτε και αφήστε παρατήρηση στο GitHub.",
+  "tables.tuningSystem": "{name}, {moria} μόρια στη διαπασών",
+  "tables.cycle": "Κύκλος διαστημάτων από {cycle} μόρια",
+  "tables.playScale": "Ακρόαση κλίμακας",
+  "tables.degree": "Φθόγγος",
+  "tables.martyria": "Μαρτυρία",
+  "tables.moria": "Μόρια",
+  "tables.toNext": "Έως τον επόμενο",
+  "tables.hz": "Hz",
+  "tables.play": "Ακρόαση",
+  "tables.remark": "Αφήστε παρατήρηση",
+  "tables.intonationSteps": "Φθόγγοι και χρόνοι: {steps}",
+  "review.unreviewed": "Χωρίς έλεγχο",
+  "review.reviewed": "Ελεγμένο",
+  "modes.cadenceKind.complete": "εντελής στον",
+  "modes.cadenceKind.incomplete": "ατελής στον",
+  "modes.title": "Οι ήχοι ανά μέλος",
+  "modes.genus": "Γένος",
+  "modes.base": "Βάση",
+  "modes.dominants": "Δεσπόζοντες φθόγγοι",
+  "modes.cadences": "Καταλήξεις",
+  "modes.cadence.complete": "Εντελής: {degrees}",
+  "modes.cadence.incomplete": "Ατελής: {degrees}",
+  "modes.playIntonation": "Ακρόαση απηχήματος",
+  "modes.intonation": "Απήχημα",
+  "modes.noSource": "Χωρίς πηγή ακόμη",
+  "modes.practise": "Μελέτη",
+  "settings.title": "Ρυθμίσεις",
+  "settings.register": "Φωνή",
+  "settings.registerHelp": "Η γυναικεία φωνή ακούγεται μία διαπασών ψηλότερα.",
+  "register.male": "Ανδρική",
+  "register.female": "Γυναικεία",
+  "settings.referencePitch": "Τονικό ύψος του Νη",
+  "settings.niNote": "Νότα",
+  "settings.fineTune": "Λεπτή ρύθμιση",
+  "settings.fineHz": "{hz} Hz",
+  "settings.resetFine": "Επαναφορά λεπτής ρύθμισης",
+  "settings.niSoundsAt": "Ο Νη ηχεί στα {hz} Hz",
+  "settings.playNi": "Ακρόαση του Νη",
+  "settings.language": "Γλώσσα",
+  "language.en": "English",
+  "language.el": "Ελληνικά",
+  "degree.Ni": "Νη",
+  "degree.Pa": "Πα",
+  "degree.Vou": "Βου",
+  "degree.Ga": "Γα",
+  "degree.Di": "Δι",
+  "degree.Ke": "Κε",
+  "degree.Zo": "Ζω",
+};
+
+export const LANGUAGES = ["en", "el"] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+export const TABLES: Record<Language, Record<TranslationKey, string>> = { en, el };
+
+let current: Language = "en";
+
+export function setLanguage(language: Language): void {
+  current = language;
+}
+
+export function currentLanguage(): Language {
+  return current;
+}
+
+export function isLanguage(value: unknown): value is Language {
+  return LANGUAGES.includes(value as Language);
+}
+
+/** A string in a given language, whatever the interface language is (e.g. the Greek Mode name on English cards). */
+export function tIn(language: Language, key: TranslationKey, params: Record<string, string | number> = {}): string {
+  return TABLES[language][key].replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`));
+}
+
 export function t(key: TranslationKey, params: Record<string, string | number> = {}): string {
-  return en[key].replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`));
+  return tIn(current, key, params);
 }
 
 /** Degree name with an octave mark: "Ke͵" an octave below Ni, "Ni′" an octave above. */

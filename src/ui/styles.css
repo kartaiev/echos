@@ -1073,3 +1073,9 @@ a {
   margin: 8px 0 0;
   font-size: 0.9rem;
 }
+
+.mode-name__greek {
+  margin-left: 8px;
+  color: var(--muted);
+  font-weight: 400;
+}

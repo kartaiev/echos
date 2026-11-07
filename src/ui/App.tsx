@@ -9,7 +9,7 @@ import {
 } from "../core/practice/PracticeSession";
 import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
-import { noteLabel, t } from "../i18n/translations";
+import { noteLabel, setLanguage, t, type Language } from "../i18n/translations";
 import { IsonPanel } from "./IsonPanel";
 import { LADDER_LAYOUTS, Ladder, type LadderLayout } from "./Ladder";
 import { MetronomePanel } from "./MetronomePanel";
@@ -20,11 +20,13 @@ import { TheoryTablesPage } from "./TheoryTablesPage";
 import {
   loadIsonVoice,
   loadLadderLayout,
+  loadLanguage,
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
   saveIsonVoice,
   saveLadderLayout,
+  saveLanguage,
   saveMetronomeSettings,
   saveModeVariant,
   savePitchSettings,
@@ -39,7 +41,16 @@ function viewFromHash(): View {
   return VIEWS.find((view) => VIEW_HASHES[view] === location.hash) ?? "practice";
 }
 
+/** The saved choice, else Greek for a Greek-speaking device, else English. */
+function startLanguage(): Language {
+  const language = loadLanguage() ?? (navigator.language.toLowerCase().startsWith("el") ? "el" : "en");
+  setLanguage(language);
+  document.documentElement.lang = language;
+  return language;
+}
+
 export function App() {
+  const [language, setLanguageState] = useState<Language>(startLanguage);
   const session = useMemo(
     () =>
       createPracticeSession({
@@ -112,6 +123,14 @@ export function App() {
   const changeMetronome = (change: Partial<MetronomeSettings>) => actOnMetronome(() => session.setMetronome(change));
   const chooseTempoPreset = (id: TempoPresetId) => actOnMetronome(() => session.chooseTempoPreset(id));
 
+  /** Every string is read through t(), so switching the language and redrawing is enough. */
+  const changeLanguage = (next: Language) => {
+    setLanguage(next);
+    document.documentElement.lang = next;
+    saveLanguage(next);
+    setLanguageState(next);
+  };
+
   const changeLayout = (next: LadderLayout) => {
     setLayout(next);
     saveLadderLayout(next);
@@ -134,7 +153,13 @@ export function App() {
       </header>
 
       {view === "settings" ? (
-        <SettingsPage pitch={pitch} onChange={changePitch} onPlayNi={() => session.playDegree("Ni")} />
+        <SettingsPage
+          pitch={pitch}
+          onChange={changePitch}
+          onPlayNi={() => session.playDegree("Ni")}
+          language={language}
+          onChangeLanguage={changeLanguage}
+        />
       ) : view === "tables" ? (
         <TheoryTablesPage session={session} />
       ) : view === "modes" ? (
