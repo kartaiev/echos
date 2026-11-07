@@ -2,7 +2,7 @@ import type { AudioOutput, PlayingClickTrack, PlayingSound } from "../../audio/A
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
 import { MODE_VARIANTS, type ModeVariantKey } from "../theory/modeVariants";
 import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../theory/scale";
-import { GENUS_IDS, PMC_1881, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
+import { GENUS_IDS, PMC_1881, type AttractionId, type GenusId, type ReviewStatus, type TuningSystemId } from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
 import { DEFAULT_ISON_VOICE, type IsonVoice } from "./isonVoice";
@@ -14,6 +14,7 @@ export type { IsonVoice } from "./isonVoice";
 export type { Grouping, MetronomeSettings } from "./metronomeSettings";
 export type { TempoPreset, TempoPresetId } from "../theory/tempoPresets";
 export type { Martyria, MartyriaFthora, RootSign } from "../theory/martyria";
+export type { AttractionId } from "../theory/tuningSystems";
 
 const DEGREE_DURATION_MS = 1200;
 /** One Chronos of an Intonation: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
@@ -54,6 +55,18 @@ export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
   isDominant: boolean;
   /** How the Degree is marked in the score in this Genus. */
   martyria: Martyria;
+  /** Moria an active Attraction moves this Degree by, or null. */
+  attraction: number | null;
+}
+
+/** An Attraction the student can switch on in the current Genus. */
+export interface AttractionState {
+  id: AttractionId;
+  degreeId: string;
+  moria: number;
+  active: boolean;
+  source: string;
+  reviewStatus: ReviewStatus;
 }
 
 /** Positions in moria from Ni that the ladder is drawn between. */
@@ -78,6 +91,7 @@ export interface Ladder {
   source: string;
   /** Bibliographic citation of the Martyria. */
   martyriaSource: string;
+  attractions: AttractionState[];
 }
 
 /** What an Intonation shows while it plays. */
@@ -118,12 +132,26 @@ export function createPracticeSession({
   let currentDegreeSound: PlayingSound | null = null;
   let intonationSounds: PlayingSound[] = [];
   let ison: { degreeId: string; frequency: number; sound: PlayingSound } | null = null;
+  let activeAttractions = new Set<AttractionId>();
   let tempo = metronome;
   let clicks: PlayingClickTrack | null = null;
 
   const buildScaleIn = (g: GenusId) =>
     buildScale({ tuningSystem, genus: g, referencePitchHz: niFrequency(settings), lowest: LADDER_LOWEST, highest: LADDER_HIGHEST });
-  const buildCurrentScale = () => buildScaleIn(genus);
+  const attractionsIn = (g: GenusId) => tuningSystem.attractions.filter((a) => a.value.genus === g);
+  const activeShifts = () =>
+    attractionsIn(genus)
+      .filter((a) => activeAttractions.has(a.value.id))
+      .map(({ value: { degree, moria } }) => ({ degree, moria }));
+  const buildCurrentScale = () =>
+    buildScale({
+      tuningSystem,
+      genus,
+      referencePitchHz: niFrequency(settings),
+      lowest: LADDER_LOWEST,
+      highest: LADDER_HIGHEST,
+      shifts: activeShifts(),
+    });
   let scale = buildCurrentScale();
 
   function findDegree(degreeId: string) {
@@ -168,6 +196,11 @@ export function createPracticeSession({
     ison = null;
   }
 
+  /** A new Genus or Mode Variant starts from the plain Scale. */
+  function clearAttractions() {
+    activeAttractions = new Set();
+  }
+
   /** After the Scale changes, the Ison follows its Degree; it is left alone if that Degree did not move. */
   function rebuildScale() {
     scale = buildCurrentScale();
@@ -182,6 +215,7 @@ export function createPracticeSession({
       const variant = chosenVariant && variantOf(chosenVariant);
       const baseId = variant ? degreeId(variant.base) : null;
       const dominantIds = new Set(variant?.dominants.map(degreeId));
+      const shifts = activeShifts();
       const degrees = scale.map(({ frequency: _, ...d }, i) => {
         const next = scale[i + 1];
         const martyria = martyriaOf(genus, d);
@@ -192,6 +226,7 @@ export function createPracticeSession({
           isBase: d.id === baseId,
           isDominant: dominantIds.has(d.id),
           martyria,
+          attraction: shifts.find(({ degree }) => degree.name === d.name && degree.octave === d.octave)?.moria ?? null,
         };
       });
       return {
@@ -203,6 +238,14 @@ export function createPracticeSession({
         moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
         martyriaSource: MARTYRIA[genus].source,
+        attractions: attractionsIn(genus).map(({ value: { id, degree, moria }, source, reviewStatus }) => ({
+          id,
+          degreeId: degreeId(degree),
+          moria,
+          active: activeAttractions.has(id),
+          source,
+          reviewStatus,
+        })),
       };
     },
     pitchSettings(): PitchState {
@@ -217,6 +260,7 @@ export function createPracticeSession({
     setGenus(next: GenusId) {
       chosenVariant = null;
       genus = next;
+      clearAttractions();
       rebuildScale();
     },
     /**
@@ -227,6 +271,7 @@ export function createPracticeSession({
       chosenVariant = next;
       const variant = variantOf(next);
       genus = variant.genus;
+      clearAttractions();
       rebuildScale();
       const baseId = degreeId(variant.base);
       if (ison && ison.degreeId !== baseId) holdIson(baseId);
@@ -250,9 +295,18 @@ export function createPracticeSession({
       });
       return { text: variant.intonation.text, durationMs: startMs };
     },
-    /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked. */
+    /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked, Attractions are off. */
     leaveModeVariant() {
       chosenVariant = null;
+      clearAttractions();
+      rebuildScale();
+    },
+    /** Switch an Attraction of the current Genus on or off; a sounding Ison on that Degree moves with it. */
+    toggleAttraction(id: AttractionId) {
+      if (!attractionsIn(genus).some((a) => a.value.id === id)) throw new Error(`No Attraction ${id} in ${genus}`);
+      if (activeAttractions.has(id)) activeAttractions.delete(id);
+      else activeAttractions.add(id);
+      rebuildScale();
     },
     modeVariant(): ModeVariantKey | null {
       return chosenVariant && { ...chosenVariant };

@@ -33,12 +33,27 @@ export interface IntervalCycle {
   intervals: readonly number[];
 }
 
+/** A Degree raised or lowered by a neighbouring structural Degree, by a fixed number of moria. */
+export const ATTRACTION_IDS = ["zo-lowered"] as const;
+export type AttractionId = (typeof ATTRACTION_IDS)[number];
+
+export interface Attraction {
+  id: AttractionId;
+  genus: GenusId;
+  /** The Degree that moves; octave 0 is the octave of Ni. */
+  degree: { name: DegreeName; octave: number };
+  /** Negative lowers the Degree. */
+  moria: number;
+}
+
 export interface TuningSystem {
   id: TuningSystemId;
   name: string;
   /** Moria that make a frequency ratio of 2:1. */
   moriaPerOctave: number;
   genera: Record<GenusId, SourcedValue<IntervalCycle>>;
+  /** Only Attractions whose size a source gives; most are left to oral tradition and have none. */
+  attractions: readonly SourcedValue<Attraction>[];
 }
 
 /**
@@ -48,6 +63,14 @@ export interface TuningSystem {
  */
 const TRISAGION_SCALES =
   "Trisagion School of Byzantine Music, \"The Scales\" chart (Free Resources, trisagionschool.org)";
+
+/**
+ * The course says Zo' (the Zo above Ke) is natural going up, 10 moria above Ke, and flat coming down, 6 moria
+ * above Ke, in every Diatonic Mode. Other Attractions it describes (Vou in the 1st Mode, Pa in the Plagal 4th) are
+ * "slight" and, by the school's own choice, given no size.
+ */
+const TRISAGION_OCTOECHOS_201 =
+  'Trisagion School of Byzantine Music, Octoëchos 201: 1st Mode (2026), "1st Mode Sticheraric – Theoretical Overview", Melodic Attractions';
 
 export const PMC_1881: TuningSystem = {
   id: "pmc-1881",
@@ -59,4 +82,11 @@ export const PMC_1881: TuningSystem = {
     "hard-chromatic": { value: { from: "Pa", intervals: [6, 20, 4, 12] }, source: TRISAGION_SCALES, reviewStatus: "unreviewed" },
     enharmonic: { value: { from: "Ni", intervals: [12, 12, 6] }, source: TRISAGION_SCALES, reviewStatus: "unreviewed" },
   },
+  attractions: [
+    {
+      value: { id: "zo-lowered", genus: "diatonic", degree: { name: "Zo", octave: 0 }, moria: -4 },
+      source: TRISAGION_OCTOECHOS_201,
+      reviewStatus: "unreviewed",
+    },
+  ],
 };

@@ -164,6 +164,23 @@ export function App() {
               ))}
             </div>
           )}
+          {ladder.attractions.length > 0 && (
+            <div className="attractions" role="group" aria-label={t("attractions.title")}>
+              <span className="attractions__title">{t("attractions.title")}</span>
+              {ladder.attractions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="attractions__toggle"
+                  aria-pressed={a.active}
+                  title={a.source}
+                  onClick={() => act(() => session.toggleAttraction(a.id))}
+                >
+                  {t(`attraction.${a.id}`)}
+                </button>
+              ))}
+            </div>
+          )}
           <a className="pitch-card" href={VIEW_HASHES.settings}>
             <span className="pitch-card__text">
               <span className="pitch-card__label">{t("settings.referencePitch")}</span>
