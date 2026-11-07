@@ -1,6 +1,7 @@
 import type { IsonState, IsonVoice, LadderDegree } from "../core/practice/PracticeSession";
 import { VOWELS } from "../audio/AudioOutput";
 import { degreeLabel, t } from "../i18n/translations";
+import { Segmented } from "./Segmented";
 
 interface IsonLaneProps {
   ison: IsonState;
@@ -40,7 +41,13 @@ export function IsonLane({ ison, degrees, voiceOpen, voicePanelId, onSetIson, on
       >
         {t("ison.voice")}
       </button>
-      <button type="button" className="transport__action" aria-pressed={sounding} disabled={!sounding} onClick={onStop}>
+      <button
+        type="button"
+        className={"transport__stop" + (sounding ? " is-sounding" : "")}
+        aria-label={t("ison.stopLabel")}
+        disabled={!sounding}
+        onClick={onStop}
+      >
         {t("ison.stop")}
       </button>
     </div>
@@ -57,20 +64,14 @@ export function IsonVoicePanel({ ison, onChangeVoice }: IsonVoicePanelProps) {
     <>
       <div className="transport__row">
         <span className="transport__label">{t("ison.vowel")}</span>
-        <div className="segmented segmented--vowel" role="radiogroup" aria-label={t("ison.vowel")}>
-          {VOWELS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              role="radio"
-              aria-checked={ison.vowel === v}
-              className={ison.vowel === v ? "is-selected" : ""}
-              onClick={() => onChangeVoice({ vowel: v })}
-            >
-              {t(`vowel.${v}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="segmented segmented--vowel"
+          options={VOWELS}
+          value={ison.vowel}
+          label={t("ison.vowel")}
+          render={(v) => t(`vowel.${v}`)}
+          onChange={(vowel) => onChangeVoice({ vowel })}
+        />
       </div>
       <label className="transport__row">
         <span className="transport__label">{t("ison.volume")}</span>

@@ -2,9 +2,13 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { MetronomeSettings, MetronomeState, TempoPreset, TempoPresetId } from "../core/practice/PracticeSession";
 import { GROUPINGS, MAX_CHRONOI_PER_MINUTE, MIN_CHRONOI_PER_MINUTE } from "../core/practice/metronomeSettings";
 import { t } from "../i18n/translations";
+import { Segmented } from "./Segmented";
 
-/** The count follows the audio clock: it is re-read every frame, not counted by a timer of its own. */
-function useCount(running: boolean, readCount: () => number | null) {
+/**
+ * The chronos the metronome is on, 1 to the grouping, or null while it is stopped. It follows the audio clock: it
+ * is re-read every frame, not counted by a timer of its own, and changes only when the next chronos is heard.
+ */
+export function useMetronomeCount(running: boolean, readCount: () => number | null) {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     if (!running) {
@@ -22,8 +26,7 @@ function useCount(running: boolean, readCount: () => number | null) {
 
 interface MetronomeLaneProps {
   metronome: MetronomeState;
-  /** Reads the count from the session; called every frame while the metronome runs. */
-  readCount: () => number | null;
+  count: number | null;
   tempoOpen: boolean;
   tempoPanelId: string;
   onStart: () => void;
@@ -31,22 +34,16 @@ interface MetronomeLaneProps {
   onToggleTempo: () => void;
 }
 
-/** The metronome in the transport bar: the count, the tempo (which opens the tempo choices), Start and Stop. */
-export function MetronomeLane({ metronome, readCount, tempoOpen, tempoPanelId, onStart, onStop, onToggleTempo }: MetronomeLaneProps) {
-  const count = useCount(metronome.running, readCount);
-  const { chronoiPerMinute: cpm, grouping, tempoPreset } = metronome;
+/**
+ * The metronome in the transport bar: the tempo, which opens the tempo choices, and one button that starts it and,
+ * while it runs, shows the chronos and stops it. The beat itself is drawn on the Ladder.
+ */
+export function MetronomeLane({ metronome, count, tempoOpen, tempoPanelId, onStart, onStop, onToggleTempo }: MetronomeLaneProps) {
+  const { chronoiPerMinute: cpm, tempoPreset, running } = metronome;
+  const caption = [t("metronome.title"), tempoPreset && t(`tempo.short.${tempoPreset}`)].filter(Boolean).join(" · ");
 
   return (
-    <div className={"transport__lane" + (metronome.running ? " is-active" : "")}>
-      {/* Read aloud every chronos would drown the singer; the Start and Stop button tells the state. */}
-      <span className="metronome-count" aria-hidden="true">
-        <span className={"metronome-count__number" + (count === 1 ? " is-accent" : "")}>{count ?? ""}</span>
-        <span className="metronome-count__dots">
-          {Array.from({ length: grouping }, (_, i) => (
-            <span key={i} className={"metronome-count__dot" + (i === 0 ? " is-first" : "") + (count === i + 1 ? " is-on" : "")} />
-          ))}
-        </span>
-      </span>
+    <div className={"transport__lane" + (running ? " is-active" : "")}>
       <button
         type="button"
         className="transport__more transport__tempo"
@@ -54,17 +51,29 @@ export function MetronomeLane({ metronome, readCount, tempoOpen, tempoPanelId, o
         aria-controls={tempoPanelId}
         onClick={onToggleTempo}
       >
+        <span className="transport__tempo-name">{caption}</span>
         <span className="transport__tempo-value">{t("metronome.cpm", { n: cpm })}</span>
-        <span className="transport__tempo-name">{tempoPreset ? t(`tempo.short.${tempoPreset}`) : t("metronome.tempo")}</span>
       </button>
       <button
         type="button"
-        className="transport__action"
-        aria-pressed={metronome.running}
-        aria-label={`${t("metronome.title")}: ${metronome.running ? t("metronome.stop") : t("metronome.start")}`}
-        onClick={metronome.running ? onStop : onStart}
+        className={"transport__beat" + (running ? " is-running" : "") + (count === 1 ? " is-accent" : "")}
+        aria-label={running ? t("metronome.stopLabel") : t("metronome.startLabel")}
+        aria-keyshortcuts="Space"
+        onClick={running ? onStop : onStart}
       >
-        {metronome.running ? t("metronome.stop") : t("metronome.start")}
+        {running ? (
+          <>
+            {/* Read aloud every chronos would drown the singer; the label says what the button does. */}
+            <span className="transport__beat-count" aria-hidden="true">
+              {count ?? ""}
+            </span>
+            <span className="transport__beat-action" aria-hidden="true">
+              {t("metronome.stop")}
+            </span>
+          </>
+        ) : (
+          t("metronome.start")
+        )}
       </button>
     </div>
   );
@@ -128,29 +137,26 @@ export function TempoPanel({ metronome, presets, onChange, onChoosePreset }: Tem
   const { chronoiPerMinute: cpm, grouping } = metronome;
   const slower = useRepeatingStep(() => onChange({ chronoiPerMinute: cpm - 1 }), cpm <= MIN_CHRONOI_PER_MINUTE);
   const faster = useRepeatingStep(() => onChange({ chronoiPerMinute: cpm + 1 }), cpm >= MAX_CHRONOI_PER_MINUTE);
+  const byId = new Map(presets.map((p) => [p.id, p]));
 
   return (
     <>
-      <div
-        className="tempo-presets"
-        role="radiogroup"
-        aria-label={t("metronome.presets")}
-        title={presets[0] && t("metronome.presetsSource", { source: presets[0].source })}
-      >
-        {presets.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            role="radio"
-            aria-checked={metronome.tempoPreset === preset.id}
-            aria-label={`${t(`tempo.${preset.id}`)}, ${t("metronome.cpm", { n: rangeLabel(preset) })}`}
-            className={"tempo-presets__preset" + (metronome.tempoPreset === preset.id ? " is-selected" : "")}
-            onClick={() => onChoosePreset(preset.id)}
-          >
-            <span>{t(`tempo.short.${preset.id}`)}</span>
-            <span className="tempo-presets__range">{rangeLabel(preset)}</span>
-          </button>
-        ))}
+      <div title={presets[0] && t("metronome.presetsSource", { source: presets[0].source })}>
+        <Segmented
+          className="tempo-presets"
+          optionClassName="tempo-presets__preset"
+          options={presets.map((p) => p.id)}
+          value={metronome.tempoPreset}
+          label={t("metronome.presets")}
+          optionLabel={(id) => `${t(`tempo.${id}`)}, ${t("metronome.cpm", { n: rangeLabel(byId.get(id)!) })}`}
+          render={(id) => (
+            <>
+              <span>{t(`tempo.short.${id}`)}</span>
+              <span className="tempo-presets__range">{rangeLabel(byId.get(id)!)}</span>
+            </>
+          )}
+          onChange={onChoosePreset}
+        />
       </div>
 
       <div className="transport__row">
@@ -177,20 +183,14 @@ export function TempoPanel({ metronome, presets, onChange, onChoosePreset }: Tem
 
       <div className="transport__row">
         <span className="transport__label">{t("metronome.grouping")}</span>
-        <div className="segmented segmented--grouping" role="radiogroup" aria-label={t("metronome.grouping")}>
-          {GROUPINGS.map((g) => (
-            <button
-              key={g}
-              type="button"
-              role="radio"
-              aria-checked={grouping === g}
-              className={grouping === g ? "is-selected" : ""}
-              onClick={() => onChange({ grouping: g })}
-            >
-              {t("metronome.groupOf", { n: g })}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="segmented segmented--grouping"
+          options={GROUPINGS}
+          value={grouping}
+          label={t("metronome.grouping")}
+          render={(n) => t("metronome.groupOf", { n })}
+          onChange={(g) => onChange({ grouping: g })}
+        />
       </div>
     </>
   );

@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
-import { degreeLabel, t } from "../i18n/translations";
+import { degreeLabel, octaveMark, t } from "../i18n/translations";
 import { martyriaGlyphs } from "./martyriaGlyphs";
 
 /** How long a Degree must be held to count as a long press instead of a tap. */
@@ -44,6 +44,10 @@ interface LadderProps {
   ladder: LadderModel;
   layout: LadderLayout;
   isonDegreeId: string | null;
+  /** The chronos the metronome is on (1 is the accent), or null while it is stopped; the rail pulses with it. */
+  beat: number | null;
+  /** Length of a chronos, so a pulse fades before the next one. */
+  chronosMs: number;
   onPlayDegree: (degreeId: string) => void;
   onLongPress: (degreeId: string) => void;
 }
@@ -54,11 +58,12 @@ interface LadderProps {
  * (4 moria) still leave room to tap. A tap plays a Degree; a long press is reported separately (it sets or
  * stops the Ison).
  */
-export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress }: LadderProps) {
+export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress }: LadderProps) {
   // One Degree is in the Tab order; the arrow keys move between them.
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const press = useRef<{ timer: number; x: number; y: number; longPressed: boolean } | null>(null);
   const strip = useRef<HTMLDivElement>(null);
+  const rail = useRef<HTMLDivElement>(null);
   const { lowestMoria, highestMoria } = ladder.drawingRange;
   const horizontal = layout === "horizontal";
   const position = (moria: number): CSSProperties => {
@@ -68,6 +73,19 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
       : { bottom: `${share * 100}%` };
   };
   const keyboardWidth = (highestMoria - lowestMoria) * MIN_PX_PER_MORIA + 2 * KEYBOARD_PAD_PX;
+
+  // The metronome is seen where the eyes already are: the rail swells with each chronos, in cinnabar on the accent.
+  useEffect(() => {
+    if (beat === null || !rail.current) return;
+    const style = getComputedStyle(rail.current);
+    const color = style.getPropertyValue(beat === 1 ? "--cinnabar" : "--text").trim();
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const swell = horizontal ? "scaleY(3)" : "scaleX(3)";
+    rail.current.animate(
+      [{ backgroundColor: color, transform: still ? "none" : swell }, { transform: "none" }],
+      { duration: Math.min(chronosMs * 0.7, 500), easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+    );
+  }, [beat, chronosMs, horizontal]);
 
   // A keyboard wider than the screen opens on the Ison, else the Base, else Ni.
   const focusId = isonDegreeId ?? ladder.degrees.find((d) => d.isBase)?.id ?? "Ni";
@@ -150,7 +168,7 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
         onKeyDown={moveFocus}
         style={horizontal ? { minWidth: keyboardWidth } : undefined}
       >
-        <div className="ladder__rail" />
+        <div ref={rail} className="ladder__rail" />
         {ladder.degrees.map((degree, index) => {
           const label = degreeLabel(degree.name, degree.octave);
           const martyria = martyriaGlyphs(degree.name, degree.martyria);
@@ -192,7 +210,15 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
                   {martyria.fthora && <span className="ladder__fthora">{martyria.fthora}</span>}
                 </span>
                 <span className="ladder__text">
-                  <span className="ladder__name">{label}</span>
+                  <span className="ladder__name">
+                    {t(`degree.${degree.name}`)}
+                    {/* Below Ni the mark is drawn as a low stroke: the "͵" sign reads as a comma. */}
+                    {degree.octave < 0 ? (
+                      <span className="ladder__low" aria-hidden="true" />
+                    ) : (
+                      octaveMark(degree.octave)
+                    )}
+                  </span>
                   {marks.map((mark) => (
                     <span key={mark} className="ladder__marks">
                       {mark}

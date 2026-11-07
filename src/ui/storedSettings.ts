@@ -13,6 +13,7 @@ const METRONOME_KEY = "echos.metronome.v1";
 const LADDER_LAYOUT_KEY = "echos.ladderLayout.v1";
 const LANGUAGE_KEY = "echos.language.v1";
 const THEME_KEY = "echos.theme.v1";
+const HELD_A_DEGREE_KEY = "echos.heldADegree.v1";
 
 /** A value saved on this device, or undefined when there is none, it is invalid, or storage is unavailable. */
 function load<T>(key: string, isValid: (value: unknown) => value is T): T | undefined {
@@ -50,3 +51,6 @@ export const loadLanguage = () => load(LANGUAGE_KEY, isLanguage);
 export const saveLanguage = (language: Language) => save(LANGUAGE_KEY, language);
 export const loadTheme = () => load(THEME_KEY, isTheme);
 export const saveTheme = (theme: Theme) => save(THEME_KEY, theme);
+/** Whether the student has once held a Degree to set the Ison; after that the hint is no longer needed. */
+export const loadHeldADegree = () => load(HELD_A_DEGREE_KEY, (v): v is true => v === true) ?? false;
+export const saveHeldADegree = () => save(HELD_A_DEGREE_KEY, true);

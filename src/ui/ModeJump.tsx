@@ -5,15 +5,17 @@ import { t } from "../i18n/translations";
 export const modeAnchor = (mode: ModeId) => `mode-${mode}`;
 
 /**
- * The eight Modes in a row, for long pages. Buttons, not "#" links: the hash already chooses the view.
- * The card's heading takes the focus, so keyboard and screen reader users land where the eye does.
+ * The eight Modes in a row that stays at the top of a long page. Buttons, not "#" links: the hash already chooses
+ * the view. A folded card opens, and its heading takes the focus, so keyboard and screen reader users land where
+ * the eye does.
  */
 export function ModeJump() {
   function jump(mode: ModeId) {
     const card = document.getElementById(modeAnchor(mode));
     if (!card) return;
+    if (card instanceof HTMLDetailsElement) card.open = true;
     card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    card.querySelector<HTMLElement>("h3")?.focus({ preventScroll: true });
+    card.querySelector<HTMLElement>("summary, h3")?.focus({ preventScroll: true });
   }
 
   return (

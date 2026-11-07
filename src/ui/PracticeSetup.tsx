@@ -5,6 +5,7 @@ import { GENUS_IDS, type AttractionId, type GenusId } from "../core/theory/tunin
 import { noteLabel, t } from "../i18n/translations";
 import { LADDER_LAYOUTS, type LadderLayout } from "./Ladder";
 import { ModePicker } from "./ModePicker";
+import { Segmented } from "./Segmented";
 
 interface PracticeSetupProps {
   modeVariant: ModeVariantKey | null;
@@ -52,20 +53,14 @@ export function PracticeSetup(props: PracticeSetupProps) {
         <ModePicker choice={modeVariant} onChoose={props.onChooseModeVariant} onLeave={() => props.onChooseModeVariant(null)} />
         {!modeVariant && (
           // The Mode Variant sets the Genus; "No Mode" brings back the Genus buttons.
-          <div className="segmented segmented--genus" role="radiogroup" aria-label={t("ladder.genus")}>
-            {GENUS_IDS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={ladder.genus === id}
-                className={ladder.genus === id ? "is-selected" : ""}
-                onClick={() => props.onChangeGenus(id)}
-              >
-                {t(`genus.${id}`)}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            className="segmented segmented--genus"
+            options={GENUS_IDS}
+            value={ladder.genus}
+            label={t("ladder.genus")}
+            render={(id) => t(`genus.${id}`)}
+            onChange={props.onChangeGenus}
+          />
         )}
         {ladder.attractions.length > 0 && (
           <div className="setup__row" role="group" aria-label={t("attractions.title")}>
@@ -85,36 +80,33 @@ export function PracticeSetup(props: PracticeSetupProps) {
         )}
         <div className="setup__row">
           <span className="setup__label">{t("ladder.layout")}</span>
-          <div className="segmented segmented--layout" role="radiogroup" aria-label={t("ladder.layout")}>
-            {LADDER_LAYOUTS.map((l) => (
-              <button
-                key={l}
-                type="button"
-                role="radio"
-                aria-checked={layout === l}
-                className={layout === l ? "is-selected" : ""}
-                onClick={() => props.onChangeLayout(l)}
-              >
-                {t(`layout.${l}`)}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            className="segmented segmented--layout"
+            options={LADDER_LAYOUTS}
+            value={layout}
+            label={t("ladder.layout")}
+            render={(l) => t(`layout.${l}`)}
+            onChange={props.onChangeLayout}
+          />
         </div>
         <a className="setup__row setup__link" href={props.settingsHref}>
           <span className="setup__label">{t("settings.referencePitch")}</span>
           <span className="setup__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>
-          <span className="setup__more">{t("setup.change")}</span>
+          <span className="setup__more">{t("nav.settings")} ›</span>
         </a>
-        <p className="setup__source">
-          {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
-          <br />
-          {ladder.source}
-        </p>
-        {ladder.attractions.map((a) => (
-          <p key={a.id} className="setup__source">
-            {t(`attraction.${a.id}`)}: {a.source}
+        <details className="setup__sources">
+          <summary>{t("setup.sources")}</summary>
+          <p className="setup__source">
+            {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
+            <br />
+            {ladder.source}
           </p>
-        ))}
+          {ladder.attractions.map((a) => (
+            <p key={a.id} className="setup__source">
+              {t(`attraction.${a.id}`)}: {a.source}
+            </p>
+          ))}
+        </details>
       </div>
     </section>
   );

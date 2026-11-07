@@ -1,5 +1,6 @@
 import { MELOS_IDS, MODE_IDS, type ModeId, type ModeVariantKey } from "../core/theory/modeVariants";
 import { t } from "../i18n/translations";
+import { Segmented } from "./Segmented";
 
 interface ModePickerProps {
   choice: ModeVariantKey | null;
@@ -27,20 +28,13 @@ export function ModePicker({ choice, onChoose, onLeave }: ModePickerProps) {
         ))}
       </select>
       {choice && (
-        <div className="segmented" role="radiogroup" aria-label={t("modePicker.melos")}>
-          {MELOS_IDS.map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={choice.melos === m}
-              className={choice.melos === m ? "is-selected" : ""}
-              onClick={() => onChoose({ mode: choice.mode, melos: m })}
-            >
-              {t(`melos.${m}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          options={MELOS_IDS}
+          value={choice.melos}
+          label={t("modePicker.melos")}
+          render={(m) => t(`melos.${m}`)}
+          onChange={(m) => onChoose({ mode: choice.mode, melos: m })}
+        />
       )}
     </div>
   );

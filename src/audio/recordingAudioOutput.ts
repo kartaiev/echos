@@ -15,9 +15,14 @@ export interface RecordedClickTrack extends ClickTrackRequest {
 export function createRecordingAudioOutput() {
   const sounds: RecordedSound[] = [];
   const clickTracks: RecordedClickTrack[] = [];
-  const output: AudioOutput & { sounds: RecordedSound[]; clickTracks: RecordedClickTrack[] } = {
+  const output: AudioOutput & { sounds: RecordedSound[]; clickTracks: RecordedClickTrack[]; running: boolean } = {
     sounds,
     clickTracks,
+    /** Tests set this to false to play a device that holds the sound back. */
+    running: true,
+    isRunning() {
+      return output.running;
+    },
     playSound(sound) {
       const recorded = { ...sound, stopped: false };
       sounds.push(recorded);

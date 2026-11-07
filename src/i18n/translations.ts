@@ -65,6 +65,13 @@ const en = {
   "ladder.tuning": "Tuning System: {name}, {moria} moria per octave",
   "ladder.niPitch": "{note} · {hz} Hz",
   "setup.change": "Change",
+  "setup.sources": "Sources",
+  "ison.stopLabel": "Stop the Ison",
+  "metronome.startLabel": "Start the metronome",
+  "metronome.stopLabel": "Stop the metronome",
+  "sound.held": "No sound: the phone has paused it.",
+  "sound.resume": "Turn sound back on",
+  "tables.unreviewedNote": "Nothing on this page has been checked by the project's reviewer yet, unless it is marked Reviewed.",
   "setup.close": "Close",
   "setup.noMode": "No Mode",
   "setup.ni": "Ni {note}",
@@ -104,7 +111,6 @@ const en = {
   "tables.play": "Play",
   "tables.remark": "Leave a remark",
   "tables.intonationSteps": "Degrees and chronoi: {steps}",
-  "review.unreviewed": "Unreviewed",
   "review.reviewed": "Reviewed",
   "modes.cadenceKind.complete": "complete on",
   "modes.cadenceKind.incomplete": "incomplete on",
@@ -213,6 +219,13 @@ const el: Record<TranslationKey, string> = {
   "ladder.tuning": "Σύστημα: {name}, {moria} μόρια στη διαπασών",
   "ladder.niPitch": "{note} · {hz} Hz",
   "setup.change": "Αλλαγή",
+  "setup.sources": "Πηγές",
+  "ison.stopLabel": "Διακοπή του ίσου",
+  "metronome.startLabel": "Έναρξη του μετρονόμου",
+  "metronome.stopLabel": "Διακοπή του μετρονόμου",
+  "sound.held": "Χωρίς ήχο: η συσκευή τον έχει σταματήσει.",
+  "sound.resume": "Επαναφορά ήχου",
+  "tables.unreviewedNote": "Τίποτα σε αυτή τη σελίδα δεν έχει ελεγχθεί ακόμη από τον υπεύθυνο του έργου, εκτός αν έχει τη σήμανση «Ελεγμένο».",
   "setup.close": "Κλείσιμο",
   "setup.noMode": "Χωρίς ήχο",
   "setup.ni": "Νη {note}",
@@ -252,7 +265,6 @@ const el: Record<TranslationKey, string> = {
   "tables.play": "Ακρόαση",
   "tables.remark": "Αφήστε παρατήρηση",
   "tables.intonationSteps": "Φθόγγοι και χρόνοι: {steps}",
-  "review.unreviewed": "Χωρίς έλεγχο",
   "review.reviewed": "Ελεγμένο",
   "modes.cadenceKind.complete": "εντελής στον",
   "modes.cadenceKind.incomplete": "ατελής στον",
@@ -323,9 +335,14 @@ export function t(key: TranslationKey, params: Record<string, string | number> =
   return tIn(current, key, params);
 }
 
+/** The octave mark after a Degree name: "͵" for each octave below Ni, "′" for each octave above. */
+export function octaveMark(octave: number): string {
+  return octave < 0 ? "\u0375".repeat(-octave) : "\u2032".repeat(octave);
+}
+
 /** Degree name with an octave mark: "Ke͵" an octave below Ni, "Ni′" an octave above. */
 export function degreeLabel(name: DegreeName, octave: number): string {
-  return t(`degree.${name}`) + (octave < 0 ? "\u0375".repeat(-octave) : "\u2032".repeat(octave));
+  return t(`degree.${name}`) + octaveMark(octave);
 }
 
 /** Western note for display, with a real sharp sign: "C#3" → "C♯3". */

@@ -990,3 +990,46 @@ describe("Practice Session: Intonations in Greek", () => {
       }
   });
 });
+
+describe("Practice Session: sound held back by the device", () => {
+  it("says so when the device keeps the sound stopped, as Safari does after a call or an app switch", () => {
+    const { audio, session } = setup();
+    audio.running = false;
+
+    session.setIson("Pa");
+
+    expect(session.soundIsHeld()).toBe(true);
+  });
+
+  it("starts the Ison and the metronome again on request, so they sound once the device lets them", () => {
+    const { audio, session } = setup();
+    session.setIson("Pa");
+    session.startMetronome();
+
+    session.restartSound();
+
+    const isons = audio.sounds.filter((s) => s.kind === "ison");
+    expect(isons.map((s) => s.stopped)).toEqual([true, false]);
+    expect(isons[1]?.frequency).toBeCloseTo(isons[0]!.frequency, 6);
+    expect(audio.clickTracks.map((t) => t.stopped)).toEqual([true, false]);
+    expect(session.ison().degreeId).toBe("Pa");
+    expect(session.metronome().running).toBe(true);
+  });
+
+  it("restarts nothing that was not sounding", () => {
+    const { audio, session } = setup();
+
+    session.restartSound();
+
+    expect(audio.sounds).toEqual([]);
+    expect(audio.clickTracks).toEqual([]);
+  });
+
+  it("does not, while the sound can be heard", () => {
+    const { session } = setup();
+
+    session.setIson("Pa");
+
+    expect(session.soundIsHeld()).toBe(false);
+  });
+});
