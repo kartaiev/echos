@@ -1,12 +1,14 @@
 import { isIsonVoice, type IsonVoice } from "../core/practice/isonVoice";
 import { isModeVariantKey, type ModeVariantKey } from "../core/theory/modeVariants";
 import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
+import { LADDER_LAYOUTS, type LadderLayout } from "./Ladder";
 import { isMetronomeSettings, type MetronomeSettings } from "../core/practice/metronomeSettings";
 
 const PITCH_KEY = "echos.pitchSettings.v1";
 const ISON_VOICE_KEY = "echos.isonVoice.v1";
 const MODE_VARIANT_KEY = "echos.modeVariant.v1";
 const METRONOME_KEY = "echos.metronome.v1";
+const LADDER_LAYOUT_KEY = "echos.ladderLayout.v1";
 
 /** A value saved on this device, or undefined when there is none, it is invalid, or storage is unavailable. */
 function load<T>(key: string, isValid: (value: unknown) => value is T): T | undefined {
@@ -37,3 +39,6 @@ export const loadModeVariant = () => load(MODE_VARIANT_KEY, isModeVariantKey);
 export const saveModeVariant = (key: ModeVariantKey | null) => save(MODE_VARIANT_KEY, key);
 export const loadMetronomeSettings = () => load(METRONOME_KEY, isMetronomeSettings);
 export const saveMetronomeSettings = (settings: MetronomeSettings) => save(METRONOME_KEY, settings);
+const isLadderLayout = (value: unknown): value is LadderLayout => LADDER_LAYOUTS.includes(value as LadderLayout);
+export const loadLadderLayout = () => load(LADDER_LAYOUT_KEY, isLadderLayout);
+export const saveLadderLayout = (layout: LadderLayout) => save(LADDER_LAYOUT_KEY, layout);
