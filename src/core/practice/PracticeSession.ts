@@ -125,6 +125,7 @@ export interface ScaleDescription {
 /** What an Intonation shows while it plays. */
 export interface PlayedIntonation {
   text: string;
+  greekText: string;
   durationMs: number;
 }
 
@@ -351,7 +352,7 @@ export function createPracticeSession({
           durationMs: chronoi * INTONATION_CHRONOS_MS,
         })),
       );
-      return { text: variant.intonation.text, durationMs };
+      return { text: variant.intonation.text, greekText: variant.intonation.greekText, durationMs };
     },
     /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked, Attractions are off. */
     leaveModeVariant() {

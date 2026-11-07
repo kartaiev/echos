@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createPracticeSession } from "./PracticeSession";
 import { createRecordingAudioOutput } from "../../audio/recordingAudioOutput";
 import { degreeId } from "../theory/scale";
+import { MELOS_IDS, MODE_IDS } from "../theory/modeVariants";
 
 function setup() {
   const audio = createRecordingAudioOutput();
@@ -451,7 +452,7 @@ describe("Practice Session: Intonations", () => {
 
     const played = session.playIntonation({ mode: "first", melos: "heirmologic" });
 
-    expect(played).toEqual({ text: "Ah-nah-nes", durationMs: 2400 });
+    expect(played).toEqual({ text: "Ah-nah-nes", greekText: "Ά-να-νες", durationMs: 2400 });
     expect(audio.sounds.map(({ kind, startMs, durationMs }) => ({ kind, startMs, durationMs }))).toEqual([
       { kind: "intonation", startMs: 0, durationMs: 900 },
       { kind: "intonation", startMs: 900, durationMs: 300 },
@@ -965,5 +966,27 @@ describe("Practice Session: Theory tables", () => {
 
     expect(audio.sounds.slice(0, 8).every((s) => s.stopped)).toBe(true);
     expect(audio.sounds.slice(8).every((s) => !s.stopped)).toBe(true);
+  });
+});
+
+// Greek Intonation texts from the course's list: άνανες, νεανές, νανά, λέγετος, ανέανες, νεχέανες, άνες, νεάγιε.
+describe("Practice Session: Intonations in Greek", () => {
+  it("reports the Greek syllables of an Intonation with the Latin ones", () => {
+    const { session } = setup();
+
+    expect(session.playIntonation({ mode: "plagal-second", melos: "heirmologic" })).toMatchObject({
+      text: "Neh-heh-ah-nes",
+      greekText: "Νε-χέ-α-νες",
+    });
+  });
+
+  it("has a Greek text for every Intonation, with as many syllables as the Latin one", () => {
+    const { session } = setup();
+
+    for (const mode of MODE_IDS)
+      for (const melos of MELOS_IDS) {
+        const intonation = session.describeModeVariant({ mode, melos }).intonation;
+        if (intonation) expect(intonation.greekText.split("-")).toHaveLength(intonation.text.split("-").length);
+      }
   });
 });
