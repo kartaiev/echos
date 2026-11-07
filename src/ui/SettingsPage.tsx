@@ -2,6 +2,7 @@ import type { PitchSettings, PitchState } from "../core/practice/PracticeSession
 import { MAX_FINE_ADJUSTMENT_HZ, NI_NOTE_CHOICES, REGISTERS, soundingNote } from "../core/practice/pitchSettings";
 import type { NoteName } from "../core/theory/westernPitch";
 import { LANGUAGES, noteLabel, t, type Language } from "../i18n/translations";
+import { THEMES, type Theme } from "./theme";
 
 interface SettingsPageProps {
   pitch: PitchState;
@@ -9,9 +10,11 @@ interface SettingsPageProps {
   onPlayNi: () => void;
   language: Language;
   onChangeLanguage: (language: Language) => void;
+  theme: Theme;
+  onChangeTheme: (theme: Theme) => void;
 }
 
-export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLanguage }: SettingsPageProps) {
+export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLanguage, theme, onChangeTheme }: SettingsPageProps) {
   const { referencePitch, register } = pitch;
   const choices = NI_NOTE_CHOICES.includes(referencePitch.note) ? NI_NOTE_CHOICES : [...NI_NOTE_CHOICES, referencePitch.note];
   const fine = referencePitch.fineHz;
@@ -34,6 +37,24 @@ export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLang
               onClick={() => onChangeLanguage(l)}
             >
               {t(`language.${l}`)}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="settings__group">
+        <legend>{t("settings.theme")}</legend>
+        <div className="segmented segmented--three" role="radiogroup" aria-label={t("settings.theme")}>
+          {THEMES.map((th) => (
+            <button
+              key={th}
+              type="button"
+              role="radio"
+              aria-checked={theme === th}
+              className={theme === th ? "is-selected" : ""}
+              onClick={() => onChangeTheme(th)}
+            >
+              {t(`theme.${th}`)}
             </button>
           ))}
         </div>

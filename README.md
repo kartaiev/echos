@@ -4,6 +4,12 @@ A free practice companion for students of Byzantine chant: the scales of every g
 
 Status: planning. See the issues for the spec and the build plan.
 
+## Running and publishing
+
+- `npm run dev` starts the app for development; `npm test` runs the tests.
+- `npm run build` makes the installable, offline app in `dist/` (relative paths, a service worker that precaches every file).
+- Every push to `main` is tested, built and published to GitHub Pages by `.github/workflows/deploy.yml`. One-time setup: Settings → Pages → Source: GitHub Actions.
+
 ## Licenses
 
 - Code: MIT (see `LICENSE`).
