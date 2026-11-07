@@ -99,5 +99,5 @@ The basic unit of time against which note durations are counted (plural: chronoi
 _Avoid_: beat, pulse
 
 **Tempo Preset**:
-A named tempo range of the tradition (e.g. Argon, Meson, Syntomon) expressed in chronoi per minute.
+A named tempo range of the tradition (e.g. Bradeia, Mesi, Metria) expressed in chronoi per minute.
 _Avoid_: speed

@@ -497,3 +497,192 @@ describe("Practice Session: Intonations", () => {
     expect(audio.sounds).toEqual([]);
   });
 });
+
+// A Chronos lasts 60000 / (chronoi per minute) ms: 80 chronoi a minute is 750 ms, 120 is 500 ms.
+describe("Practice Session: Metronome", () => {
+  it("at 80 chronoi a minute in groups of three requests a click every 750 ms with an accent on every third", () => {
+    const { audio, session } = setup();
+
+    session.setMetronome({ chronoiPerMinute: 80, grouping: 3 });
+    session.startMetronome();
+
+    expect(audio.clickTracks).toHaveLength(1);
+    expect(audio.clickTracks[0]).toMatchObject({ intervalMs: 750, accentEvery: 3, stopped: false });
+    expect(session.metronome()).toMatchObject({ chronoiPerMinute: 80, grouping: 3, running: true });
+  });
+
+  it("starts at Melling's Medium tempo, 100 chronoi a minute, in groups of two, and makes no sound until started", () => {
+    const { audio, session } = setup();
+
+    expect(session.metronome()).toMatchObject({ chronoiPerMinute: 100, grouping: 2, running: false, count: null });
+    expect(audio.clickTracks).toEqual([]);
+
+    session.startMetronome();
+
+    expect(audio.clickTracks[0]).toMatchObject({ intervalMs: 600, accentEvery: 2 });
+  });
+
+  it("stops the clicks", () => {
+    const { audio, session } = setup();
+
+    session.startMetronome();
+    session.stopMetronome();
+
+    expect(audio.clickTracks[0]?.stopped).toBe(true);
+    expect(session.metronome()).toMatchObject({ running: false, count: null });
+  });
+
+  it("starting twice keeps one click track", () => {
+    const { audio, session } = setup();
+
+    session.startMetronome();
+    session.startMetronome();
+
+    expect(audio.clickTracks.map((c) => c.stopped)).toEqual([false]);
+  });
+
+  // At 80 chronoi a minute a Chronos lasts 750 ms: 0-749 ms is the 1st, 1500-2249 the 3rd, 2250 starts the next group.
+  it.each([
+    [0, 1],
+    [749, 1],
+    [750, 2],
+    [1600, 3],
+    [2250, 1],
+  ])("counts the Chronos in the group from the clicks heard: at %i ms the count is %i", (elapsedMs, count) => {
+    const { audio, session } = setup();
+
+    session.setMetronome({ chronoiPerMinute: 80, grouping: 3 });
+    session.startMetronome();
+    audio.clickTracks[0]!.elapsedMs = elapsedMs;
+
+    expect(session.metronome().count).toBe(count);
+  });
+
+  it("shows no count before the first click is heard", () => {
+    const { audio, session } = setup();
+
+    session.startMetronome();
+    audio.clickTracks[0]!.elapsedMs = -20;
+
+    expect(session.metronome().count).toBeNull();
+  });
+
+  it("changing tempo or grouping while it runs restarts the clicks from the first of the group", () => {
+    const { audio, session } = setup();
+
+    session.startMetronome();
+    session.setMetronome({ chronoiPerMinute: 120 });
+    session.setMetronome({ grouping: 4 });
+
+    expect(audio.clickTracks.map(({ intervalMs, accentEvery, stopped }) => ({ intervalMs, accentEvery, stopped }))).toEqual([
+      { intervalMs: 600, accentEvery: 2, stopped: true },
+      { intervalMs: 500, accentEvery: 2, stopped: true },
+      { intervalMs: 500, accentEvery: 4, stopped: false },
+    ]);
+  });
+
+  it("changing tempo while stopped makes no sound", () => {
+    const { audio, session } = setup();
+
+    session.setMetronome({ chronoiPerMinute: 120, grouping: 4 });
+
+    expect(audio.clickTracks).toEqual([]);
+  });
+
+  it.each([
+    [10, 40],
+    [300, 240],
+    [87.6, 88],
+  ])("keeps the tempo a whole number of chronoi a minute between 40 and 240: %f becomes %i", (asked, kept) => {
+    const { session } = setup();
+
+    session.setMetronome({ chronoiPerMinute: asked });
+
+    expect(session.metronome().chronoiPerMinute).toBe(kept);
+  });
+
+  it("restores tempo and grouping saved on the device without sounding", () => {
+    const audio = createRecordingAudioOutput();
+    const session = createPracticeSession({ audio, metronome: { chronoiPerMinute: 120, grouping: 4 } });
+
+    expect(audio.clickTracks).toEqual([]);
+    session.startMetronome();
+
+    expect(audio.clickTracks[0]).toMatchObject({ intervalMs: 500, accentEvery: 4 });
+  });
+
+  it("runs together with the Ison: neither starts, stops nor restarts the other", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Ni");
+    session.startMetronome();
+    session.setIson("Di");
+    session.setMetronome({ chronoiPerMinute: 120 });
+    session.stopIson();
+    session.stopMetronome();
+    session.setIson("Pa");
+    session.startMetronome();
+
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", true], ["ison", true], ["ison", false]]);
+    expect(audio.clickTracks.map((c) => [c.intervalMs, c.stopped])).toEqual([[600, true], [500, true], [500, false]]);
+  });
+});
+
+// Tempo Presets after Melling, "Reading Psalmodia" (2000), §11 Rhythm & Tempo, in beats (chronoi) per minute:
+// Slow (Bradeia) 80-100, Medium (Mesi) 100-120, Moderate (Metria) 120-160, Quick (Tacheia) 160-180,
+// Very Quick (Tachytati) from 180. Speech tempo (Chyma) is unmetred and not a Tempo Preset.
+describe("Practice Session: Tempo Presets", () => {
+  it("lists the presets slowest first, with their ranges, source and review status", () => {
+    const { session } = setup();
+
+    const presets = session.tempoPresets();
+
+    expect(presets.map((p) => [p.id, p.value.minChronoiPerMinute, p.value.maxChronoiPerMinute])).toEqual([
+      ["bradeia", 80, 100],
+      ["mesi", 100, 120],
+      ["metria", 120, 160],
+      ["tacheia", 160, 180],
+      ["tachytati", 180, null],
+    ]);
+    expect(presets.every((p) => p.reviewStatus === "unreviewed" && /Melling/.test(p.source))).toBe(true);
+  });
+
+  it.each([
+    ["bradeia", 80, 750],
+    ["mesi", 100, 600],
+    ["metria", 120, 500],
+    ["tacheia", 160, 375],
+    ["tachytati", 180, 333.33],
+  ] as const)("choosing %s sets the slowest tempo of its range, %i chronoi a minute (%i ms)", (id, chronoiPerMinute, intervalMs) => {
+    const { audio, session } = setup();
+
+    session.chooseTempoPreset(id);
+    session.startMetronome();
+
+    expect(session.metronome()).toMatchObject({ chronoiPerMinute, tempoPreset: id });
+    expect(audio.clickTracks[0]?.intervalMs).toBeCloseTo(intervalMs, 2);
+  });
+
+  it.each([
+    [60, null],
+    [99, "bradeia"],
+    [100, "mesi"],
+    [140, "metria"],
+    [200, "tachytati"],
+  ] as const)("names the preset a tempo set by hand falls in: %i is %s", (chronoiPerMinute, preset) => {
+    const { session } = setup();
+
+    session.setMetronome({ chronoiPerMinute });
+
+    expect(session.metronome().tempoPreset).toBe(preset);
+  });
+
+  it("keeps the grouping when a preset is chosen", () => {
+    const { session } = setup();
+
+    session.setMetronome({ grouping: 3 });
+    session.chooseTempoPreset("bradeia");
+
+    expect(session.metronome().grouping).toBe(3);
+  });
+});

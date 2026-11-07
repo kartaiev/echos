@@ -1,17 +1,21 @@
-import type { AudioOutput, PlayingSound } from "../../audio/AudioOutput";
+import type { AudioOutput, PlayingClickTrack, PlayingSound } from "../../audio/AudioOutput";
 import { MODE_VARIANTS, type ModeVariantKey } from "../theory/modeVariants";
 import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../theory/scale";
 import { GENUS_IDS, PMC_1881, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
 import { DEFAULT_ISON_VOICE, type IsonVoice } from "./isonVoice";
+import { TEMPO_PRESETS, tempoPreset, tempoPresetOf, type TempoPreset, type TempoPresetId } from "../theory/tempoPresets";
+import { chronosMs, clampTempo, DEFAULT_METRONOME_SETTINGS, type MetronomeSettings } from "./metronomeSettings";
 
 export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 export type { IsonVoice } from "./isonVoice";
+export type { Grouping, MetronomeSettings } from "./metronomeSettings";
+export type { TempoPreset, TempoPresetId } from "../theory/tempoPresets";
 
 const DEGREE_DURATION_MS = 1200;
 /** One Chronos of an Intonation: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
-const INTONATION_CHRONOS_MS = 600;
+const INTONATION_CHRONOS_MS = chronosMs(100);
 /** Degrees and Intonations always sing "a" at full volume; only the Ison voice is adjustable. */
 const SUNG_VOWEL = "a";
 const SUNG_VOLUME = 1;
@@ -35,6 +39,8 @@ export interface PracticeSessionOptions {
   isonVoice?: IsonVoice;
   /** The Mode Variant last chosen on this device; restoring it makes no sound. */
   modeVariant?: ModeVariantKey;
+  /** Tempo and grouping restored from the device; restoring them makes no sound. */
+  metronome?: MetronomeSettings;
 }
 
 export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
@@ -74,6 +80,14 @@ export interface PlayedIntonation {
   durationMs: number;
 }
 
+export interface MetronomeState extends MetronomeSettings {
+  running: boolean;
+  /** The preset whose range holds the tempo, or null below the slowest. */
+  tempoPreset: TempoPresetId | null;
+  /** Which Chronos of the group is sounding, from 1; null while stopped or before the first click is heard. */
+  count: number | null;
+}
+
 export interface IsonState extends IsonVoice {
   /** The Degree the Ison holds, or null when it is silent. */
   degreeId: string | null;
@@ -88,6 +102,7 @@ export function createPracticeSession({
   pitchSettings = DEFAULT_PITCH_SETTINGS,
   isonVoice = DEFAULT_ISON_VOICE,
   modeVariant,
+  metronome = DEFAULT_METRONOME_SETTINGS,
 }: PracticeSessionOptions) {
   const tuningSystem = PMC_1881;
   let chosenVariant: ModeVariantKey | null = modeVariant ?? null;
@@ -97,6 +112,8 @@ export function createPracticeSession({
   let currentDegreeSound: PlayingSound | null = null;
   let intonationSounds: PlayingSound[] = [];
   let ison: { degreeId: string; frequency: number; sound: PlayingSound } | null = null;
+  let tempo = metronome;
+  let clicks: PlayingClickTrack | null = null;
 
   const buildScaleIn = (g: GenusId) =>
     buildScale({ tuningSystem, genus: g, referencePitchHz: niFrequency(settings), lowest: LADDER_LOWEST, highest: LADDER_HIGHEST });
@@ -114,6 +131,30 @@ export function createPracticeSession({
     ison?.sound.stop();
     const sound = audio.playSound({ kind: "ison", frequency, durationMs: null, vowel: voice.vowel, volume: voice.volume });
     ison = { degreeId, frequency, sound };
+  }
+
+  function startClicks() {
+    clicks?.stop();
+    clicks = audio.playClickTrack({ intervalMs: chronosMs(tempo.chronoiPerMinute), accentEvery: tempo.grouping });
+  }
+
+  function stopClicks() {
+    clicks?.stop();
+    clicks = null;
+  }
+
+  /** A running metronome starts again from the first of the group, so the count and the accent stay together. */
+  function changeTempo(change: Partial<MetronomeSettings>) {
+    const next = { ...tempo, ...change };
+    tempo = { chronoiPerMinute: clampTempo(next.chronoiPerMinute), grouping: next.grouping };
+    if (clicks) startClicks();
+  }
+
+  function currentCount(): number | null {
+    if (!clicks) return null;
+    const elapsed = clicks.elapsedMs();
+    if (elapsed < 0) return null;
+    return (Math.floor(elapsed / chronosMs(tempo.chronoiPerMinute)) % tempo.grouping) + 1;
   }
 
   function stopIson() {
@@ -223,6 +264,28 @@ export function createPracticeSession({
     ison(): IsonState {
       return { degreeId: ison?.degreeId ?? null, ...voice };
     },
+    metronome(): MetronomeState {
+      return {
+        ...tempo,
+        running: clicks !== null,
+        tempoPreset: tempoPresetOf(tempo.chronoiPerMinute),
+        count: currentCount(),
+      };
+    },
+    /** Change tempo and/or grouping; the tempo is kept to a whole number of chronoi a minute from 40 to 240. */
+    setMetronome: changeTempo,
+    /** Set the tempo to the slowest of the preset's range; the grouping stays. */
+    chooseTempoPreset(id: TempoPresetId) {
+      changeTempo({ chronoiPerMinute: tempoPreset(id).value.minChronoiPerMinute });
+    },
+    tempoPresets(): readonly TempoPreset[] {
+      return TEMPO_PRESETS;
+    },
+    /** Start the clicks; the Ison and any sung sound go on as they are. Starting it again changes nothing. */
+    startMetronome() {
+      if (!clicks) startClicks();
+    },
+    stopMetronome: stopClicks,
     /** Change the Ison vowel and/or volume; a sounding Ison changes with it. */
     setIsonVoice(change: Partial<IsonVoice>) {
       const previous = voice;
