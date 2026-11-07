@@ -12,6 +12,8 @@ interface SegmentedProps<T extends string | number> {
   className?: string;
   optionClassName?: string;
   lang?: (option: T) => string | undefined;
+  /** Whether the arrows go round from the last choice to the first; off where the choices are an ordered scale. */
+  wrap?: boolean;
 }
 
 /**
@@ -27,7 +29,9 @@ export function Segmented<T extends string | number>(props: SegmentedProps<T>) {
     if (step === undefined) return;
     e.preventDefault();
     const from = options.indexOf(focusable as T);
-    const to = (from + step + options.length) % options.length;
+    const to =
+      props.wrap === false ? Math.max(0, Math.min(options.length - 1, from + step)) : (from + step + options.length) % options.length;
+    if (to === from) return;
     const next = options[to];
     if (next === undefined) return;
     onChange(next);

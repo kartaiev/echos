@@ -17,11 +17,9 @@ import { ModesPage } from "./ModesPage";
 import { PracticeSetup } from "./PracticeSetup";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, type Theme } from "./theme";
-import { TheoryTablesPage } from "./TheoryTablesPage";
 import { TransportBar } from "./TransportBar";
 import { useSoundHeld, useWakeLock } from "./whileSinging";
 import {
-  loadHeldADegree,
   loadIsonVoice,
   loadLadderLayout,
   loadLanguage,
@@ -29,7 +27,6 @@ import {
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
-  saveHeldADegree,
   saveIsonVoice,
   saveLadderLayout,
   saveLanguage,
@@ -40,7 +37,7 @@ import {
 } from "./storedSettings";
 
 /** Plain "#name" hashes only: they survive being opened inside claude.ai and other embeds. */
-const VIEW_HASHES = { practice: "#practice", modes: "#modes", tables: "#tables", settings: "#pitch" } as const;
+const VIEW_HASHES = { practice: "#practice", modes: "#modes", settings: "#pitch" } as const;
 type View = keyof typeof VIEW_HASHES;
 const VIEWS = Object.keys(VIEW_HASHES) as View[];
 
@@ -91,8 +88,6 @@ export function App() {
   const somethingSounds = ison.degreeId !== null || metronome.running;
   useWakeLock(somethingSounds);
   const sound = useSoundHeld(somethingSounds, () => session.soundIsHeld());
-  // The hint teaches the long press; once the student has used it, the Ladder gets the room back.
-  const [heldADegree, setHeldADegree] = useState(loadHeldADegree);
 
   useEffect(() => {
     // Each view opens at its top, not at the scroll position the last one was left at.
@@ -222,8 +217,6 @@ export function App() {
           theme={theme}
           onChangeTheme={changeTheme}
         />
-      ) : view === "tables" ? (
-        <TheoryTablesPage session={session} />
       ) : view === "modes" ? (
         <ModesPage
           describe={(key) => session.describeModeVariant(key)}
@@ -246,7 +239,6 @@ export function App() {
             onToggleAttraction={(id) => act(() => session.toggleAttraction(id))}
             onChangeLayout={changeLayout}
           />
-          {!heldADegree && <p className="practice__hint">{t("ladder.hint")}</p>}
           <Ladder
             ladder={ladder}
             layout={layout}
@@ -257,13 +249,7 @@ export function App() {
               session.playDegree(id);
               sound.checkSoon();
             }}
-            onLongPress={(id) => {
-              actOnIson(() => session.toggleIson(id));
-              if (!heldADegree) {
-                saveHeldADegree();
-                setHeldADegree(true);
-              }
-            }}
+            onLongPress={(id) => actOnIson(() => session.toggleIson(id))}
           />
           <TransportBar
             ison={ison}

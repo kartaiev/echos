@@ -94,19 +94,6 @@ export function PracticeSetup(props: PracticeSetupProps) {
           <span className="setup__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>
           <span className="setup__more">{t("nav.settings")} ›</span>
         </a>
-        <details className="setup__sources">
-          <summary>{t("setup.sources")}</summary>
-          <p className="setup__source">
-            {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
-            <br />
-            {ladder.source}
-          </p>
-          {ladder.attractions.map((a) => (
-            <p key={a.id} className="setup__source">
-              {t(`attraction.${a.id}`)}: {a.source}
-            </p>
-          ))}
-        </details>
       </div>
     </section>
   );

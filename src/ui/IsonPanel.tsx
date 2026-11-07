@@ -41,15 +41,12 @@ export function IsonLane({ ison, degrees, voiceOpen, voicePanelId, onSetIson, on
       >
         {t("ison.voice")}
       </button>
-      <button
-        type="button"
-        className={"transport__stop" + (sounding ? " is-sounding" : "")}
-        aria-label={t("ison.stopLabel")}
-        disabled={!sounding}
-        onClick={onStop}
-      >
-        {t("ison.stop")}
-      </button>
+      {/* Only while the Ison sounds: an inert Stop would sit right above the metronome's button. */}
+      {sounding && (
+        <button type="button" className="transport__stop" aria-label={t("ison.stopLabel")} onClick={onStop}>
+          {t("ison.stop")}
+        </button>
+      )}
     </div>
   );
 }

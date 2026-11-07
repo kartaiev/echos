@@ -46,7 +46,13 @@ export function TransportBar(props: TransportBarProps) {
 
   useEffect(() => {
     if (!sheet) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSheet(null);
+    // Escape gives the focus back to the button that opened the sheet; a touch elsewhere keeps it where it lands.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const opener = bar.current?.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(sheet === "voice" ? voiceId : tempoId)}"]`);
+      setSheet(null);
+      opener?.focus();
+    };
     const onPointer = (e: PointerEvent) => {
       if (!bar.current?.contains(e.target as Node)) setSheet(null);
     };
@@ -56,7 +62,7 @@ export function TransportBar(props: TransportBarProps) {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("pointerdown", onPointer, { capture: true });
     };
-  }, [sheet]);
+  }, [sheet, voiceId, tempoId]);
 
   return (
     <section ref={bar} className="transport" aria-label={t("transport.label")}>

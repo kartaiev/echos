@@ -94,10 +94,10 @@ a {
   color: var(--cinnabar);
 }
 
-/* Four tabs in one row, each a full thumb's width. */
+/* Three tabs in one row, each a full thumb's width. */
 .header-nav {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--line);
 }
 
@@ -217,6 +217,47 @@ a {
   }
 }
 
+/*
+ * Holding a key: a ring closes in on it and is whole at the moment the Ison starts (LONG_PRESS_MS in Ladder.tsx,
+ * 120 + 380 = 500ms). It waits 120ms so that a plain tap shows no ring.
+ */
+.ladder__degree::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 3px solid var(--cinnabar);
+  border-radius: 15px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ladder__degree.is-holding::before {
+  animation: hold-ring 380ms cubic-bezier(0.4, 0, 0.2, 1) 120ms both;
+}
+
+@keyframes hold-ring {
+  from {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ladder__degree.is-holding::before {
+    animation-name: hold-ring-still;
+  }
+
+  @keyframes hold-ring-still {
+    to {
+      opacity: 1;
+    }
+  }
+}
+
 /* The finger on a key: the answer comes before the sound does. */
 .ladder__degree:active {
   border-color: var(--cinnabar);
@@ -241,8 +282,6 @@ a {
   outline: 2px solid var(--cinnabar);
   outline-offset: 2px;
 }
-
-
 
 /* Base and Dominant Degrees of the chosen Mode Variant; the Base is filled softly, the Ison fully. */
 .ladder__degree.is-dominant {
@@ -355,6 +394,29 @@ a {
   margin: 0;
 }
 
+/* The band the metronome flashes along the rail; invisible between chronoi. */
+.ladder__pulse {
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  bottom: -12px;
+  width: 28px;
+  margin-left: -14px;
+  border-radius: 14px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ladder--horizontal .ladder__pulse {
+  left: 0;
+  right: 0;
+  top: 50%;
+  bottom: auto;
+  width: auto;
+  height: 28px;
+  margin: -14px 0 0;
+}
+
 .ladder--horizontal .ladder__rail {
   left: 0;
   right: 0;
@@ -374,8 +436,6 @@ a {
   padding: 4px 6px;
   transform: translateX(-50%);
 }
-
-
 
 .ladder--horizontal .ladder__degree::after {
   top: auto;
@@ -410,12 +470,6 @@ a {
   min-width: 22px;
   transform: translate(-50%, -50%);
 }
-
-
-
-
-
-
 
 .segmented--layout {
   grid-template-columns: repeat(2, auto);
@@ -556,21 +610,6 @@ a {
 
 /* The way into pitch settings from the practice view: a whole tappable card, not an inline link. */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .modes h2 {
   margin: 20px 0 8px;
   font-size: 1.1rem;
@@ -650,36 +689,6 @@ a {
   cursor: pointer;
 }
 
-.mode-card__source {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .segmented--grouping {
   grid-template-columns: repeat(3, 48px);
 }
@@ -697,197 +706,6 @@ a {
   white-space: nowrap;
 }
 
-.tables h2 {
-  margin: 24px 0 8px;
-  font-size: 1.1rem;
-}
-
-.tables__intro,
-.tables__cycle,
-.tables__steps,
-.tables__cadences {
-  margin: 4px 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.tables__steps {
-  display: block;
-}
-
-.tables__card {
-  margin: 12px 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.tables__card h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  color: var(--cinnabar);
-}
-
-.tables__heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-/* A folded card: its heading is the button that opens it, with a mark that turns. */
-.tables__card > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 44px;
-  margin: -12px -14px;
-  padding: 12px 14px;
-  list-style: none;
-  cursor: pointer;
-}
-
-.tables__card > summary::-webkit-details-marker {
-  display: none;
-}
-
-.tables__card > summary::after {
-  content: "";
-  width: 0.5em;
-  height: 0.5em;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg) translateY(-25%);
-  transition: transform 0.2s;
-}
-
-.tables__card[open] > summary {
-  margin-bottom: 0;
-}
-
-.tables__card[open] > summary::after {
-  transform: rotate(-135deg);
-}
-
-.tables__card > summary:focus-visible {
-  outline: 2px solid var(--cinnabar);
-  outline-offset: -2px;
-  border-radius: 12px;
-}
-
-.tables__source a {
-  color: inherit;
-  text-underline-offset: 2px;
-}
-
-.tables__source {
-  margin: 6px 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-  overflow-wrap: anywhere;
-}
-
-.tables__status {
-  display: inline-block;
-  padding: 0 6px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.tables__status.is-reviewed {
-  background: var(--line);
-  color: var(--text);
-}
-
-.tables__degrees {
-  width: 100%;
-  margin: 8px 0;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.tables__degrees th,
-.tables__degrees td {
-  padding: 4px 4px;
-  border-bottom: 1px solid var(--line);
-  text-align: right;
-}
-
-.tables__degrees th:first-child,
-.tables__degrees thead th {
-  text-align: left;
-}
-
-.tables__degrees thead th {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.tables__degrees td.tables__martyria {
-  text-align: left;
-}
-
-.tables__martyria .ladder__martyria {
-  font-size: 1.3rem;
-}
-
-.tables__play {
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.tables__variant + .tables__variant {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.tables__variant h4 {
-  margin: 8px 0 6px;
-  font-size: 0.95rem;
-}
-
-.tables__variant dl {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
-  margin: 0 0 8px;
-  font-size: 0.9rem;
-}
-
-.tables__variant dd {
-  margin: 0;
-}
-
-.tables__tempos {
-  list-style: none;
-}
-
-.tables__tempo + .tables__tempo {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-}
-
-.tables__attraction p {
-  margin: 8px 0 0;
-  font-size: 0.9rem;
-}
-
 .mode-name__greek {
   margin-left: 8px;
   color: var(--muted);
@@ -900,7 +718,6 @@ a {
 
 /* The views other than Practice end with room below them; Practice ends with its transport bar. */
 .modes,
-.tables,
 .settings {
   padding-bottom: 32px;
 }
@@ -1032,13 +849,6 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-.setup__source {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-  overflow-wrap: anywhere;
-}
-
 /*
  * The Ison and the metronome stay at the bottom of the screen while the Ladder scrolls, under the thumb. The
  * bar spans the column including its side padding, and keeps clear of the home indicator.
@@ -1154,9 +964,6 @@ a {
   color: inherit;
 }
 
-
-
-
 .transport__more:focus-visible,
 .transport__stop:focus-visible,
 .transport__beat:focus-visible,
@@ -1193,14 +1000,6 @@ a {
 .segmented--vowel {
   grid-template-columns: repeat(4, 44px);
 }
-
-
-
-
-
-
-
-
 
 /* The five Tempo Presets in one row: the name a teacher says, and its range. */
 .tempo-presets {
@@ -1273,32 +1072,33 @@ a {
 }
 
 /*
- * The eight Modes as a jump row that stays at the top of the long pages. On a phone it is one line that scrolls
- * sideways, so it never takes more than a strip of the screen.
+ * The eight Modes as a jump block that stays at the top of the long pages: the authentic Modes over the plagal
+ * ones on a phone, one line on a wider screen with a wider gap between the two sets.
  */
 .mode-jump {
   position: sticky;
   top: 0;
   z-index: 1;
-  display: flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
   margin: 8px calc(-1 * max(16px, env(safe-area-inset-left, 0px))) 4px;
   padding: 6px max(16px, env(safe-area-inset-left, 0px));
-  overflow-x: auto;
-  scrollbar-width: none;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
 .mode-jump button {
-  flex: 1 0 auto;
-  min-height: 44px;
-  padding: 0 12px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 4px;
+  white-space: nowrap;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
   color: var(--cinnabar);
   font: inherit;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1307,10 +1107,24 @@ a {
   border-color: var(--cinnabar);
 }
 
-/* The card a jump lands on keeps its heading clear of the jump row. */
-.mode-card,
-.tables__card {
-  scroll-margin-top: 72px;
+@media (min-width: 480px) {
+  .mode-jump {
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  .mode-jump .mode-jump__plagal {
+    margin-left: 8px;
+  }
+}
+
+.mode-jump button[aria-current] {
+  border-color: var(--cinnabar);
+  background: var(--cinnabar-soft);
+}
+
+/* The card a jump lands on keeps its heading clear of the jump block. */
+.mode-card {
+  scroll-margin-top: 112px;
 }
 
 .mode-card h3:focus {
@@ -1349,24 +1163,18 @@ a {
   cursor: pointer;
 }
 
-/* The Ison's Stop: filled while the Ison sounds, inert otherwise. */
+/* The Ison's Stop, shown only while the Ison sounds. */
 .transport__stop {
   flex: none;
   min-width: 76px;
   min-height: 44px;
   padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--accent-fill);
   border-radius: 10px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-weight: 600;
-}
-
-.transport__stop.is-sounding {
-  border-color: var(--accent-fill);
   background: var(--accent-fill);
   color: var(--on-accent);
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -1411,24 +1219,11 @@ a {
 
 .transport__beat-action {
   color: var(--cinnabar);
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  line-height: 1.2;
 }
 
 /* The horizontal keyboard sits in the middle of the free height rather than on top of it. */
 .practice__body > .ladder-strip--horizontal {
   margin-block: auto;
-}
-
-.setup__sources summary {
-  min-height: 32px;
-  color: var(--muted);
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.setup__sources[open] {
-  display: grid;
-  gap: 6px;
 }

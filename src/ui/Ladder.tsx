@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
-import { degreeLabel, octaveMark, t } from "../i18n/translations";
+import { octaveMark, t } from "../i18n/translations";
 import { martyriaGlyphs } from "./martyriaGlyphs";
 
-/** How long a Degree must be held to count as a long press instead of a tap. */
+/** How long a Degree must be held to count as a long press instead of a tap; the hold ring in styles.css matches it. */
 const LONG_PRESS_MS = 500;
 /** A finger that slides further than this is not holding the Degree. */
 const MOVE_TOLERANCE_PX = 10;
@@ -59,11 +59,15 @@ interface LadderProps {
  * stops the Ison).
  */
 export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress }: LadderProps) {
+  // The Degree being held: a ring closes in on it while the long press counts down.
+  const [holdingId, setHoldingId] = useState<string | null>(null);
+  const hintId = useId();
   // One Degree is in the Tab order; the arrow keys move between them.
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const press = useRef<{ timer: number; x: number; y: number; longPressed: boolean } | null>(null);
   const strip = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLDivElement>(null);
+  const pulse = useRef<HTMLDivElement>(null);
   const { lowestMoria, highestMoria } = ladder.drawingRange;
   const horizontal = layout === "horizontal";
   const position = (moria: number): CSSProperties => {
@@ -74,17 +78,27 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
   };
   const keyboardWidth = (highestMoria - lowestMoria) * MIN_PX_PER_MORIA + 2 * KEYBOARD_PAD_PX;
 
-  // The metronome is seen where the eyes already are: the rail swells with each chronos, in cinnabar on the accent.
+  /*
+   * The metronome is seen where the eyes already are: with each chronos a wide band flashes along the rail and the
+   * rail itself darkens, both fading before the next chronos. The accent is cinnabar and stronger, so the group
+   * can be followed from the corner of the eye.
+   */
   useEffect(() => {
-    if (beat === null || !rail.current) return;
+    if (beat === null || !rail.current || !pulse.current) return;
+    const accent = beat === 1;
     const style = getComputedStyle(rail.current);
-    const color = style.getPropertyValue(beat === 1 ? "--cinnabar" : "--text").trim();
+    const color = style.getPropertyValue(accent ? "--cinnabar" : "--text").trim();
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const swell = horizontal ? "scaleY(3)" : "scaleX(3)";
-    rail.current.animate(
-      [{ backgroundColor: color, transform: still ? "none" : swell }, { transform: "none" }],
-      { duration: Math.min(chronosMs * 0.7, 500), easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+    const narrow = horizontal ? "scaleY(0.3)" : "scaleX(0.3)";
+    const timing = { duration: Math.min(chronosMs * 0.75, 550), easing: "cubic-bezier(0.16, 1, 0.3, 1)" };
+    pulse.current.animate(
+      [
+        { backgroundColor: color, opacity: accent ? 0.45 : 0.22, transform: "none" },
+        { backgroundColor: color, opacity: 0, transform: still ? "none" : narrow },
+      ],
+      timing,
     );
+    rail.current.animate([{ backgroundColor: color }, {}], timing);
   }, [beat, chronosMs, horizontal]);
 
   // A keyboard wider than the screen opens on the Ison, else the Base, else Ni.
@@ -109,15 +123,18 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
       longPressed: false,
       timer: window.setTimeout(() => {
         current.longPressed = true;
+        setHoldingId(null);
         navigator.vibrate?.(15);
         onLongPress(degreeId);
       }, LONG_PRESS_MS),
     };
     press.current = current;
+    setHoldingId(degreeId);
   }
 
   function cancelPress() {
     if (press.current) window.clearTimeout(press.current.timer);
+    setHoldingId(null);
   }
 
   /** The click that ends a long press arrives right after this; forget the press once it has been handled. */
@@ -130,11 +147,19 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
     if (press.current && Math.hypot(x - press.current.x, y - press.current.y) > MOVE_TOLERANCE_PX) cancelPress();
   }
 
-  /** Up and Right go to the next higher Degree, Down and Left to the next lower; Home and End to the ends. */
-  function moveFocus(e: KeyboardEvent) {
+  /**
+   * Up and Right go to the next higher Degree, Down and Left to the next lower; Home and End to the ends. I sets or
+   * stops the Ison on the Degree with the focus, as holding it does.
+   */
+  function onKeys(e: KeyboardEvent) {
     const ids = ladder.degrees.map((d) => d.id);
     const from = ids.indexOf((e.target as HTMLElement).dataset.degree ?? "");
     if (from < 0) return;
+    if (e.code === "KeyI" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      onLongPress(ids[from]!);
+      return;
+    }
     const to = { ArrowUp: from + 1, ArrowRight: from + 1, ArrowDown: from - 1, ArrowLeft: from - 1, Home: 0, End: ids.length - 1 }[
       e.key
     ];
@@ -165,12 +190,21 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
         className={`ladder ladder--${layout}`}
         role="group"
         aria-label={t("ladder.label")}
-        onKeyDown={moveFocus}
+        aria-describedby={hintId}
+        onKeyDown={onKeys}
         style={horizontal ? { minWidth: keyboardWidth } : undefined}
       >
+        {/* How to play it, for those who cannot see the rings: a tap plays, a hold sets the Ison. */}
+        <p id={hintId} className="visually-hidden">
+          {t("ladder.hint")} {t("ladder.keysHint")}
+        </p>
+        <div ref={pulse} className="ladder__pulse" aria-hidden="true" />
         <div ref={rail} className="ladder__rail" />
         {ladder.degrees.map((degree, index) => {
-          const label = degreeLabel(degree.name, degree.octave);
+          // Spoken with a word for the octave: screen readers say "͵" and "′" unpredictably.
+          const spokenName =
+            t(`degree.${degree.name}`) +
+            (degree.octave < 0 ? ` ${t("degree.low")}` : degree.octave > 0 ? ` ${t("degree.high")}` : "");
           const martyria = martyriaGlyphs(degree.name, degree.martyria);
           const isIson = degree.id === isonDegreeId;
           // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
@@ -184,6 +218,7 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
             "ladder__degree",
             horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right",
             degree.isDominant && "is-dominant",
+            holdingId === degree.id && "is-holding",
             degree.isBase && "is-base",
             isIson && "is-ison",
             degree.attraction !== null && "is-attracted",
@@ -196,7 +231,8 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
                 style={position(degree.moria)}
                 data-degree={degree.id}
                 tabIndex={degree.id === tabbableId ? 0 : -1}
-                aria-label={[t("ladder.playDegree", { degree: label }), ...spoken].join(", ")}
+                aria-label={[t("ladder.playDegree", { degree: spokenName }), ...spoken].join(", ")}
+                aria-keyshortcuts="I"
                 onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
                 onPointerMove={(e) => movePress(e.clientX, e.clientY)}
                 onPointerUp={endPress}
