@@ -16,6 +16,7 @@ import { MetronomePanel } from "./MetronomePanel";
 import { ModePicker } from "./ModePicker";
 import { ModesPage } from "./ModesPage";
 import { SettingsPage } from "./SettingsPage";
+import { TheoryTablesPage } from "./TheoryTablesPage";
 import {
   loadIsonVoice,
   loadLadderLayout,
@@ -30,7 +31,7 @@ import {
 } from "./storedSettings";
 
 /** Plain "#name" hashes only: they survive being opened inside claude.ai and other embeds. */
-const VIEW_HASHES = { practice: "#practice", modes: "#modes", settings: "#pitch" } as const;
+const VIEW_HASHES = { practice: "#practice", modes: "#modes", tables: "#tables", settings: "#pitch" } as const;
 type View = keyof typeof VIEW_HASHES;
 const VIEWS = Object.keys(VIEW_HASHES) as View[];
 
@@ -134,6 +135,8 @@ export function App() {
 
       {view === "settings" ? (
         <SettingsPage pitch={pitch} onChange={changePitch} onPlayNi={() => session.playDegree("Ni")} />
+      ) : view === "tables" ? (
+        <TheoryTablesPage session={session} />
       ) : view === "modes" ? (
         <ModesPage
           describe={(key) => session.describeModeVariant(key)}

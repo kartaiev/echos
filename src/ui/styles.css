@@ -73,7 +73,9 @@ a {
 
 .header-nav {
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 12px;
 }
 
 .header-link[aria-current="page"] {
@@ -240,6 +242,8 @@ a {
   font-weight: 400;
   line-height: 0.286em;
   white-space: nowrap;
+  /* Number features such as tabular figures make the browser drop the Martyria glyphs. */
+  font-variant-numeric: normal;
 }
 
 /* The Fthora is drawn smaller and lowered so it sits beside the top of the letter, inside the same box. */
@@ -909,4 +913,163 @@ a {
 
 .mode-card__cadence {
   display: block;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tables h2 {
+  margin: 24px 0 8px;
+  font-size: 1.1rem;
+}
+
+.tables__intro,
+.tables__cycle,
+.tables__steps,
+.tables__cadences {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.tables__steps {
+  display: block;
+}
+
+.tables__card {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.tables__card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--cinnabar);
+}
+
+.tables__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tables__source {
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.tables__status {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tables__status.is-unreviewed {
+  background: var(--cinnabar-soft);
+  color: var(--cinnabar);
+}
+
+.tables__status.is-reviewed {
+  background: var(--line);
+  color: var(--text);
+}
+
+.tables__degrees {
+  width: 100%;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tables__degrees th,
+.tables__degrees td {
+  padding: 4px 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.tables__degrees th:first-child,
+.tables__degrees thead th {
+  text-align: left;
+}
+
+.tables__degrees thead th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tables__degrees td.tables__martyria {
+  text-align: left;
+}
+
+.tables__martyria .ladder__martyria {
+  font-size: 1.3rem;
+}
+
+.tables__play {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tables__variant + .tables__variant {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.tables__variant h4 {
+  margin: 8px 0 6px;
+  font-size: 0.95rem;
+}
+
+.tables__variant dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.tables__variant dd {
+  margin: 0;
+}
+
+.tables__tempos {
+  list-style: none;
+}
+
+.tables__tempo + .tables__tempo {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.tables__attraction p {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
 }

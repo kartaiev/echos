@@ -909,3 +909,61 @@ describe("Practice Session: Mode Variant cards", () => {
     expect(sticheraric.session.describeModeVariant({ mode: "first", melos: "sticheraric" }).source).toMatch(/Melling.*Octoëchos 201/);
   });
 });
+
+// The Theory tables page lets the reviewer read and hear every Genus without changing the practice screen.
+describe("Practice Session: Theory tables", () => {
+  it.each(Object.keys(EXPECTED_HZ) as (keyof typeof EXPECTED_HZ)[])(
+    "describes the %s Scale with every Degree, its frequency, Martyria and sources",
+    (genus) => {
+      const { session } = setup();
+
+      const scale = session.describeScale(genus);
+
+      expect(scale.degrees.map((d) => d.id)).toEqual(LADDER_IDS);
+      expect(scale.degrees.map((d) => d.frequency)).toEqual(EXPECTED_HZ[genus].map((hz) => expect.closeTo(hz, 2)));
+      expect(scale.degrees.every((d) => d.martyria.rootSign.length > 0)).toBe(true);
+      expect(scale).toMatchObject({
+        genus,
+        intervals: { source: expect.stringMatching(/Trisagion/), reviewStatus: "unreviewed" },
+        martyriaSource: expect.stringMatching(/Trisagion/),
+      });
+      expect(session.ladder().genus).toBe("diatonic");
+    },
+  );
+
+  it("lists the sourced Attractions of a Genus with the Scale", () => {
+    const { session } = setup();
+
+    expect(session.describeScale("diatonic").attractions.map((a) => a.value.id)).toEqual(["zo-lowered"]);
+    expect(session.describeScale("enharmonic").attractions).toEqual([]);
+  });
+
+  it("plays a Degree of any Genus without changing the practice screen", () => {
+    const { audio, session } = setup();
+
+    session.playDegreeIn("hard-chromatic", "Vou");
+
+    expect(audio.sounds[0]).toMatchObject({ kind: "degree", frequency: expect.closeTo(155.56, 2) });
+    expect(session.ladder().genus).toBe("diatonic");
+  });
+
+  it("plays a whole Scale from Ni up to Ni', one Degree after another, 600 ms each", () => {
+    const { audio, session } = setup();
+
+    const played = session.playScale("diatonic");
+
+    expect(audio.sounds.map((s) => s.frequency)).toEqual(EXPECTED_HZ.diatonic.slice(2, 10).map((hz) => expect.closeTo(hz, 2)));
+    expect(audio.sounds.map((s) => [s.startMs, s.durationMs])).toEqual([0, 1, 2, 3, 4, 5, 6, 7].map((i) => [i * 600, 600]));
+    expect(played).toEqual({ durationMs: 4800 });
+  });
+
+  it("stops a Scale still playing when another one starts", () => {
+    const { audio, session } = setup();
+
+    session.playScale("diatonic");
+    session.playScale("enharmonic");
+
+    expect(audio.sounds.slice(0, 8).every((s) => s.stopped)).toBe(true);
+    expect(audio.sounds.slice(8).every((s) => !s.stopped)).toBe(true);
+  });
+});
