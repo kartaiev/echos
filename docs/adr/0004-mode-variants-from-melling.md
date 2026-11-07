@@ -1,5 +1,7 @@
 # Mode Variant data follows Melling, mapped onto Heirmologic and Sticheraric
 
+**Superseded by ADR-0005** for the Heirmologic Mode Variants; the Sticheraric mapping below still holds.
+
 The first source we found that gives Genus, Base and Dominant Degrees for all eight Modes in one place is David J. Melling, "Reading Psalmodia" (2000), §9. Melling does not always split melodies by Melos: for several Modes he separates "Irmic and short Sticheric" melodies from "slow Sticheric" ones instead. We map the first group to Heirmologic and the second to Sticheraric. This gives Plagal 2nd Heirmologic in Soft Chromatic and Plagal 2nd Sticheraric in Hard Chromatic, which agrees with ADR-0002.
 
 Where Melling offers alternatives, we take the first one he lists:

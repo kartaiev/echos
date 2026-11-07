@@ -71,7 +71,7 @@ export function createWebAudioOutput(): AudioOutput {
   return {
     playSound(sound: SoundRequest) {
       const ctx = getContext();
-      const start = ctx.currentTime;
+      const start = ctx.currentTime + (sound.startMs ?? 0) / 1000;
       const end = sound.durationMs === null ? null : start + sound.durationMs / 1000;
 
       const source = ctx.createOscillator();

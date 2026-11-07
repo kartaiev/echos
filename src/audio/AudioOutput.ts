@@ -1,5 +1,5 @@
 /** What kind of sound the Practice Session is asking for ("Tone" is avoided: it means Mode in chant). */
-export type SoundKind = "degree" | "ison";
+export type SoundKind = "degree" | "ison" | "intonation";
 
 /** Vowels the synthesized voice can sing; "ou" as in Greek ου. */
 export const VOWELS = ["a", "e", "o", "ou"] as const;
@@ -8,6 +8,8 @@ export type Vowel = (typeof VOWELS)[number];
 export interface SoundRequest {
   kind: SoundKind;
   frequency: number;
+  /** Delay before the sound starts, for sounds sung in sequence; 0 when left out. */
+  startMs?: number;
   /** How long the sound lasts; null holds it until stop() is called. */
   durationMs: number | null;
   vowel: Vowel;

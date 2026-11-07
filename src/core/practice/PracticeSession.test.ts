@@ -317,7 +317,8 @@ describe("Practice Session: Ison", () => {
   });
 });
 
-// Mode Variants after Melling, "Reading Psalmodia" (2000), §9: Genus, Base and Dominant Degrees per Mode and Melos.
+// Mode Variants: Heirmologic after Trisagion School, ByzB-101 Modal Theory Review ("Heirmologic Genre": Base and
+// Structural Notes); Sticheraric after Melling, "Reading Psalmodia" (2000), §9.
 // Base frequencies from Ni = C3 in the Genus of the variant (worked out in Python, as above).
 const MODE_VARIANT_TABLE = [
   ["first", "heirmologic", "diatonic", "Pa", 146.83, ["Pa", "Di"]],
@@ -326,13 +327,13 @@ const MODE_VARIANT_TABLE = [
   ["second", "sticheraric", "soft-chromatic", "Di", 196.0, ["Ni", "Vou", "Di"]],
   ["third", "heirmologic", "enharmonic", "Ga", 174.61, ["Pa", "Ga", "Ke"]],
   ["third", "sticheraric", "enharmonic", "Ga", 174.61, ["Pa", "Ga", "Ke"]],
-  ["fourth", "heirmologic", "diatonic", "Vou", 161.67, ["Vou", "Di"]],
+  ["fourth", "heirmologic", "diatonic", "Vou", 161.67, ["Pa", "Vou", "Di"]],
   ["fourth", "sticheraric", "diatonic", "Pa", 146.83, ["Pa", "Vou", "Di"]],
-  ["plagal-first", "heirmologic", "diatonic", "Ke,", 110.0, ["Ke,", "Ni", "Pa"]],
+  ["plagal-first", "heirmologic", "diatonic", "Pa", 146.83, ["Pa", "Ga"]],
   ["plagal-first", "sticheraric", "diatonic", "Pa", 146.83, ["Pa", "Di", "Ke"]],
-  ["plagal-second", "heirmologic", "soft-chromatic", "Vou", 161.67, ["Vou", "Di"]],
+  ["plagal-second", "heirmologic", "soft-chromatic", "Di", 196.0, ["Vou", "Di", "Zo"]],
   ["plagal-second", "sticheraric", "hard-chromatic", "Pa", 146.83, ["Pa", "Di", "Ke"]],
-  ["grave", "heirmologic", "enharmonic", "Ga", 174.61, ["Ga", "Di", "Zo"]],
+  ["grave", "heirmologic", "enharmonic", "Ga", 174.61, ["Pa", "Ga", "Di"]],
   ["grave", "sticheraric", "diatonic", "Zo,", 121.12, ["Pa", "Ga", "Di", "Zo"]],
   ["plagal-fourth", "heirmologic", "diatonic", "Ni", 130.81, ["Ni", "Vou", "Di"]],
   ["plagal-fourth", "sticheraric", "diatonic", "Ni", 130.81, ["Ni", "Vou", "Di"]],
@@ -348,9 +349,9 @@ describe("Practice Session: Mode Variants", () => {
 
     expect(session.ladder().genus).toBe("soft-chromatic");
     expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", true], ["ison", false], ["degree", false]]);
-    // Ison from Ni 130.81 Hz to the Base Vou 161.67 Hz; Soft Chromatic Pa 141.29 Hz.
+    // Ison from Ni 130.81 Hz to the Base Di 196.00 Hz; Soft Chromatic Pa 141.29 Hz.
     expect(audio.sounds.map((s) => s.frequency)).toEqual(
-      [130.81, 161.67, 141.29].map((hz) => expect.closeTo(hz, 2)),
+      [130.81, 196.0, 141.29].map((hz) => expect.closeTo(hz, 2)),
     );
   });
 
@@ -438,5 +439,61 @@ describe("Practice Session: Mode Variants", () => {
     expect(session.ladder().genus).toBe("soft-chromatic");
     expect(session.ladder().degrees.some((d) => d.isBase || d.isDominant)).toBe(false);
     expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([["ison", false]]);
+  });
+});
+
+// Intonations from the Trisagion chart (ByzB-101, Heirmologic Genre), one Chronos = 600 ms (Melling's Medium tempo,
+// 100 chronoi a minute). Frequencies from Ni = C3 in the Genus of the Mode Variant, as above.
+describe("Practice Session: Intonations", () => {
+  it("sings the 1st Mode Heirmologic Intonation Degree by Degree with its lengths, and reports its text", () => {
+    const { audio, session } = setup();
+
+    const played = session.playIntonation({ mode: "first", melos: "heirmologic" });
+
+    expect(played).toEqual({ text: "Ah-nah-nes", durationMs: 2400 });
+    expect(audio.sounds.map(({ kind, startMs, durationMs }) => ({ kind, startMs, durationMs }))).toEqual([
+      { kind: "intonation", startMs: 0, durationMs: 900 },
+      { kind: "intonation", startMs: 900, durationMs: 300 },
+      { kind: "intonation", startMs: 1200, durationMs: 1200 },
+    ]);
+    // Ni, Pa, Pa.
+    expect(audio.sounds.map((s) => s.frequency)).toEqual([130.81, 146.83, 146.83].map((hz) => expect.closeTo(hz, 2)));
+  });
+
+  it("sings in the Genus of its Mode Variant: Plagal 2nd Heirmologic in Soft Chromatic", () => {
+    const { audio, session } = setup();
+
+    session.playIntonation({ mode: "plagal-second", melos: "heirmologic" });
+
+    // Vou 161.67, Di 196.00, Ga 174.61, Vou, Ga, Di; lengths 1, 1.5, 1, 1.5, 0.5, 2 chronoi.
+    expect(audio.sounds.map((s) => s.frequency)).toEqual(
+      [161.67, 196.0, 174.61, 161.67, 174.61, 196.0].map((hz) => expect.closeTo(hz, 2)),
+    );
+    expect(audio.sounds.map((s) => s.durationMs)).toEqual([600, 900, 600, 900, 300, 1200]);
+  });
+
+  it("leaves the Ison sounding and stops an Intonation still playing", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Ga");
+    session.playIntonation({ mode: "third", melos: "heirmologic" });
+    session.playIntonation({ mode: "grave", melos: "heirmologic" });
+
+    expect(audio.sounds.map((s) => [s.kind, s.stopped])).toEqual([
+      ["ison", false],
+      ["intonation", true],
+      ["intonation", true],
+      ["intonation", true],
+      ["intonation", false],
+      ["intonation", false],
+      ["intonation", false],
+    ]);
+  });
+
+  it("plays nothing for a Mode Variant whose source gives no Intonation", () => {
+    const { audio, session } = setup();
+
+    expect(session.playIntonation({ mode: "first", melos: "sticheraric" })).toBeNull();
+    expect(audio.sounds).toEqual([]);
   });
 });

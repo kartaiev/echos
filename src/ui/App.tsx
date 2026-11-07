@@ -7,6 +7,7 @@ import { noteLabel, t } from "../i18n/translations";
 import { IsonPanel } from "./IsonPanel";
 import { Ladder } from "./Ladder";
 import { ModePicker } from "./ModePicker";
+import { ModesPage } from "./ModesPage";
 import { SettingsPage } from "./SettingsPage";
 import {
   loadIsonVoice,
@@ -17,13 +18,13 @@ import {
   savePitchSettings,
 } from "./storedSettings";
 
-type View = "practice" | "settings";
-
 /** Plain "#name" hashes only: they survive being opened inside claude.ai and other embeds. */
-const SETTINGS_HASH = "#pitch";
+const VIEW_HASHES = { practice: "#practice", modes: "#modes", settings: "#pitch" } as const;
+type View = keyof typeof VIEW_HASHES;
+const VIEWS = Object.keys(VIEW_HASHES) as View[];
 
 function viewFromHash(): View {
-  return location.hash === SETTINGS_HASH ? "settings" : "practice";
+  return VIEWS.find((view) => VIEW_HASHES[view] === location.hash) ?? "practice";
 }
 
 export function App() {
@@ -90,15 +91,25 @@ export function App() {
           <h1>{t("app.title")}</h1>
           <p>{t("app.tagline")}</p>
         </div>
-        {view === "practice" ? (
-          <a className="header-link" href={SETTINGS_HASH}>{t("nav.settings")}</a>
-        ) : (
-          <a className="header-link" href="#practice">{t("nav.practice")}</a>
-        )}
+        <nav className="header-nav">
+          {VIEWS.map((v) => (
+            <a key={v} className="header-link" href={VIEW_HASHES[v]} aria-current={view === v ? "page" : undefined}>
+              {t(`nav.${v}`)}
+            </a>
+          ))}
+        </nav>
       </header>
 
       {view === "settings" ? (
         <SettingsPage pitch={pitch} onChange={changePitch} onPlayNi={() => session.playDegree("Ni")} />
+      ) : view === "modes" ? (
+        <ModesPage
+          onPlayIntonation={(key) => session.playIntonation(key)}
+          onPractise={(key) => {
+            chooseModeVariant(key);
+            location.hash = VIEW_HASHES.practice;
+          }}
+        />
       ) : (
         <section className="practice__body">
           <ModePicker choice={modeVariant} onChoose={chooseModeVariant} onLeave={() => chooseModeVariant(null)} />
@@ -121,7 +132,7 @@ export function App() {
               ))}
             </div>
           )}
-          <a className="pitch-card" href={SETTINGS_HASH}>
+          <a className="pitch-card" href={VIEW_HASHES.settings}>
             <span className="pitch-card__text">
               <span className="pitch-card__label">{t("settings.referencePitch")}</span>
               <span className="pitch-card__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>
