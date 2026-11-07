@@ -16,17 +16,20 @@ import { MetronomePanel } from "./MetronomePanel";
 import { ModePicker } from "./ModePicker";
 import { ModesPage } from "./ModesPage";
 import { SettingsPage } from "./SettingsPage";
+import { applyTheme, type Theme } from "./theme";
 import { TheoryTablesPage } from "./TheoryTablesPage";
 import {
   loadIsonVoice,
   loadLadderLayout,
   loadLanguage,
+  loadTheme,
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
   saveIsonVoice,
   saveLadderLayout,
   saveLanguage,
+  saveTheme,
   saveMetronomeSettings,
   saveModeVariant,
   savePitchSettings,
@@ -51,6 +54,11 @@ function startLanguage(): Language {
 
 export function App() {
   const [language, setLanguageState] = useState<Language>(startLanguage);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = loadTheme() ?? "system";
+    applyTheme(saved);
+    return saved;
+  });
   const session = useMemo(
     () =>
       createPracticeSession({
@@ -131,6 +139,12 @@ export function App() {
     setLanguageState(next);
   };
 
+  const changeTheme = (next: Theme) => {
+    applyTheme(next);
+    saveTheme(next);
+    setTheme(next);
+  };
+
   const changeLayout = (next: LadderLayout) => {
     setLayout(next);
     saveLadderLayout(next);
@@ -159,6 +173,8 @@ export function App() {
           onPlayNi={() => session.playDegree("Ni")}
           language={language}
           onChangeLanguage={changeLanguage}
+          theme={theme}
+          onChangeTheme={changeTheme}
         />
       ) : view === "tables" ? (
         <TheoryTablesPage session={session} />

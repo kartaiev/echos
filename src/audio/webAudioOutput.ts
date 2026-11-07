@@ -60,7 +60,17 @@ const HIDDEN_LOOKAHEAD_S = 1.5;
 /** One AudioContext for the whole page, created and resumed inside a user gesture, as browsers require. */
 let context: AudioContext | null = null;
 
+/**
+ * iPhones mute Web Audio when the ring/silent switch is on, unless the page says it plays media. Safari 16.4 and
+ * later read navigator.audioSession for that; other browsers ignore it.
+ */
+function playThroughSilentSwitch() {
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  if (session && session.type !== "playback") session.type = "playback";
+}
+
 function getContext() {
+  playThroughSilentSwitch();
   context ??= new AudioContext();
   if (context.state === "suspended") void context.resume();
   return context;
