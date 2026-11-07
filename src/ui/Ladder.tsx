@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
+import { martyriaGlyphs } from "./martyriaGlyphs";
 
 /** How long a Degree must be held to count as a long press instead of a tap. */
 const LONG_PRESS_MS = 500;
@@ -112,6 +113,7 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
         <div className="ladder__rail" />
         {ladder.degrees.map((degree, index) => {
           const label = degreeLabel(degree.name, degree.octave);
+          const martyria = martyriaGlyphs(degree.name, degree.martyria);
           const isIson = degree.id === isonDegreeId;
           // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
           const marks = [
@@ -142,8 +144,14 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
                 onContextMenu={(e) => e.preventDefault()}
                 onClick={() => click(degree.id)}
               >
-                <span className="ladder__name">{label}</span>
-                {marks.length > 0 && <span className="ladder__marks">{marks.join(" · ")}</span>}
+                <span className="ladder__martyria" aria-hidden="true">
+                  {martyria.letterAndSign}
+                  {martyria.fthora && <span className="ladder__fthora">{martyria.fthora}</span>}
+                </span>
+                <span className="ladder__text">
+                  <span className="ladder__name">{label}</span>
+                  {marks.length > 0 && <span className="ladder__marks">{marks.join(" · ")}</span>}
+                </span>
               </button>
               {degree.moriaToNext !== null && (
                 <span className="ladder__interval" style={position(degree.moria + degree.moriaToNext / 2)}>

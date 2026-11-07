@@ -35,6 +35,13 @@
   color-scheme: dark;
 }
 
+/* Neanes, SIL Open Font License 1.1 (src/assets/fonts/OFL.txt); used only for the Martyria signs. */
+@font-face {
+  font-family: "Neanes";
+  src: url("../assets/fonts/Neanes.otf") format("opentype");
+  font-display: block;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -207,6 +214,40 @@ a {
   background: var(--cinnabar);
 }
 
+.ladder__degree {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/*
+ * The Martyria box is exactly as tall as its ink: up to 0.61em above the baseline (a letter, or a sign written
+ * above it) and 0.66em below (a sign hanging under the letter). Neanes has an ascent of 1.4em and a descent of
+ * 0.466em, so a line height of 0.286em puts the baseline 0.61em from the top in every browser.
+ */
+.ladder__martyria {
+  display: block;
+  flex: none;
+  height: 1.27em;
+  font-family: "Neanes", serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: 0.286em;
+  white-space: nowrap;
+}
+
+/* The Fthora is drawn smaller and lowered so it sits beside the top of the letter, inside the same box. */
+.ladder__fthora {
+  position: relative;
+  top: 0.35em;
+  font-size: 0.7em;
+}
+
+.ladder__text {
+  display: block;
+}
+
 .ladder__name {
   display: block;
   line-height: 1.1;
@@ -252,7 +293,7 @@ a {
 }
 
 .ladder--horizontal {
-  height: 168px;
+  height: 224px;
   margin: 0;
 }
 
@@ -267,12 +308,16 @@ a {
 }
 
 .ladder--horizontal .ladder__degree {
+  flex-direction: column;
+  gap: 2px;
   width: auto;
   min-width: 48px;
-  height: 52px;
-  padding: 0 6px;
+  height: 80px;
+  padding: 4px 6px;
   transform: translateX(-50%);
 }
+
+
 
 .ladder--horizontal .ladder__degree::after {
   top: auto;
