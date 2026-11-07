@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
 import { martyriaGlyphs } from "./martyriaGlyphs";
@@ -15,6 +15,26 @@ const MOVE_TOLERANCE_PX = 10;
 const MIN_PX_PER_MORIA = 4.6;
 /** Room at both ends of the keyboard for half a key. */
 const KEYBOARD_PAD_PX = 40;
+/** The ring that answers a tap; it fades on its own, so it never stays on the last Degree like a state. */
+const STRIKE_MS = 650;
+
+/** A ring that grows out of the key and fades: the Degree was struck, nothing more. */
+function strike(key: HTMLElement) {
+  const style = getComputedStyle(key);
+  const ink = style.getPropertyValue("--cinnabar").trim();
+  const soft = style.getPropertyValue("--cinnabar-soft").trim();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    key.animate([{ backgroundColor: soft }, {}], { duration: STRIKE_MS / 2 });
+    return;
+  }
+  key.animate(
+    [
+      { outline: `3px solid ${ink}`, outlineOffset: "0px", backgroundColor: soft },
+      { outline: "3px solid transparent", outlineOffset: "10px" },
+    ],
+    { duration: STRIKE_MS, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+  );
+}
 
 /** Vertical like a Parallage chart, or horizontal like a keyboard. */
 export const LADDER_LAYOUTS = ["vertical", "horizontal"] as const;
@@ -35,7 +55,8 @@ interface LadderProps {
  * stops the Ison).
  */
 export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress }: LadderProps) {
-  const [lastPlayed, setLastPlayed] = useState<string | null>(null);
+  // One Degree is in the Tab order; the arrow keys move between them.
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const press = useRef<{ timer: number; x: number; y: number; longPressed: boolean } | null>(null);
   const strip = useRef<HTMLDivElement>(null);
   const { lowestMoria, highestMoria } = ladder.drawingRange;
@@ -50,6 +71,7 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
 
   // A keyboard wider than the screen opens on the Ison, else the Base, else Ni.
   const focusId = isonDegreeId ?? ladder.degrees.find((d) => d.isBase)?.id ?? "Ni";
+  const tabbableId = ladder.degrees.some((d) => d.id === focusedId) ? focusedId : focusId;
   useLayoutEffect(() => {
     const scroller = strip.current;
     if (!horizontal || !scroller) return;
@@ -90,7 +112,23 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
     if (press.current && Math.hypot(x - press.current.x, y - press.current.y) > MOVE_TOLERANCE_PX) cancelPress();
   }
 
-  function click(degreeId: string) {
+  /** Up and Right go to the next higher Degree, Down and Left to the next lower; Home and End to the ends. */
+  function moveFocus(e: KeyboardEvent) {
+    const ids = ladder.degrees.map((d) => d.id);
+    const from = ids.indexOf((e.target as HTMLElement).dataset.degree ?? "");
+    if (from < 0) return;
+    const to = { ArrowUp: from + 1, ArrowRight: from + 1, ArrowDown: from - 1, ArrowLeft: from - 1, Home: 0, End: ids.length - 1 }[
+      e.key
+    ];
+    if (to === undefined) return;
+    e.preventDefault();
+    const id = ids[Math.max(0, Math.min(ids.length - 1, to))];
+    if (id === undefined) return;
+    setFocusedId(id);
+    strip.current?.querySelector<HTMLElement>(`[data-degree="${CSS.escape(id)}"]`)?.focus();
+  }
+
+  function click(degreeId: string, key: HTMLElement) {
     // The click that ends a long press must not also play the Degree.
     if (press.current?.longPressed) {
       press.current = null;
@@ -98,7 +136,8 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
     }
     cancelPress();
     press.current = null;
-    setLastPlayed(degreeId);
+    setFocusedId(degreeId);
+    strike(key);
     onPlayDegree(degreeId);
   }
 
@@ -108,6 +147,7 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
         className={`ladder ladder--${layout}`}
         role="group"
         aria-label={t("ladder.label")}
+        onKeyDown={moveFocus}
         style={horizontal ? { minWidth: keyboardWidth } : undefined}
       >
         <div className="ladder__rail" />
@@ -119,16 +159,16 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
           const marks = [
             degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
             degree.attraction === null ? null : degree.attraction < 0 ? t("ladder.loweredMark") : t("ladder.raisedMark"),
-          isIson ? t("ladder.isonMark") : null,
           ].filter((m): m is string => m !== null);
+          // The Ison key is filled, so its mark is only read aloud.
+          const spoken = isIson ? [...marks, t("ladder.isonMark")] : marks;
           const classes = [
             "ladder__degree",
             horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right",
-            lastPlayed === degree.id && "is-playing",
             degree.isDominant && "is-dominant",
             degree.isBase && "is-base",
             isIson && "is-ison",
-          degree.attraction !== null && "is-attracted",
+            degree.attraction !== null && "is-attracted",
           ];
           return (
             <div key={degree.id}>
@@ -137,14 +177,15 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
                 className={classes.filter(Boolean).join(" ")}
                 style={position(degree.moria)}
                 data-degree={degree.id}
-                aria-label={[t("ladder.playDegree", { degree: label }), ...marks].join(", ")}
+                tabIndex={degree.id === tabbableId ? 0 : -1}
+                aria-label={[t("ladder.playDegree", { degree: label }), ...spoken].join(", ")}
                 onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
                 onPointerMove={(e) => movePress(e.clientX, e.clientY)}
                 onPointerUp={endPress}
                 onPointerLeave={endPress}
                 onPointerCancel={endPress}
                 onContextMenu={(e) => e.preventDefault()}
-                onClick={() => click(degree.id)}
+                onClick={(e) => click(degree.id, e.currentTarget)}
               >
                 <span className="ladder__martyria" aria-hidden="true">
                   {martyria.letterAndSign}

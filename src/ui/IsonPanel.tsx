@@ -2,38 +2,61 @@ import type { IsonState, IsonVoice, LadderDegree } from "../core/practice/Practi
 import { VOWELS } from "../audio/AudioOutput";
 import { degreeLabel, t } from "../i18n/translations";
 
-interface IsonPanelProps {
+interface IsonLaneProps {
   ison: IsonState;
   degrees: readonly LadderDegree[];
+  voiceOpen: boolean;
+  voicePanelId: string;
   onSetIson: (degreeId: string) => void;
   onStop: () => void;
+  onToggleVoice: () => void;
+}
+
+/** The Ison in the transport bar; the Degree menu is also the way to set it without a long press. */
+export function IsonLane({ ison, degrees, voiceOpen, voicePanelId, onSetIson, onStop, onToggleVoice }: IsonLaneProps) {
+  const sounding = ison.degreeId !== null;
+  return (
+    <div className={"transport__lane" + (sounding ? " is-active" : "")}>
+      <span className="transport__name">{t("ison.title")}</span>
+      <select
+        className="transport__select"
+        value={ison.degreeId ?? ""}
+        aria-label={t("ison.degree")}
+        onChange={(e) => (e.target.value ? onSetIson(e.target.value) : onStop())}
+      >
+        <option value="">{t("ison.off")}</option>
+        {[...degrees].reverse().map((d) => (
+          <option key={d.id} value={d.id}>
+            {degreeLabel(d.name, d.octave)}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="transport__more"
+        aria-expanded={voiceOpen}
+        aria-controls={voicePanelId}
+        onClick={onToggleVoice}
+      >
+        {t("ison.voice")}
+      </button>
+      <button type="button" className="transport__action" aria-pressed={sounding} disabled={!sounding} onClick={onStop}>
+        {t("ison.stop")}
+      </button>
+    </div>
+  );
+}
+
+interface IsonVoicePanelProps {
+  ison: IsonState;
   onChangeVoice: (change: Partial<IsonVoice>) => void;
 }
 
-/** Ison controls; the Degree menu is also the way to set the Ison without a long press (keyboard, screen readers). */
-export function IsonPanel({ ison, degrees, onSetIson, onStop, onChangeVoice }: IsonPanelProps) {
+export function IsonVoicePanel({ ison, onChangeVoice }: IsonVoicePanelProps) {
   return (
-    <section className={"ison" + (ison.degreeId ? " is-sounding" : "")} aria-label={t("ison.title")}>
-      <div className="ison__row">
-        <span className="ison__title">{t("ison.title")}</span>
-        <select
-          className="ison__degree"
-          value={ison.degreeId ?? ""}
-          aria-label={t("ison.degree")}
-          onChange={(e) => (e.target.value ? onSetIson(e.target.value) : onStop())}
-        >
-          <option value="">{t("ison.off")}</option>
-          {[...degrees].reverse().map((d) => (
-            <option key={d.id} value={d.id}>
-              {degreeLabel(d.name, d.octave)}
-            </option>
-          ))}
-        </select>
-        <button type="button" className="ison__stop" onClick={onStop} disabled={!ison.degreeId}>
-          {t("ison.stop")}
-        </button>
-      </div>
-      <div className="ison__row">
+    <>
+      <div className="transport__row">
+        <span className="transport__label">{t("ison.vowel")}</span>
         <div className="segmented segmented--vowel" role="radiogroup" aria-label={t("ison.vowel")}>
           {VOWELS.map((v) => (
             <button
@@ -48,17 +71,19 @@ export function IsonPanel({ ison, degrees, onSetIson, onStop, onChangeVoice }: I
             </button>
           ))}
         </div>
+      </div>
+      <label className="transport__row">
+        <span className="transport__label">{t("ison.volume")}</span>
         <input
-          className="ison__volume"
+          className="transport__range"
           type="range"
           min={0}
           max={1}
           step={0.05}
           value={ison.volume}
-          aria-label={t("ison.volume")}
           onChange={(e) => onChangeVoice({ volume: Number(e.target.value) })}
         />
-      </div>
-    </section>
+      </label>
+    </>
   );
 }

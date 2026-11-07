@@ -6,6 +6,12 @@
   --line: #d9d1c4;
   --cinnabar: #b5331f;
   --cinnabar-soft: #f3ddd7;
+  /* A filled control, and the text on it. */
+  --accent-fill: #b5331f;
+  --on-accent: #ffffff;
+  /* "Not yet checked": waiting, not wrong, so not in the alarm red. */
+  --pending-bg: #f1e6cc;
+  --pending-text: #6e5210;
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -17,9 +23,13 @@
     --surface: #211d19;
     --text: #efe8dd;
     --muted: #a59a8c;
-    --line: #3a332c;
+    --line: #5c5148;
     --cinnabar: #e0614a;
     --cinnabar-soft: #3d221c;
+    --accent-fill: #c4452f;
+    --on-accent: #ffffff;
+    --pending-bg: #3b3020;
+    --pending-text: #e2c486;
     color-scheme: dark;
   }
 }
@@ -29,9 +39,13 @@
   --surface: #211d19;
   --text: #efe8dd;
   --muted: #a59a8c;
-  --line: #3a332c;
+  --line: #5c5148;
   --cinnabar: #e0614a;
   --cinnabar-soft: #3d221c;
+  --accent-fill: #c4452f;
+  --on-accent: #ffffff;
+  --pending-bg: #3b3020;
+  --pending-text: #e2c486;
   color-scheme: dark;
 }
 
@@ -52,40 +66,63 @@ body {
   color: var(--text);
 }
 
+/* A column as tall as the screen at least, so the transport bar rests on its bottom edge. */
 .practice {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
   max-width: 480px;
   margin: 0 auto;
-  padding-block: 16px;
+  padding-top: 16px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
 .practice__header {
+  display: grid;
+  gap: 4px;
+}
+
+.practice__brand {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 10px;
 }
 
 a {
   color: var(--cinnabar);
 }
 
+/* Four tabs in one row, each a full thumb's width. */
 .header-nav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0 12px;
-}
-
-.header-link[aria-current="page"] {
-  color: var(--text);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--line);
 }
 
 .header-link {
-  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-link[aria-current="page"] {
+  border-bottom-color: var(--cinnabar);
+  color: var(--text);
+}
+
+.header-link:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: -2px;
+  border-radius: 6px;
 }
 
 .practice__header h1 {
@@ -96,10 +133,8 @@ a {
 }
 
 .practice__header p,
-.practice__genus,
-.practice__hint,
-.practice__source {
-  margin: 4px 0 0;
+.practice__hint {
+  margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -112,11 +147,11 @@ a {
 .ladder {
   position: relative;
   /*
-   * 13 Degrees from low Ke to high Ga' fill the rest of a phone screen. With the current tables the
-   * closest Degrees on one side are 16 moria apart in a drawing range of 130 moria, which at 440px
-   * is 54px: a 44px button plus a gap. A new Tuning System may need a taller ladder.
+   * 13 Degrees from low Ke to high Ga' fill the screen between the setup line and the transport bar. With
+   * the current tables the closest Degrees on one side are 16 moria apart in a drawing range of 130 moria,
+   * which at 440px is 54px: a 48px key plus a gap. A new Tuning System may need a taller ladder.
    */
-  height: max(440px, min(100svh - 372px, 760px));
+  height: max(440px, min(100svh - 400px, 760px));
   margin: 28px 0 28px;
 }
 
@@ -133,7 +168,7 @@ a {
 .ladder__degree {
   position: absolute;
   width: min(120px, calc(50% - 24px));
-  height: 44px;
+  height: 48px;
   transform: translateY(50%);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -185,15 +220,7 @@ a {
   outline-offset: 2px;
 }
 
-.ladder__degree.is-playing {
-  background: var(--cinnabar-soft);
-  border-color: var(--cinnabar);
-  color: var(--cinnabar);
-}
 
-.ladder__degree.is-playing::after {
-  background: var(--cinnabar);
-}
 
 /* Base and Dominant Degrees of the chosen Mode Variant; the Base is filled softly, the Ison fully. */
 .ladder__degree.is-dominant {
@@ -206,9 +233,9 @@ a {
 }
 
 .ladder__degree.is-ison {
-  border-color: var(--cinnabar);
-  background: var(--cinnabar);
-  color: var(--surface);
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+  color: var(--on-accent);
 }
 
 /* A Degree moved by an Attraction: a bar along its bottom edge, and a "Lowered" or "Raised" mark. */
@@ -259,12 +286,12 @@ a {
 
 .ladder__name {
   display: block;
-  line-height: 1.1;
+  line-height: 1.05;
 }
 
 .ladder__marks {
   display: block;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.2;
@@ -302,7 +329,7 @@ a {
 }
 
 .ladder--horizontal {
-  height: 240px;
+  height: 250px;
   margin: 0;
 }
 
@@ -321,7 +348,7 @@ a {
   gap: 2px;
   width: auto;
   min-width: 48px;
-  height: 90px;
+  height: 96px;
   padding: 4px 6px;
   transform: translateX(-50%);
 }
@@ -362,50 +389,11 @@ a {
   transform: translate(-50%, -50%);
 }
 
-.attractions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-top: 10px;
-}
 
-.attractions__title {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
 
-.attractions__toggle {
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
 
-.attractions__toggle[aria-pressed="true"] {
-  border-color: var(--cinnabar);
-  background: var(--cinnabar-soft);
-  color: var(--cinnabar);
-  font-weight: 600;
-}
 
-.practice__ladder-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-}
 
-.practice__ladder-label {
-  flex: 1;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
 
 .segmented--layout {
   grid-template-columns: repeat(2, auto);
@@ -537,127 +525,29 @@ a {
   padding: 0 16px;
   border: 0;
   border-radius: 10px;
-  background: var(--cinnabar);
-  color: #fff;
+  background: var(--accent-fill);
+  color: var(--on-accent);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 
 /* The way into pitch settings from the practice view: a whole tappable card, not an inline link. */
-.pitch-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 56px;
-  margin-top: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text);
-  text-decoration: none;
-  touch-action: manipulation;
-}
 
-.pitch-card:hover {
-  border-color: var(--cinnabar);
-}
 
-.pitch-card:focus-visible {
-  outline: 2px solid var(--cinnabar);
-  outline-offset: 2px;
-}
 
-.pitch-card__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
 
-.pitch-card__label {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
 
-.pitch-card__value {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
 
-.pitch-card__action {
-  flex-shrink: 0;
-  color: var(--cinnabar);
-  font-weight: 600;
-}
 
-.ison {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-}
 
-.ison.is-sounding {
-  border-color: var(--cinnabar);
-}
 
-.ison__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-.ison__title {
-  font-weight: 600;
-}
 
-.ison__degree {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  padding: 0 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-}
 
-.ison__stop {
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--cinnabar);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--cinnabar);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
 
-.ison__stop:disabled {
-  border-color: var(--line);
-  color: var(--muted);
-  cursor: default;
-}
 
-.segmented--vowel {
-  grid-template-columns: repeat(4, 44px);
-}
 
-.ison__volume {
-  flex: 1;
-  width: 0;
-  min-width: 0;
-  margin: 0;
-  accent-color: var(--cinnabar);
-}
 
 .modes h2 {
   margin: 20px 0 8px;
@@ -744,168 +634,29 @@ a {
   font-size: 0.75rem;
 }
 
-.metronome {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-}
 
-.metronome.is-running {
-  border-color: var(--cinnabar);
-}
 
-.metronome__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-.metronome__title {
-  flex: 1;
-  font-weight: 600;
-}
 
-.metronome__toggle {
-  min-height: 44px;
-  min-width: 88px;
-  padding: 0 16px;
-  border: 1px solid var(--cinnabar);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--cinnabar);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
 
-.metronome__toggle[aria-pressed="true"] {
-  background: var(--cinnabar);
-  color: var(--surface);
-}
 
-.metronome__count {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  padding: 4px 0;
-}
 
-.metronome__number {
-  font-size: 4.5rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-}
 
-.metronome.is-running .metronome__number {
-  color: var(--text);
-}
 
-.metronome.is-running .metronome__number.is-accent {
-  color: var(--cinnabar);
-}
 
-.metronome__dots {
-  display: flex;
-  gap: 10px;
-}
 
-.metronome__dot {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--line);
-  border-radius: 50%;
-}
 
-.metronome__dot.is-first {
-  border-color: var(--cinnabar);
-}
 
-.metronome__dot.is-on {
-  border-color: var(--text);
-  background: var(--text);
-}
 
-.metronome__dot.is-first.is-on {
-  border-color: var(--cinnabar);
-  background: var(--cinnabar);
-}
 
-.metronome__step {
-  width: 44px;
-  min-height: 44px;
-  flex: none;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 1.25rem;
-  cursor: pointer;
-}
 
-.metronome__step:disabled {
-  color: var(--muted);
-  cursor: default;
-}
 
-.metronome__tempo {
-  flex: 1;
-  width: 0;
-  min-width: 0;
-  margin: 0;
-  accent-color: var(--cinnabar);
-}
 
-.metronome__cpm {
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
 
-.metronome__presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 
-.metronome__preset {
-  display: grid;
-  min-height: 44px;
-  padding: 4px 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  text-align: left;
-  cursor: pointer;
-}
 
-.metronome__preset.is-selected {
-  border-color: var(--cinnabar);
-  background: var(--cinnabar-soft);
-  color: var(--cinnabar);
-  font-weight: 600;
-}
 
-.metronome__range {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
 
-.metronome__label {
-  flex: 1;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
 
 .segmented--grouping {
   grid-template-columns: repeat(3, 48px);
@@ -981,8 +732,8 @@ a {
 }
 
 .tables__status.is-unreviewed {
-  background: var(--cinnabar-soft);
-  color: var(--cinnabar);
+  background: var(--pending-bg);
+  color: var(--pending-text);
 }
 
 .tables__status.is-reviewed {
@@ -1082,4 +833,483 @@ a {
 
 .segmented--three {
   grid-template-columns: repeat(3, 1fr);
+}
+
+/* The views other than Practice end with room below them; Practice ends with its transport bar. */
+.modes,
+.tables,
+.settings {
+  padding-bottom: 32px;
+}
+
+.practice__hint {
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+/* What is being practised, in one tappable line; the choices fold out under it. */
+.setup {
+  margin-top: 12px;
+}
+
+.setup__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.setup__summary:hover,
+.setup.is-open .setup__summary {
+  border-color: var(--cinnabar);
+}
+
+.setup.is-open .setup__summary {
+  border-radius: 12px 12px 0 0;
+}
+
+.setup__summary:focus-visible,
+.setup__link:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+}
+
+.setup__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.setup__title {
+  font-weight: 600;
+}
+
+.setup__details {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.setup__action,
+.setup__more {
+  flex: none;
+  color: var(--cinnabar);
+  font-weight: 600;
+}
+
+.setup__panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--cinnabar);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: var(--surface);
+}
+
+.setup__panel[hidden] {
+  display: none;
+}
+
+.setup__panel .mode-picker,
+.setup__panel .segmented--genus {
+  margin-top: 0;
+}
+
+.setup__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.setup__label {
+  flex: 1;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.setup__toggle {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.setup__toggle[aria-pressed="true"] {
+  border-color: var(--cinnabar);
+  background: var(--cinnabar-soft);
+  color: var(--cinnabar);
+  font-weight: 600;
+}
+
+.setup__link {
+  min-height: 44px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.setup__value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.setup__source {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The Ison and the metronome stay at the bottom of the screen while the Ladder scrolls, under the thumb. The
+ * bar spans the column including its side padding, and keeps clear of the home indicator.
+ */
+.practice__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.transport {
+  --gutter: max(16px, env(safe-area-inset-left, 0px));
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  z-index: 1;
+  display: grid;
+  /* Lanes may shrink below their widest option or tempo text; the menu and the tempo give way first. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 8px var(--gutter) max(8px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.transport__sheet {
+  display: grid;
+  gap: 10px;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.transport__sheet[hidden] {
+  display: none;
+}
+
+.transport__lane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+
+/* The lane names and the count share one column, so the controls of both lanes line up. */
+.transport__name,
+.metronome-count {
+  flex: none;
+  width: 3rem;
+}
+
+.transport__name {
+  font-weight: 600;
+}
+
+.transport__lane.is-active .transport__name {
+  color: var(--cinnabar);
+}
+
+.transport__select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.transport__more {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.transport__more[aria-expanded="true"] {
+  border-color: var(--cinnabar);
+  color: var(--cinnabar);
+}
+
+.transport__tempo {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 10px;
+  text-align: left;
+}
+
+.transport__tempo-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transport__tempo-name {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.transport__more[aria-expanded="true"] .transport__tempo-name {
+  color: inherit;
+}
+
+/* Start, and the two Stops: outlined while silent, filled while it sounds. */
+.transport__action {
+  flex: none;
+  min-width: 76px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--cinnabar);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.transport__action[aria-pressed="true"] {
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+}
+
+.transport__action:disabled {
+  border-color: var(--line);
+  color: var(--muted);
+  cursor: default;
+}
+
+.transport__more:focus-visible,
+.transport__action:focus-visible,
+.transport__select:focus-visible,
+.tempo-step:focus-visible,
+.tempo-presets__preset:focus-visible,
+.mode-jump button:focus-visible,
+.segmented button:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+}
+
+.transport__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transport__label {
+  flex: 1;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.transport__range {
+  flex: 2;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  accent-color: var(--cinnabar);
+}
+
+.segmented--vowel {
+  grid-template-columns: repeat(4, 44px);
+}
+
+/* The chronos number over its dots; the first dot is the accented chronos. */
+.metronome-count {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+}
+
+.metronome-count__number {
+  min-height: 1em;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metronome-count__number.is-accent {
+  color: var(--cinnabar);
+}
+
+.metronome-count__dots {
+  display: flex;
+  gap: 4px;
+}
+
+.metronome-count__dot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+}
+
+.metronome-count__dot.is-first {
+  border-color: var(--cinnabar);
+}
+
+.metronome-count__dot.is-on {
+  border-color: var(--text);
+  background: var(--text);
+}
+
+.metronome-count__dot.is-first.is-on {
+  border-color: var(--cinnabar);
+  background: var(--cinnabar);
+}
+
+/* The five Tempo Presets in one row: the name a teacher says, and its range. */
+.tempo-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.tempo-presets__preset {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 4px 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.tempo-presets__preset.is-selected {
+  border-color: var(--cinnabar);
+  background: var(--cinnabar-soft);
+  color: var(--cinnabar);
+  font-weight: 600;
+}
+
+.tempo-presets__range {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tempo-presets__preset.is-selected .tempo-presets__range {
+  color: inherit;
+}
+
+.tempo-step {
+  flex: none;
+  width: 48px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.3rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.tempo-step:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.tempo-step__value {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The eight Modes as a jump row on the long pages. */
+.mode-jump {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.mode-jump button {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-jump button:hover {
+  border-color: var(--cinnabar);
+}
+
+@media (min-width: 480px) {
+  .mode-jump {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+/* The card a jump lands on keeps its heading clear of the top of the screen. */
+.mode-card,
+.tables__card {
+  scroll-margin-top: 12px;
+}
+
+.mode-card h3:focus,
+.tables__card h3:focus {
+  outline: none;
+}
+
+::selection {
+  background: var(--cinnabar-soft);
+  color: var(--text);
 }
