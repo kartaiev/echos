@@ -141,23 +141,22 @@ export function TempoPanel({ metronome, presets, onChange, onChoosePreset }: Tem
 
   return (
     <>
-      <div title={presets[0] && t("metronome.presetsSource", { source: presets[0].source })}>
-        <Segmented
-          className="tempo-presets"
-          optionClassName="tempo-presets__preset"
-          options={presets.map((p) => p.id)}
-          value={metronome.tempoPreset}
-          label={t("metronome.presets")}
-          optionLabel={(id) => `${t(`tempo.${id}`)}, ${t("metronome.cpm", { n: rangeLabel(byId.get(id)!) })}`}
-          render={(id) => (
-            <>
-              <span>{t(`tempo.short.${id}`)}</span>
-              <span className="tempo-presets__range">{rangeLabel(byId.get(id)!)}</span>
-            </>
-          )}
-          onChange={onChoosePreset}
-        />
-      </div>
+      <Segmented
+        className="tempo-presets"
+        optionClassName="tempo-presets__preset"
+        options={presets.map((p) => p.id)}
+        value={metronome.tempoPreset}
+        label={t("metronome.presets")}
+        wrap={false}
+        optionLabel={(id) => `${t(`tempo.${id}`)}, ${t("metronome.cpm", { n: rangeLabel(byId.get(id)!) })}`}
+        render={(id) => (
+          <>
+            <span>{t(`tempo.short.${id}`)}</span>
+            <span className="tempo-presets__range">{rangeLabel(byId.get(id)!)}</span>
+          </>
+        )}
+        onChange={onChoosePreset}
+      />
 
       <div className="transport__row">
         <button

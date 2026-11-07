@@ -58,7 +58,7 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
                   <dt>{t("modes.dominants")}</dt>
                   <dd>{variant.dominants.map(label).join(" · ")}</dd>
                   <dt>{t("modes.cadences")}</dt>
-                  <dd title={variant.cadences.source}>
+                  <dd>
                     {(["complete", "incomplete"] as const).map((kind) =>
                       cadencesOf(kind).length > 0 ? (
                         <span key={kind} className="mode-card__cadence">
@@ -88,7 +88,6 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
                     {t("modes.practise")}
                   </button>
                 </div>
-                <p className="mode-card__source">{variant.source}</p>
               </div>
             );
           })}
