@@ -8,4 +8,4 @@ Status: planning. See the issues for the spec and the build plan.
 
 - Code: MIT (see `LICENSE`).
 - Theory data (tuning systems, mode variants, intonations): CC BY-SA 4.0. Every value cites its source.
-- Neume fonts: Neanes fonts, SIL Open Font License 1.1.
+- Neume font: Neanes (SBMuFL layout) from the Neanes project, [github.com/neanes/sbmufl](https://github.com/neanes/sbmufl), SIL Open Font License 1.1. Bundled unmodified in `src/assets/fonts` with its licence (`OFL.txt`); only the font is used, no Neanes code.

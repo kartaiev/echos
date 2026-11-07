@@ -1,4 +1,5 @@
 import type { AudioOutput, PlayingClickTrack, PlayingSound } from "../../audio/AudioOutput";
+import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
 import { MODE_VARIANTS, type ModeVariantKey } from "../theory/modeVariants";
 import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../theory/scale";
 import { GENUS_IDS, PMC_1881, type GenusId, type TuningSystemId } from "../theory/tuningSystems";
@@ -12,6 +13,7 @@ export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 export type { IsonVoice } from "./isonVoice";
 export type { Grouping, MetronomeSettings } from "./metronomeSettings";
 export type { TempoPreset, TempoPresetId } from "../theory/tempoPresets";
+export type { Martyria, MartyriaFthora, RootSign } from "../theory/martyria";
 
 const DEGREE_DURATION_MS = 1200;
 /** One Chronos of an Intonation: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
@@ -50,6 +52,8 @@ export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
   isBase: boolean;
   /** A Degree of structural weight in the chosen Mode Variant. */
   isDominant: boolean;
+  /** How the Degree is marked in the score in this Genus. */
+  martyria: Martyria;
 }
 
 /** Positions in moria from Ni that the ladder is drawn between. */
@@ -72,6 +76,8 @@ export interface Ladder {
   moriaPerOctave: number;
   /** Bibliographic citation of the interval values; shown as written, not translated. */
   source: string;
+  /** Bibliographic citation of the Martyria. */
+  martyriaSource: string;
 }
 
 /** What an Intonation shows while it plays. */
@@ -178,7 +184,15 @@ export function createPracticeSession({
       const dominantIds = new Set(variant?.dominants.map(degreeId));
       const degrees = scale.map(({ frequency: _, ...d }, i) => {
         const next = scale[i + 1];
-        return { ...d, moriaToNext: next ? next.moria - d.moria : null, isBase: d.id === baseId, isDominant: dominantIds.has(d.id) };
+        const martyria = martyriaOf(genus, d);
+        if (!martyria) throw new Error(`No Martyria for ${d.id} in ${genus}`);
+        return {
+          ...d,
+          moriaToNext: next ? next.moria - d.moria : null,
+          isBase: d.id === baseId,
+          isDominant: dominantIds.has(d.id),
+          martyria,
+        };
       });
       return {
         degrees,
@@ -188,6 +202,7 @@ export function createPracticeSession({
         tuningSystemId: tuningSystem.id,
         moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
+        martyriaSource: MARTYRIA[genus].source,
       };
     },
     pitchSettings(): PitchState {

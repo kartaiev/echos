@@ -686,3 +686,105 @@ describe("Practice Session: Tempo Presets", () => {
     expect(session.metronome().grouping).toBe(3);
   });
 });
+
+// Martyria read off the Trisagion School "The Scales" chart: the Degree's letter with a sign below it (above it for
+// low Ke and lower), and in the Enharmonic the enharmonic Fthora beside Ga, Zo' and Vou'. The chart prints low Zo to
+// Ni' (Diatonic), low Ke to Vou' (Hard Chromatic), Ni to Pa' (Soft Chromatic) and Ni to Vou' (Enharmonic); the
+// Degrees outside that follow the chart's own pattern (marked * below).
+describe("Practice Session: Martyria", () => {
+  type Expected = [degreeId: string, rootSign: string, fthora?: "enharmonic"];
+  const EXPECTED: Record<string, Expected[]> = {
+    diatonic: [
+      ["Ke,", "alpha"], // *
+      ["Zo,", "zo"],
+      ["Ni", "delta"],
+      ["Pa", "alpha"],
+      ["Vou", "legetos"],
+      ["Ga", "nana"],
+      ["Di", "delta-dotted"],
+      ["Ke", "alpha-dotted"],
+      ["Zo", "legetos"],
+      ["Ni'", "nana"],
+      ["Pa'", "alpha"], // *
+      ["Vou'", "legetos"], // *
+      ["Ga'", "nana"], // *
+    ],
+    "hard-chromatic": [
+      ["Ke,", "hard-chromatic-di"],
+      ["Zo,", "hard-chromatic-pa"],
+      ["Ni", "hard-chromatic-di"],
+      ["Pa", "hard-chromatic-pa"],
+      ["Vou", "hard-chromatic-di"],
+      ["Ga", "hard-chromatic-pa"],
+      ["Di", "hard-chromatic-di"],
+      ["Ke", "hard-chromatic-pa"],
+      ["Zo", "hard-chromatic-di"],
+      ["Ni'", "hard-chromatic-pa"],
+      ["Pa'", "hard-chromatic-di"],
+      ["Vou'", "hard-chromatic-pa"],
+      ["Ga'", "hard-chromatic-di"], // *
+    ],
+    "soft-chromatic": [
+      ["Ke,", "soft-chromatic-di"], // *
+      ["Zo,", "soft-chromatic-ke"], // *
+      ["Ni", "soft-chromatic-di"],
+      ["Pa", "soft-chromatic-ke"],
+      ["Vou", "soft-chromatic-di"],
+      ["Ga", "soft-chromatic-ke"],
+      ["Di", "soft-chromatic-di"],
+      ["Ke", "soft-chromatic-ke"],
+      ["Zo", "soft-chromatic-di"],
+      ["Ni'", "soft-chromatic-ke"],
+      ["Pa'", "soft-chromatic-di"],
+      ["Vou'", "soft-chromatic-ke"], // *
+      ["Ga'", "soft-chromatic-di"], // *
+    ],
+    enharmonic: [
+      ["Ke,", "alpha"], // *
+      ["Zo,", "zo"], // *
+      ["Ni", "delta"],
+      ["Pa", "alpha"],
+      ["Vou", "legetos"],
+      ["Ga", "nana", "enharmonic"],
+      ["Di", "delta-dotted"],
+      ["Ke", "alpha-dotted"],
+      ["Zo", "nana", "enharmonic"],
+      ["Ni'", "delta-dotted"],
+      ["Pa'", "alpha-dotted"],
+      ["Vou'", "nana", "enharmonic"],
+      ["Ga'", "delta-dotted"], // *
+    ],
+  };
+
+  it.each(Object.keys(EXPECTED))("gives every Degree of the %s ladder its Martyria", (genus) => {
+    const { session } = setup();
+
+    session.setGenus(genus as Parameters<typeof session.setGenus>[0]);
+
+    expect(session.ladder().degrees.map((d) => [d.id, d.martyria.rootSign, ...(d.martyria.fthora ? [d.martyria.fthora] : [])])).toEqual(
+      EXPECTED[genus],
+    );
+  });
+
+  it("writes the sign above the letter for low Ke and below it for every higher Degree", () => {
+    const { session } = setup();
+
+    const above = session.ladder().degrees.filter((d) => d.martyria.rootSignAbove).map((d) => d.id);
+
+    expect(above).toEqual(["Ke,"]);
+  });
+
+  it("follows the Genus of the chosen Mode Variant", () => {
+    const { session } = setup();
+
+    session.setModeVariant({ mode: "plagal-second", melos: "sticheraric" });
+
+    expect(session.ladder().degrees.find((d) => d.id === "Pa")?.martyria.rootSign).toBe("hard-chromatic-pa");
+  });
+
+  it("names the source of the Martyria", () => {
+    const { session } = setup();
+
+    expect(session.ladder().martyriaSource).toMatch(/Trisagion School.*The Scales/);
+  });
+});
