@@ -69,25 +69,60 @@ function playThroughSilentSwitch() {
   if (session && session.type !== "playback") session.type = "playback";
 }
 
-function getContext() {
+/**
+ * When a gesture asked a stopped context to resume and it still is not running a second later, iOS has left it
+ * stuck after an interruption; the next gesture then builds a fresh context.
+ */
+const STUCK_AFTER_MS = 1000;
+/** When a gesture first asked the current context to resume without success; null while it runs. */
+let resumeAskedAt: number | null = null;
+
+/**
+ * The page's AudioContext, started if it is not running. Safari stops it as "interrupted" when the student switches
+ * to another app or takes a call, and as "suspended" before the first gesture; both resume here.
+ */
+function getContext(fromGesture = false) {
   playThroughSilentSwitch();
-  context ??= new AudioContext();
-  if (context.state === "suspended") void context.resume();
-  return context;
+  if (fromGesture && context && context.state !== "running" && resumeAskedAt !== null
+    && performance.now() - resumeAskedAt > STUCK_AFTER_MS) {
+    void context.close().catch(() => {});
+    context = null;
+  }
+  if (!context || context.state === "closed") {
+    context = new AudioContext();
+    resumeAskedAt = null;
+  }
+  const ctx = context;
+  if (ctx.state === "running") {
+    resumeAskedAt = null;
+  } else {
+    if (fromGesture) resumeAskedAt ??= performance.now();
+    ctx.resume().then(
+      () => {
+        if (ctx === context && ctx.state === "running") resumeAskedAt = null;
+      },
+      () => {},
+    );
+  }
+  return ctx;
 }
 
 let unlockListening = false;
 
 /**
- * A long press starts the Ison from a timer, outside any gesture. Touch browsers only allow audio on the
- * gesture that lifts the finger, so audio is also unlocked then: a sound started while suspended begins on lift.
+ * Touch browsers only let audio start inside a gesture, and a long press starts the Ison from a timer, outside one.
+ * So every touch, click or key wakes the context: a sound started while it slept begins on the finger's lift, and
+ * the first touch after returning from another app brings the sound back. Coming back to the page tries too.
  */
 function listenForUnlock() {
   if (unlockListening) return;
   unlockListening = true;
   for (const type of ["pointerdown", "pointerup", "touchend", "keydown"]) {
-    window.addEventListener(type, getContext, { capture: true });
+    window.addEventListener(type, () => getContext(true), { capture: true });
   }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && context) getContext();
+  });
 }
 
 function scheduleClick(ctx: AudioContext, output: AudioNode, at: number, accent: boolean) {
