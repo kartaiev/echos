@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
 
@@ -6,24 +6,59 @@ import { degreeLabel, t } from "../i18n/translations";
 const LONG_PRESS_MS = 500;
 /** A finger that slides further than this is not holding the Degree. */
 const MOVE_TOLERANCE_PX = 10;
+/**
+ * The horizontal keyboard is never narrower than this many pixels per moria, so that Degrees on the same side
+ * (at least 16 moria apart in the current tables) leave room for a key with its "Dominant" mark. Where the
+ * screen is narrower, the keyboard scrolls inside its own strip.
+ */
+const MIN_PX_PER_MORIA = 4.6;
+/** Room at both ends of the keyboard for half a key. */
+const KEYBOARD_PAD_PX = 40;
+
+/** Vertical like a Parallage chart, or horizontal like a keyboard. */
+export const LADDER_LAYOUTS = ["vertical", "horizontal"] as const;
+export type LadderLayout = (typeof LADDER_LAYOUTS)[number];
 
 interface LadderProps {
   ladder: LadderModel;
+  layout: LadderLayout;
   isonDegreeId: string | null;
   onPlayDegree: (degreeId: string) => void;
   onLongPress: (degreeId: string) => void;
 }
 
 /**
- * Vertical Scale ladder, lowest Degree at the bottom, distances in proportion to moria.
- * Degrees alternate left and right of the rail so that small intervals (4 moria) still leave room to tap.
- * A tap plays a Degree; a long press is reported separately (it sets or stops the Ison).
+ * The Scale ladder, distances in proportion to moria: vertical with the lowest Degree at the bottom, or
+ * horizontal with the lowest on the left. Degrees alternate on both sides of the rail so that small intervals
+ * (4 moria) still leave room to tap. A tap plays a Degree; a long press is reported separately (it sets or
+ * stops the Ison).
  */
-export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: LadderProps) {
+export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress }: LadderProps) {
   const [lastPlayed, setLastPlayed] = useState<string | null>(null);
   const press = useRef<{ timer: number; x: number; y: number; longPressed: boolean } | null>(null);
+  const strip = useRef<HTMLDivElement>(null);
   const { lowestMoria, highestMoria } = ladder.drawingRange;
-  const position = (moria: number) => `${((moria - lowestMoria) / (highestMoria - lowestMoria)) * 100}%`;
+  const horizontal = layout === "horizontal";
+  const position = (moria: number): CSSProperties => {
+    const share = (moria - lowestMoria) / (highestMoria - lowestMoria);
+    return horizontal
+      ? { left: `calc(${KEYBOARD_PAD_PX}px + (100% - ${2 * KEYBOARD_PAD_PX}px) * ${share})` }
+      : { bottom: `${share * 100}%` };
+  };
+  const keyboardWidth = (highestMoria - lowestMoria) * MIN_PX_PER_MORIA + 2 * KEYBOARD_PAD_PX;
+
+  // A keyboard wider than the screen opens on the Ison, else the Base, else Ni.
+  const focusId = isonDegreeId ?? ladder.degrees.find((d) => d.isBase)?.id ?? "Ni";
+  useLayoutEffect(() => {
+    const scroller = strip.current;
+    if (!horizontal || !scroller) return;
+    const key = scroller.querySelector<HTMLElement>(`[data-degree="${CSS.escape(focusId)}"]`);
+    if (!key) return;
+    // Keys are centred on their position by a transform, which offsetLeft leaves out.
+    const keyCentre = key.offsetLeft;
+    const visible = keyCentre - scroller.scrollLeft;
+    if (visible < 60 || visible > scroller.clientWidth - 60) scroller.scrollLeft = keyCentre - scroller.clientWidth / 2;
+  }, [horizontal, focusId]);
 
   function startPress(degreeId: string, x: number, y: number) {
     cancelPress();
@@ -67,50 +102,58 @@ export function Ladder({ ladder, isonDegreeId, onPlayDegree, onLongPress }: Ladd
   }
 
   return (
-    <div className="ladder" role="group" aria-label={t("ladder.label")}>
-      <div className="ladder__rail" />
-      {ladder.degrees.map((degree, index) => {
-        const label = degreeLabel(degree.name, degree.octave);
-        const isIson = degree.id === isonDegreeId;
-        // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
-        const marks = [
-          degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
-          isIson ? t("ladder.isonMark") : null,
-        ].filter((m): m is string => m !== null);
-        const classes = [
-          "ladder__degree",
-          index % 2 === 0 ? "is-left" : "is-right",
-          lastPlayed === degree.id && "is-playing",
-          degree.isDominant && "is-dominant",
-          degree.isBase && "is-base",
-          isIson && "is-ison",
-        ];
-        return (
-          <div key={degree.id}>
-            <button
-              type="button"
-              className={classes.filter(Boolean).join(" ")}
-              style={{ bottom: position(degree.moria) }}
-              aria-label={[t("ladder.playDegree", { degree: label }), ...marks].join(", ")}
-              onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
-              onPointerMove={(e) => movePress(e.clientX, e.clientY)}
-              onPointerUp={endPress}
-              onPointerLeave={endPress}
-              onPointerCancel={endPress}
-              onContextMenu={(e) => e.preventDefault()}
-              onClick={() => click(degree.id)}
-            >
-              <span className="ladder__name">{label}</span>
-              {marks.length > 0 && <span className="ladder__marks">{marks.join(" · ")}</span>}
-            </button>
-            {degree.moriaToNext !== null && (
-              <span className="ladder__interval" style={{ bottom: position(degree.moria + degree.moriaToNext / 2) }}>
-                {degree.moriaToNext}
-              </span>
-            )}
-          </div>
-        );
-      })}
+    <div ref={strip} className={`ladder-strip ladder-strip--${layout}`}>
+      <div
+        className={`ladder ladder--${layout}`}
+        role="group"
+        aria-label={t("ladder.label")}
+        style={horizontal ? { minWidth: keyboardWidth } : undefined}
+      >
+        <div className="ladder__rail" />
+        {ladder.degrees.map((degree, index) => {
+          const label = degreeLabel(degree.name, degree.octave);
+          const isIson = degree.id === isonDegreeId;
+          // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
+          const marks = [
+            degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
+            isIson ? t("ladder.isonMark") : null,
+          ].filter((m): m is string => m !== null);
+          const classes = [
+            "ladder__degree",
+            horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right",
+            lastPlayed === degree.id && "is-playing",
+            degree.isDominant && "is-dominant",
+            degree.isBase && "is-base",
+            isIson && "is-ison",
+          ];
+          return (
+            <div key={degree.id}>
+              <button
+                type="button"
+                className={classes.filter(Boolean).join(" ")}
+                style={position(degree.moria)}
+                data-degree={degree.id}
+                aria-label={[t("ladder.playDegree", { degree: label }), ...marks].join(", ")}
+                onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
+                onPointerMove={(e) => movePress(e.clientX, e.clientY)}
+                onPointerUp={endPress}
+                onPointerLeave={endPress}
+                onPointerCancel={endPress}
+                onContextMenu={(e) => e.preventDefault()}
+                onClick={() => click(degree.id)}
+              >
+                <span className="ladder__name">{label}</span>
+                {marks.length > 0 && <span className="ladder__marks">{marks.join(" · ")}</span>}
+              </button>
+              {degree.moriaToNext !== null && (
+                <span className="ladder__interval" style={position(degree.moria + degree.moriaToNext / 2)}>
+                  {degree.moriaToNext}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -11,17 +11,19 @@ import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
 import { IsonPanel } from "./IsonPanel";
-import { Ladder } from "./Ladder";
+import { LADDER_LAYOUTS, Ladder, type LadderLayout } from "./Ladder";
 import { MetronomePanel } from "./MetronomePanel";
 import { ModePicker } from "./ModePicker";
 import { ModesPage } from "./ModesPage";
 import { SettingsPage } from "./SettingsPage";
 import {
   loadIsonVoice,
+  loadLadderLayout,
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
   saveIsonVoice,
+  saveLadderLayout,
   saveMetronomeSettings,
   saveModeVariant,
   savePitchSettings,
@@ -51,6 +53,8 @@ export function App() {
   // The Practice Session holds the state; the UI re-reads it after every command.
   const [, setVersion] = useState(0);
   const [view, setView] = useState<View>(viewFromHash);
+  // How the ladder is drawn is a matter of the screen, not of practice, so it lives in the UI.
+  const [layout, setLayout] = useState<LadderLayout>(() => loadLadderLayout() ?? "vertical");
   const pitch = session.pitchSettings();
   const ison = session.ison();
   const ladder = session.ladder();
@@ -106,6 +110,11 @@ export function App() {
 
   const changeMetronome = (change: Partial<MetronomeSettings>) => actOnMetronome(() => session.setMetronome(change));
   const chooseTempoPreset = (id: TempoPresetId) => actOnMetronome(() => session.chooseTempoPreset(id));
+
+  const changeLayout = (next: LadderLayout) => {
+    setLayout(next);
+    saveLadderLayout(next);
+  };
 
   return (
     <main className="practice">
@@ -163,8 +172,26 @@ export function App() {
             <span className="pitch-card__action" aria-hidden="true">{t("ladder.changePitch")} ›</span>
           </a>
           <p className="practice__hint">{t("ladder.hint")}</p>
+          <div className="practice__ladder-bar">
+            <span className="practice__ladder-label">{t("ladder.layout")}</span>
+            <div className="segmented segmented--layout" role="radiogroup" aria-label={t("ladder.layout")}>
+              {LADDER_LAYOUTS.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="radio"
+                  aria-checked={layout === l}
+                  className={layout === l ? "is-selected" : ""}
+                  onClick={() => changeLayout(l)}
+                >
+                  {t(`layout.${l}`)}
+                </button>
+              ))}
+            </div>
+          </div>
           <Ladder
             ladder={ladder}
+            layout={layout}
             isonDegreeId={ison.degreeId}
             onPlayDegree={(id) => session.playDegree(id)}
             onLongPress={(id) => act(() => session.toggleIson(id))}
