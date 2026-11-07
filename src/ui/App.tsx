@@ -8,16 +8,15 @@ import {
   type TempoPresetId,
 } from "../core/practice/PracticeSession";
 import type { ModeVariantKey } from "../core/theory/modeVariants";
-import { GENUS_IDS, type GenusId } from "../core/theory/tuningSystems";
-import { noteLabel, setLanguage, t, type Language } from "../i18n/translations";
-import { IsonPanel } from "./IsonPanel";
-import { LADDER_LAYOUTS, Ladder, type LadderLayout } from "./Ladder";
-import { MetronomePanel } from "./MetronomePanel";
-import { ModePicker } from "./ModePicker";
+import type { GenusId } from "../core/theory/tuningSystems";
+import { degreeLabel, setLanguage, t, type Language } from "../i18n/translations";
+import { Ladder, type LadderLayout } from "./Ladder";
 import { ModesPage } from "./ModesPage";
+import { PracticeSetup } from "./PracticeSetup";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, type Theme } from "./theme";
 import { TheoryTablesPage } from "./TheoryTablesPage";
+import { TransportBar } from "./TransportBar";
 import {
   loadIsonVoice,
   loadLadderLayout,
@@ -81,9 +80,15 @@ export function App() {
   const modeVariant = session.modeVariant();
   const metronome = session.metronome();
   const readCount = useCallback(() => session.metronome().count, [session]);
+  // Read aloud by screen readers: the Ison can start and stop from a long press, away from its menu.
+  const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
-    const onHashChange = () => setView(viewFromHash());
+    // Each view opens at its top, not at the scroll position the last one was left at.
+    const onHashChange = () => {
+      setView(viewFromHash());
+      window.scrollTo(0, 0);
+    };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -145,6 +150,15 @@ export function App() {
     setTheme(next);
   };
 
+  /** Runs an Ison command, then says where the Ison now is. */
+  const actOnIson = (command: () => void) =>
+    act(() => {
+      command();
+      const id = session.ison().degreeId;
+      const degree = session.ladder().degrees.find((d) => d.id === id);
+      setAnnouncement(degree ? t("ison.announceOn", { degree: degreeLabel(degree.name, degree.octave) }) : t("ison.announceOff"));
+    });
+
   const changeLayout = (next: LadderLayout) => {
     setLayout(next);
     saveLadderLayout(next);
@@ -153,7 +167,7 @@ export function App() {
   return (
     <main className="practice">
       <header className="practice__header">
-        <div>
+        <div className="practice__brand">
           <h1>{t("app.title")}</h1>
           <p>{t("app.tagline")}</p>
         </div>
@@ -189,93 +203,41 @@ export function App() {
         />
       ) : (
         <section className="practice__body">
-          <ModePicker choice={modeVariant} onChoose={chooseModeVariant} onLeave={() => chooseModeVariant(null)} />
-          {modeVariant ? (
-            // The Mode Variant sets the Genus; choosing "No Mode" brings back the Genus buttons.
-            <p className="practice__genus">{t("ladder.genusOf", { genus: t(`genus.${ladder.genus}`) })}</p>
-          ) : (
-            <div className="segmented segmented--genus" role="radiogroup" aria-label={t("ladder.genus")}>
-              {GENUS_IDS.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={ladder.genus === id}
-                  className={ladder.genus === id ? "is-selected" : ""}
-                  onClick={() => changeGenus(id)}
-                >
-                  {t(`genus.${id}`)}
-                </button>
-              ))}
-            </div>
-          )}
-          {ladder.attractions.length > 0 && (
-            <div className="attractions" role="group" aria-label={t("attractions.title")}>
-              <span className="attractions__title">{t("attractions.title")}</span>
-              {ladder.attractions.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  className="attractions__toggle"
-                  aria-pressed={a.active}
-                  title={a.source}
-                  onClick={() => act(() => session.toggleAttraction(a.id))}
-                >
-                  {t(`attraction.${a.id}`)}
-                </button>
-              ))}
-            </div>
-          )}
-          <a className="pitch-card" href={VIEW_HASHES.settings}>
-            <span className="pitch-card__text">
-              <span className="pitch-card__label">{t("settings.referencePitch")}</span>
-              <span className="pitch-card__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>
-            </span>
-            <span className="pitch-card__action" aria-hidden="true">{t("ladder.changePitch")} ›</span>
-          </a>
+          <PracticeSetup
+            modeVariant={modeVariant}
+            ladder={ladder}
+            pitch={pitch}
+            layout={layout}
+            settingsHref={VIEW_HASHES.settings}
+            onChooseModeVariant={chooseModeVariant}
+            onChangeGenus={changeGenus}
+            onToggleAttraction={(id) => act(() => session.toggleAttraction(id))}
+            onChangeLayout={changeLayout}
+          />
           <p className="practice__hint">{t("ladder.hint")}</p>
-          <div className="practice__ladder-bar">
-            <span className="practice__ladder-label">{t("ladder.layout")}</span>
-            <div className="segmented segmented--layout" role="radiogroup" aria-label={t("ladder.layout")}>
-              {LADDER_LAYOUTS.map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  role="radio"
-                  aria-checked={layout === l}
-                  className={layout === l ? "is-selected" : ""}
-                  onClick={() => changeLayout(l)}
-                >
-                  {t(`layout.${l}`)}
-                </button>
-              ))}
-            </div>
-          </div>
           <Ladder
             ladder={ladder}
             layout={layout}
             isonDegreeId={ison.degreeId}
             onPlayDegree={(id) => session.playDegree(id)}
-            onLongPress={(id) => act(() => session.toggleIson(id))}
+            onLongPress={(id) => actOnIson(() => session.toggleIson(id))}
           />
-          <IsonPanel
+          <TransportBar
             ison={ison}
             degrees={ladder.degrees}
-            onSetIson={(id) => act(() => session.setIson(id))}
-            onStop={() => act(() => session.stopIson())}
-            onChangeVoice={changeIsonVoice}
-          />
-          <MetronomePanel
             metronome={metronome}
             presets={session.tempoPresets()}
             readCount={readCount}
-            onStart={() => act(() => session.startMetronome())}
-            onStop={() => act(() => session.stopMetronome())}
-            onChange={changeMetronome}
+            onSetIson={(id) => actOnIson(() => session.setIson(id))}
+            onStopIson={() => actOnIson(() => session.stopIson())}
+            onChangeVoice={changeIsonVoice}
+            onStartMetronome={() => act(() => session.startMetronome())}
+            onStopMetronome={() => act(() => session.stopMetronome())}
+            onChangeMetronome={changeMetronome}
             onChoosePreset={chooseTempoPreset}
           />
-          <p className="practice__source" title={ladder.source}>
-            {t("ladder.tuning", { name: t(`tuning.${ladder.tuningSystemId}`), moria: ladder.moriaPerOctave })}
+          <p className="visually-hidden" aria-live="polite">
+            {announcement}
           </p>
         </section>
       )}

@@ -3,6 +3,7 @@ import { MELOS_IDS, MODE_IDS, type ModeVariantKey } from "../core/theory/modeVar
 import type { DegreePosition } from "../core/theory/scale";
 import { GENUS_IDS, type GenusId, type ReviewStatus } from "../core/theory/tuningSystems";
 import { degreeLabel, t } from "../i18n/translations";
+import { ModeJump, modeAnchor } from "./ModeJump";
 import { ModeName } from "./ModeName";
 import { intonationText } from "./intonationText";
 import { martyriaGlyphs } from "./martyriaGlyphs";
@@ -202,9 +203,10 @@ export function TheoryTablesPage({ session }: TheoryTablesPageProps) {
       ))}
 
       <h2>{t("modes.title")}</h2>
+      <ModeJump />
       {MODE_IDS.map((mode) => (
-        <article key={mode} className="tables__card">
-          <h3>
+        <article key={mode} id={modeAnchor(mode)} className="tables__card">
+          <h3 tabIndex={-1}>
             <ModeName mode={mode} />
           </h3>
           {MELOS_IDS.map((melos) => (

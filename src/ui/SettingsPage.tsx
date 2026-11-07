@@ -24,43 +24,6 @@ export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLang
       <h2>{t("settings.title")}</h2>
 
       <fieldset className="settings__group">
-        <legend>{t("settings.language")}</legend>
-        <div className="segmented" role="radiogroup" aria-label={t("settings.language")}>
-          {LANGUAGES.map((l) => (
-            <button
-              key={l}
-              type="button"
-              role="radio"
-              lang={l}
-              aria-checked={language === l}
-              className={language === l ? "is-selected" : ""}
-              onClick={() => onChangeLanguage(l)}
-            >
-              {t(`language.${l}`)}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="settings__group">
-        <legend>{t("settings.theme")}</legend>
-        <div className="segmented segmented--three" role="radiogroup" aria-label={t("settings.theme")}>
-          {THEMES.map((th) => (
-            <button
-              key={th}
-              type="button"
-              role="radio"
-              aria-checked={theme === th}
-              className={theme === th ? "is-selected" : ""}
-              onClick={() => onChangeTheme(th)}
-            >
-              {t(`theme.${th}`)}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="settings__group">
         <legend>{t("settings.register")}</legend>
         <div className="segmented" role="radiogroup" aria-label={t("settings.register")}>
           {REGISTERS.map((r) => (
@@ -121,6 +84,43 @@ export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLang
           {t("settings.playNi")}
         </button>
       </div>
+
+      <fieldset className="settings__group">
+        <legend>{t("settings.language")}</legend>
+        <div className="segmented" role="radiogroup" aria-label={t("settings.language")}>
+          {LANGUAGES.map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              lang={l}
+              aria-checked={language === l}
+              className={language === l ? "is-selected" : ""}
+              onClick={() => onChangeLanguage(l)}
+            >
+              {t(`language.${l}`)}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="settings__group">
+        <legend>{t("settings.theme")}</legend>
+        <div className="segmented segmented--three" role="radiogroup" aria-label={t("settings.theme")}>
+          {THEMES.map((th) => (
+            <button
+              key={th}
+              type="button"
+              role="radio"
+              aria-checked={theme === th}
+              className={theme === th ? "is-selected" : ""}
+              onClick={() => onChangeTheme(th)}
+            >
+              {t(`theme.${th}`)}
+            </button>
+          ))}
+        </div>
+      </fieldset>
     </section>
   );
 }
