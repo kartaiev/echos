@@ -5,8 +5,10 @@ import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../
 import {
   GENUS_IDS,
   PMC_1881,
+  type Attraction,
   type AttractionId,
   type GenusId,
+  type IntervalCycle,
   type ReviewStatus,
   type SourcedValue,
   type TuningSystemId,
@@ -26,7 +28,7 @@ export type { AttractionId } from "../theory/tuningSystems";
 export type { Cadence, CadenceKind } from "../theory/modeVariants";
 
 const DEGREE_DURATION_MS = 1200;
-/** One Chronos of an Intonation: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
+/** One Chronos of an Intonation or a sung Scale: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
 const INTONATION_CHRONOS_MS = chronosMs(100);
 /** Degrees and Intonations always sing "a" at full volume; only the Ison voice is adjustable. */
 const SUNG_VOWEL = "a";
@@ -103,6 +105,23 @@ export interface Ladder {
   attractions: AttractionState[];
 }
 
+/** A Degree as the Theory tables show it: position, sound and Martyria in one Genus. */
+export interface TableDegree extends ScaleDegree {
+  moriaToNext: number | null;
+  martyria: Martyria;
+}
+
+/** Everything the Theory tables show for one Genus of the Tuning System, with sources. */
+export interface ScaleDescription {
+  genus: GenusId;
+  tuningSystemId: TuningSystemId;
+  moriaPerOctave: number;
+  intervals: SourcedValue<IntervalCycle>;
+  degrees: TableDegree[];
+  martyriaSource: string;
+  attractions: readonly SourcedValue<Attraction>[];
+}
+
 /** What an Intonation shows while it plays. */
 export interface PlayedIntonation {
   text: string;
@@ -146,7 +165,8 @@ export function createPracticeSession({
   let settings = pitchSettings;
   let voice = isonVoice;
   let currentDegreeSound: PlayingSound | null = null;
-  let intonationSounds: PlayingSound[] = [];
+  /** An Intonation or a Scale played as a sequence; starting another one stops it. */
+  let phraseSounds: PlayingSound[] = [];
   let ison: { degreeId: string; frequency: number; sound: PlayingSound } | null = null;
   let activeAttractions = new Set<AttractionId>();
   let tempo = metronome;
@@ -172,6 +192,30 @@ export function createPracticeSession({
 
   function findDegree(degreeId: string) {
     const degree = scale.find((d) => d.id === degreeId);
+    if (!degree) throw new Error(`Unknown Degree: ${degreeId}`);
+    return degree;
+  }
+
+  /** Sing one Degree, cutting off the previous one like a single voice. */
+  function singDegree(frequency: number) {
+    currentDegreeSound?.stop();
+    currentDegreeSound = audio.playSound({ kind: "degree", frequency, durationMs: DEGREE_DURATION_MS, vowel: SUNG_VOWEL, volume: SUNG_VOLUME });
+  }
+
+  /** Sing Degrees one after another, stopping any phrase still sounding; returns the total length. */
+  function singPhrase(kind: "intonation" | "degree", steps: { frequency: number; durationMs: number }[]): number {
+    phraseSounds.forEach((sound) => sound.stop());
+    let startMs = 0;
+    phraseSounds = steps.map(({ frequency, durationMs }) => {
+      const sound = audio.playSound({ kind, frequency, startMs, durationMs, vowel: SUNG_VOWEL, volume: SUNG_VOLUME });
+      startMs += durationMs;
+      return sound;
+    });
+    return startMs;
+  }
+
+  function findIn(g: GenusId, degreeId: string) {
+    const degree = buildScaleIn(g).find((d) => d.id === degreeId);
     if (!degree) throw new Error(`Unknown Degree: ${degreeId}`);
     return degree;
   }
@@ -299,17 +343,15 @@ export function createPracticeSession({
     playIntonation(key: ModeVariantKey): PlayedIntonation | null {
       const variant = variantOf(key);
       if (!variant.intonation) return null;
-      intonationSounds.forEach((sound) => sound.stop());
       const variantScale = buildScaleIn(variant.genus);
-      let startMs = 0;
-      intonationSounds = variant.intonation.steps.map(({ degree, chronoi }) => {
-        const { frequency } = variantScale.find((d) => d.id === degreeId(degree))!;
-        const durationMs = chronoi * INTONATION_CHRONOS_MS;
-        const sound = audio.playSound({ kind: "intonation", frequency, startMs, durationMs, vowel: SUNG_VOWEL, volume: SUNG_VOLUME });
-        startMs += durationMs;
-        return sound;
-      });
-      return { text: variant.intonation.text, durationMs: startMs };
+      const durationMs = singPhrase(
+        "intonation",
+        variant.intonation.steps.map(({ degree, chronoi }) => ({
+          frequency: variantScale.find((d) => d.id === degreeId(degree))!.frequency,
+          durationMs: chronoi * INTONATION_CHRONOS_MS,
+        })),
+      );
+      return { text: variant.intonation.text, durationMs };
     },
     /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked, Attractions are off. */
     leaveModeVariant() {
@@ -333,15 +375,32 @@ export function createPracticeSession({
       return chosenVariant && { ...chosenVariant };
     },
     playDegree(degreeId: string) {
-      const degree = findDegree(degreeId);
-      currentDegreeSound?.stop();
-      currentDegreeSound = audio.playSound({
-        kind: "degree",
-        frequency: degree.frequency,
-        durationMs: DEGREE_DURATION_MS,
-        vowel: SUNG_VOWEL,
-        volume: SUNG_VOLUME,
-      });
+      singDegree(findDegree(degreeId).frequency);
+    },
+    /** For the Theory tables: a Genus with every Degree, its sound, Martyria and sources, as the source gives it. */
+    describeScale(g: GenusId): ScaleDescription {
+      const degrees = buildScaleIn(g);
+      return {
+        genus: g,
+        tuningSystemId: tuningSystem.id,
+        moriaPerOctave: tuningSystem.moriaPerOctave,
+        intervals: tuningSystem.genera[g],
+        degrees: degrees.map((d, i) => {
+          const next = degrees[i + 1];
+          return { ...d, moriaToNext: next ? next.moria - d.moria : null, martyria: martyriaOf(g, d)! };
+        }),
+        martyriaSource: MARTYRIA[g].source,
+        attractions: attractionsIn(g),
+      };
+    },
+    /** Play a Degree of any Genus, leaving the practice screen as it is. */
+    playDegreeIn(g: GenusId, degreeId: string) {
+      singDegree(findIn(g, degreeId).frequency);
+    },
+    /** Sing a Genus from Ni up to Ni', one Chronos at the Medium tempo per Degree. */
+    playScale(g: GenusId): { durationMs: number } {
+      const octave = buildScaleIn(g).filter((d) => d.octave === 0 || d.id === "Ni'");
+      return { durationMs: singPhrase("degree", octave.map(({ frequency }) => ({ frequency, durationMs: INTONATION_CHRONOS_MS }))) };
     },
     /** Hold the Ison on a Degree; it keeps sounding while Degrees are played, until moved or stopped. */
     setIson: holdIson,
