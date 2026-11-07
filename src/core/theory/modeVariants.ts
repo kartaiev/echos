@@ -35,7 +35,15 @@ export interface Intonation {
   steps: readonly IntonationStep[];
 }
 
-/** Cadences (ADR-0002) arrive when a source for them is found. */
+/** Complete Cadences rest on the Base, incomplete ones on another Dominant Degree. */
+export type CadenceKind = "complete" | "incomplete";
+
+export interface Cadence {
+  kind: CadenceKind;
+  degree: DegreePosition;
+}
+
+/** The theory of a Mode Variant; its Cadences follow from the Base and Dominant Degrees (see `cadencesOf`). */
 export interface ModeVariant {
   genus: GenusId;
   base: DegreePosition;
@@ -46,6 +54,8 @@ export interface ModeVariant {
 }
 
 const TRISAGION_101 = 'Trisagion School of Byzantine Music, ByzB-101 "Modal Theory Review", Heirmologic Genre';
+const TRISAGION_201 = "Trisagion School of Byzantine Music, Octoëchos 201: 1st Mode (2026)";
+const TRISAGION_201_CADENCES = `${TRISAGION_201}, "Melodic Formulas/Cadences"`;
 const MELLING =
   'David J. Melling, "Reading Psalmodia: An introduction to modern Byzantine Notation" (2000), §9 Tones, Modes & Scales';
 
@@ -77,7 +87,14 @@ export const MODE_VARIANTS: Record<ModeId, Record<MelosId, SourcedValue<ModeVari
   first: {
     heirmologic: sourcedVariant(TRISAGION_101, "diatonic", degree("Pa"), [degree("Pa"), degree("Di")],
       sungAs("Ah-nah-nes", [["Ni", 1.5], ["Pa", 0.5], ["Pa", 2]])),
-    sticheraric: sourcedVariant(MELLING, "diatonic", degree("Pa"), [degree("Pa"), degree("Ga")]),
+    // The course gives 1st Mode Sticheraric the same Intonation as the Heirmologic.
+    sticheraric: sourcedVariant(
+      `${MELLING}; Intonation: ${TRISAGION_201}, "Modal Theory of 1st Mode Heirmologic"`,
+      "diatonic",
+      degree("Pa"),
+      [degree("Pa"), degree("Ga")],
+      sungAs("Ah-nah-nes", [["Ni", 1.5], ["Pa", 0.5], ["Pa", 2]]),
+    ),
   },
   second: {
     heirmologic: sourcedVariant(TRISAGION_101, "hard-chromatic", degree("Pa"), [degree("Pa"), degree("Di")],
@@ -121,6 +138,24 @@ export const MODE_VARIANTS: Record<ModeId, Record<MelosId, SourcedValue<ModeVari
     sticheraric: sourcedVariant(MELLING, "diatonic", degree("Ni"), [degree("Ni"), degree("Vou"), degree("Di")]),
   },
 };
+
+const samePosition = (a: DegreePosition, b: DegreePosition) => a.name === b.name && a.octave === b.octave;
+
+/**
+ * The course defines a complete Cadence as one ending on the Base and an incomplete one as ending on another
+ * structural note, so a Mode Variant's Cadences follow from its Base and Dominant Degrees. Final Cadences end a
+ * piece; the course names no Degree for them, so they are left out.
+ */
+export function cadencesOf({ base, dominants }: ModeVariant): SourcedValue<Cadence[]> {
+  return {
+    value: [
+      { kind: "complete", degree: base },
+      ...dominants.filter((d) => !samePosition(d, base)).map((d) => ({ kind: "incomplete" as const, degree: d })),
+    ],
+    source: TRISAGION_201_CADENCES,
+    reviewStatus: "unreviewed",
+  };
+}
 
 /** Guards a choice restored from the device. */
 export function isModeVariantKey(value: unknown): value is ModeVariantKey {

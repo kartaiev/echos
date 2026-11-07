@@ -1,8 +1,16 @@
 import type { AudioOutput, PlayingClickTrack, PlayingSound } from "../../audio/AudioOutput";
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
-import { MODE_VARIANTS, type ModeVariantKey } from "../theory/modeVariants";
+import { cadencesOf, MODE_VARIANTS, type Cadence, type ModeVariant, type ModeVariantKey } from "../theory/modeVariants";
 import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../theory/scale";
-import { GENUS_IDS, PMC_1881, type AttractionId, type GenusId, type ReviewStatus, type TuningSystemId } from "../theory/tuningSystems";
+import {
+  GENUS_IDS,
+  PMC_1881,
+  type AttractionId,
+  type GenusId,
+  type ReviewStatus,
+  type SourcedValue,
+  type TuningSystemId,
+} from "../theory/tuningSystems";
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
 import { DEFAULT_ISON_VOICE, type IsonVoice } from "./isonVoice";
@@ -15,6 +23,7 @@ export type { Grouping, MetronomeSettings } from "./metronomeSettings";
 export type { TempoPreset, TempoPresetId } from "../theory/tempoPresets";
 export type { Martyria, MartyriaFthora, RootSign } from "../theory/martyria";
 export type { AttractionId } from "../theory/tuningSystems";
+export type { Cadence, CadenceKind } from "../theory/modeVariants";
 
 const DEGREE_DURATION_MS = 1200;
 /** One Chronos of an Intonation: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
@@ -106,6 +115,13 @@ export interface MetronomeState extends MetronomeSettings {
   tempoPreset: TempoPresetId | null;
   /** Which Chronos of the group is sounding, from 1; null while stopped or before the first click is heard. */
   count: number | null;
+}
+
+/** Everything a Mode Variant card shows. */
+export interface ModeVariantDescription extends ModeVariant {
+  cadences: SourcedValue<Cadence[]>;
+  source: string;
+  reviewStatus: ReviewStatus;
 }
 
 export interface IsonState extends IsonVoice {
@@ -307,6 +323,11 @@ export function createPracticeSession({
       if (activeAttractions.has(id)) activeAttractions.delete(id);
       else activeAttractions.add(id);
       rebuildScale();
+    },
+    /** The theory of a Mode Variant for its card, without choosing it. */
+    describeModeVariant({ mode, melos }: ModeVariantKey): ModeVariantDescription {
+      const { value, source, reviewStatus } = MODE_VARIANTS[mode][melos];
+      return { ...value, cadences: cadencesOf(value), source, reviewStatus };
     },
     modeVariant(): ModeVariantKey | null {
       return chosenVariant && { ...chosenVariant };

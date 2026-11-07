@@ -906,3 +906,7 @@ a {
 .segmented--grouping {
   grid-template-columns: repeat(3, 48px);
 }
+
+.mode-card__cadence {
+  display: block;
+}

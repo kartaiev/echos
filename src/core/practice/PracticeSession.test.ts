@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createPracticeSession } from "./PracticeSession";
 import { createRecordingAudioOutput } from "../../audio/recordingAudioOutput";
+import { degreeId } from "../theory/scale";
 
 function setup() {
   const audio = createRecordingAudioOutput();
@@ -493,7 +494,7 @@ describe("Practice Session: Intonations", () => {
   it("plays nothing for a Mode Variant whose source gives no Intonation", () => {
     const { audio, session } = setup();
 
-    expect(session.playIntonation({ mode: "first", melos: "sticheraric" })).toBeNull();
+    expect(session.playIntonation({ mode: "second", melos: "sticheraric" })).toBeNull();
     expect(audio.sounds).toEqual([]);
   });
 });
@@ -860,5 +861,51 @@ describe("Practice Session: Attractions", () => {
 
     expect(session.ladder().attractions).toEqual([]);
     expect(() => session.toggleAttraction("zo-lowered")).toThrow(/zo-lowered/);
+  });
+});
+
+// Cadences after the Trisagion School course Octoëchos 201 ("Melodic Formulas/Cadences"): a complete Cadence ends on
+// the Base, an incomplete one on another structural note (our Dominant Degrees). Final Cadences end a piece; the
+// course names no Degree for them, so they are not listed.
+describe("Practice Session: Mode Variant cards", () => {
+  it.each([
+    ["first", "heirmologic", ["Pa"], ["Di"]],
+    ["first", "sticheraric", ["Pa"], ["Ga"]],
+    ["plagal-second", "heirmologic", ["Di"], ["Vou", "Zo"]],
+    ["grave", "sticheraric", ["Zo,"], ["Pa", "Ga", "Di", "Zo"]],
+    ["plagal-fourth", "heirmologic", ["Ni"], ["Vou", "Di"]],
+  ] as const)("%s %s cadences completely on %j and incompletely on %j", (mode, melos, complete, incomplete) => {
+    const { session } = setup();
+
+    const { cadences } = session.describeModeVariant({ mode, melos });
+
+    expect(cadences.value.filter((c) => c.kind === "complete").map((c) => degreeId(c.degree))).toEqual(complete);
+    expect(cadences.value.filter((c) => c.kind === "incomplete").map((c) => degreeId(c.degree))).toEqual(incomplete);
+    expect(cadences).toMatchObject({ source: expect.stringMatching(/Octoëchos 201.*Cadences/), reviewStatus: "unreviewed" });
+  });
+
+  it("describes a Mode Variant with its Genus, Base, Dominant Degrees and source", () => {
+    const { session } = setup();
+
+    expect(session.describeModeVariant({ mode: "plagal-fourth", melos: "sticheraric" })).toMatchObject({
+      genus: "diatonic",
+      base: { name: "Ni", octave: 0 },
+      dominants: [{ name: "Ni" }, { name: "Vou" }, { name: "Di" }],
+      source: expect.stringMatching(/Melling/),
+      reviewStatus: "unreviewed",
+    });
+  });
+
+  // The course: "1st Mode Heirmologic also has the same introductory intonation as 1st Mode Sticheraric".
+  it("sings the 1st Mode Sticheraric Intonation like the Heirmologic one: Ni, Pa, Pa", () => {
+    const heirmologic = setup();
+    const sticheraric = setup();
+
+    const played = sticheraric.session.playIntonation({ mode: "first", melos: "sticheraric" });
+    heirmologic.session.playIntonation({ mode: "first", melos: "heirmologic" });
+
+    expect(played).toMatchObject({ text: "Ah-nah-nes" });
+    expect(sticheraric.audio.sounds).toEqual(heirmologic.audio.sounds);
+    expect(sticheraric.session.describeModeVariant({ mode: "first", melos: "sticheraric" }).source).toMatch(/Melling.*Octoëchos 201/);
   });
 });
