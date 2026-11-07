@@ -118,7 +118,8 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
           // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
           const marks = [
             degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
-            isIson ? t("ladder.isonMark") : null,
+            degree.attraction === null ? null : degree.attraction < 0 ? t("ladder.loweredMark") : t("ladder.raisedMark"),
+          isIson ? t("ladder.isonMark") : null,
           ].filter((m): m is string => m !== null);
           const classes = [
             "ladder__degree",
@@ -127,6 +128,7 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
             degree.isDominant && "is-dominant",
             degree.isBase && "is-base",
             isIson && "is-ison",
+          degree.attraction !== null && "is-attracted",
           ];
           return (
             <div key={degree.id}>
@@ -150,7 +152,11 @@ export function Ladder({ ladder, layout, isonDegreeId, onPlayDegree, onLongPress
                 </span>
                 <span className="ladder__text">
                   <span className="ladder__name">{label}</span>
-                  {marks.length > 0 && <span className="ladder__marks">{marks.join(" · ")}</span>}
+                  {marks.map((mark) => (
+                    <span key={mark} className="ladder__marks">
+                      {mark}
+                    </span>
+                  ))}
                 </span>
               </button>
               {degree.moriaToNext !== null && (

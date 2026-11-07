@@ -788,3 +788,77 @@ describe("Practice Session: Martyria", () => {
     expect(session.ladder().martyriaSource).toMatch(/Trisagion School.*The Scales/);
   });
 });
+
+// Attraction of Zo' in the Diatonic, from the Trisagion School course Octoëchos 201 ("1st Mode Sticheraric –
+// Theoretical Overview"): Ke to Zo' is 10 moria natural and 6 when Zo' is flat, so the flat Zo' is 4 moria lower.
+// Our "Zo" is their Zo': the Zo above Ke. Ni = C3 = 130.8128 Hz; Zo at 64 moria is 242.23 Hz, at 60 moria 233.08 Hz.
+describe("Practice Session: Attractions", () => {
+  it("offers Zo lowered by 4 moria in the Diatonic, off at first, with its source", () => {
+    const { session } = setup();
+
+    expect(session.ladder().attractions).toEqual([
+      { id: "zo-lowered", degreeId: "Zo", moria: -4, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
+    ]);
+  });
+
+  it("with Zo lowered, playing Zo requests the altered frequency; switching it off restores the regular one", () => {
+    const { audio, session } = setup();
+
+    session.toggleAttraction("zo-lowered");
+    session.playDegree("Zo");
+    session.toggleAttraction("zo-lowered");
+    session.playDegree("Zo");
+
+    expect(audio.sounds.map((s) => s.frequency)).toEqual([expect.closeTo(233.08, 2), expect.closeTo(242.23, 2)]);
+  });
+
+  it("marks the lowered Degree and moves it on the ladder: Ke to Zo becomes 6 moria, Zo to Ni' 12", () => {
+    const { session } = setup();
+
+    session.toggleAttraction("zo-lowered");
+    const ladder = session.ladder();
+    const zo = ladder.degrees.find((d) => d.id === "Zo")!;
+    const ke = ladder.degrees.find((d) => d.id === "Ke")!;
+
+    expect(zo).toMatchObject({ moria: 60, moriaToNext: 12, attraction: -4 });
+    expect(ke.moriaToNext).toBe(6);
+    expect(ladder.degrees.filter((d) => d.attraction !== null).map((d) => d.id)).toEqual(["Zo"]);
+    expect(ladder.attractions[0]?.active).toBe(true);
+  });
+
+  it("moves a sounding Ison on Zo with the Attraction", () => {
+    const { audio, session } = setup();
+
+    session.setIson("Zo");
+    session.toggleAttraction("zo-lowered");
+
+    expect(audio.sounds.map((s) => [s.frequency, s.stopped])).toEqual([
+      [expect.closeTo(242.23, 2), true],
+      [expect.closeTo(233.08, 2), false],
+    ]);
+  });
+
+  it.each([
+    ["choosing a Mode Variant", (s: ReturnType<typeof setup>["session"]) => s.setModeVariant({ mode: "first", melos: "heirmologic" })],
+    ["leaving the Mode Variant", (s: ReturnType<typeof setup>["session"]) => s.leaveModeVariant()],
+    ["choosing a Genus", (s: ReturnType<typeof setup>["session"]) => s.setGenus("diatonic")],
+  ])("resets the Attractions on %s", (_, change) => {
+    const { audio, session } = setup();
+
+    session.toggleAttraction("zo-lowered");
+    change(session);
+    session.playDegree("Zo");
+
+    expect(session.ladder().attractions.every((a) => !a.active)).toBe(true);
+    expect(audio.sounds[0]?.frequency).toBeCloseTo(242.23, 2);
+  });
+
+  it("offers no Attraction in a Genus the source does not cover", () => {
+    const { session } = setup();
+
+    session.setGenus("soft-chromatic");
+
+    expect(session.ladder().attractions).toEqual([]);
+    expect(() => session.toggleAttraction("zo-lowered")).toThrow(/zo-lowered/);
+  });
+});
