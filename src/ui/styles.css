@@ -937,13 +937,41 @@ a {
   color: var(--cinnabar);
 }
 
+/*
+ * Voice and Tempo open a sheet above the bar, so they carry a drawn chevron like the Ison menu's: pointing up
+ * while the sheet is closed, down while it is open.
+ */
+.transport__more {
+  position: relative;
+  padding-right: 28px;
+}
+
+.transport__more::after {
+  content: "";
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -2px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.transport__more[aria-expanded="true"]::after {
+  margin-top: -5px;
+  transform: rotate(225deg);
+}
+
 .transport__tempo {
   display: grid;
   align-content: center;
   flex: 1;
   min-width: 0;
   min-height: 56px;
-  padding: 2px 10px;
+  padding: 2px 28px 2px 10px;
   text-align: left;
 }
 
