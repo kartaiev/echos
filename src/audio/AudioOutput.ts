@@ -25,6 +25,11 @@ export interface AudioOutput {
   playSound(sound: SoundRequest): PlayingSound;
   /** Starts a metronome click that repeats until stopped; the first click is accented and sounds at once. */
   playClickTrack(track: ClickTrackRequest): PlayingClickTrack;
+  /**
+   * False while the device keeps the sound stopped (Safari before the first tap, or after a call or an app
+   * switch): sounds are requested but nobody hears them.
+   */
+  isRunning(): boolean;
 }
 
 export interface ClickTrackRequest {

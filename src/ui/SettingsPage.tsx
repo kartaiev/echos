@@ -2,6 +2,7 @@ import type { PitchSettings, PitchState } from "../core/practice/PracticeSession
 import { MAX_FINE_ADJUSTMENT_HZ, NI_NOTE_CHOICES, REGISTERS, soundingNote } from "../core/practice/pitchSettings";
 import type { NoteName } from "../core/theory/westernPitch";
 import { LANGUAGES, noteLabel, t, type Language } from "../i18n/translations";
+import { Segmented } from "./Segmented";
 import { THEMES, type Theme } from "./theme";
 
 interface SettingsPageProps {
@@ -25,20 +26,13 @@ export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLang
 
       <fieldset className="settings__group">
         <legend>{t("settings.register")}</legend>
-        <div className="segmented" role="radiogroup" aria-label={t("settings.register")}>
-          {REGISTERS.map((r) => (
-            <button
-              key={r}
-              type="button"
-              role="radio"
-              aria-checked={register === r}
-              className={register === r ? "is-selected" : ""}
-              onClick={() => onChange({ register: r })}
-            >
-              {t(`register.${r}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          options={REGISTERS}
+          value={register}
+          label={t("settings.register")}
+          render={(r) => t(`register.${r}`)}
+          onChange={(r) => onChange({ register: r })}
+        />
         <p className="settings__help">{t("settings.registerHelp")}</p>
       </fieldset>
 
@@ -76,50 +70,36 @@ export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLang
             {t("settings.resetFine")}
           </button>
         )}
+        <div className="settings__result">
+          <p>{t("settings.niSoundsAt", { hz: pitch.niHz.toFixed(2) })}</p>
+          <button type="button" className="secondary-button" onClick={onPlayNi}>
+            {t("settings.playNi")}
+          </button>
+        </div>
       </fieldset>
-
-      <div className="settings__result">
-        <p>{t("settings.niSoundsAt", { hz: pitch.niHz.toFixed(2) })}</p>
-        <button type="button" className="primary-button" onClick={onPlayNi}>
-          {t("settings.playNi")}
-        </button>
-      </div>
 
       <fieldset className="settings__group">
         <legend>{t("settings.language")}</legend>
-        <div className="segmented" role="radiogroup" aria-label={t("settings.language")}>
-          {LANGUAGES.map((l) => (
-            <button
-              key={l}
-              type="button"
-              role="radio"
-              lang={l}
-              aria-checked={language === l}
-              className={language === l ? "is-selected" : ""}
-              onClick={() => onChangeLanguage(l)}
-            >
-              {t(`language.${l}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          options={LANGUAGES}
+          value={language}
+          label={t("settings.language")}
+          lang={(l) => l}
+          render={(l) => t(`language.${l}`)}
+          onChange={onChangeLanguage}
+        />
       </fieldset>
 
       <fieldset className="settings__group">
         <legend>{t("settings.theme")}</legend>
-        <div className="segmented segmented--three" role="radiogroup" aria-label={t("settings.theme")}>
-          {THEMES.map((th) => (
-            <button
-              key={th}
-              type="button"
-              role="radio"
-              aria-checked={theme === th}
-              className={theme === th ? "is-selected" : ""}
-              onClick={() => onChangeTheme(th)}
-            >
-              {t(`theme.${th}`)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="segmented segmented--three"
+          options={THEMES}
+          value={theme}
+          label={t("settings.theme")}
+          render={(th) => t(`theme.${th}`)}
+          onChange={onChangeTheme}
+        />
       </fieldset>
     </section>
   );

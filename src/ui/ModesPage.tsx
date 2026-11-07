@@ -56,13 +56,13 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
                   <dt>{t("modes.base")}</dt>
                   <dd>{label(variant.base)}</dd>
                   <dt>{t("modes.dominants")}</dt>
-                  <dd>{variant.dominants.map(label).join(", ")}</dd>
+                  <dd>{variant.dominants.map(label).join(" · ")}</dd>
                   <dt>{t("modes.cadences")}</dt>
                   <dd title={variant.cadences.source}>
                     {(["complete", "incomplete"] as const).map((kind) =>
                       cadencesOf(kind).length > 0 ? (
                         <span key={kind} className="mode-card__cadence">
-                          {t(`modes.cadence.${kind}`, { degrees: cadencesOf(kind).join(", ") })}
+                          {t(`modes.cadence.${kind}`, { degrees: cadencesOf(kind).join(" · ") })}
                         </span>
                       ) : null,
                     )}

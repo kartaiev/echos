@@ -211,8 +211,30 @@ a {
   right: 100%;
 }
 
-.ladder__degree:hover {
+@media (hover: hover) {
+  .ladder__degree:hover {
+    border-color: var(--cinnabar);
+  }
+}
+
+/* The finger on a key: the answer comes before the sound does. */
+.ladder__degree:active {
   border-color: var(--cinnabar);
+}
+
+/*
+ * The mark of the octave below Ni, drawn as the prime turned upside down: a short stroke hanging below the line
+ * and leaning the other way from a comma. The "͵" sign itself reads as a comma.
+ */
+.ladder__low {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.38em;
+  margin-left: 0.1em;
+  border-radius: 0.04em;
+  background: currentColor;
+  vertical-align: -0.34em;
+  transform: skewX(28deg);
 }
 
 .ladder__degree:focus-visible {
@@ -712,6 +734,52 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: 8px;
+}
+
+/* A folded card: its heading is the button that opens it, with a mark that turns. */
+.tables__card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  margin: -12px -14px;
+  padding: 12px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.tables__card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tables__card > summary::after {
+  content: "";
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-25%);
+  transition: transform 0.2s;
+}
+
+.tables__card[open] > summary {
+  margin-bottom: 0;
+}
+
+.tables__card[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.tables__card > summary:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: -2px;
+  border-radius: 12px;
+}
+
+.tables__source a {
+  color: inherit;
+  text-underline-offset: 2px;
 }
 
 .tables__source {
@@ -729,11 +797,6 @@ a {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.tables__status.is-unreviewed {
-  background: var(--pending-bg);
-  color: var(--pending-text);
 }
 
 .tables__status.is-reviewed {
@@ -1020,9 +1083,7 @@ a {
   min-height: 48px;
 }
 
-/* The lane names and the count share one column, so the controls of both lanes line up. */
-.transport__name,
-.metronome-count {
+.transport__name {
   flex: none;
   width: 3rem;
 }
@@ -1068,8 +1129,10 @@ a {
 
 .transport__tempo {
   display: grid;
+  align-content: center;
   flex: 1;
   min-width: 0;
+  min-height: 56px;
   padding: 2px 10px;
   text-align: left;
 }
@@ -1091,35 +1154,13 @@ a {
   color: inherit;
 }
 
-/* Start, and the two Stops: outlined while silent, filled while it sounds. */
-.transport__action {
-  flex: none;
-  min-width: 76px;
-  min-height: 44px;
-  padding: 0 10px;
-  border: 1px solid var(--cinnabar);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--cinnabar);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
 
-.transport__action[aria-pressed="true"] {
-  border-color: var(--accent-fill);
-  background: var(--accent-fill);
-  color: var(--on-accent);
-}
 
-.transport__action:disabled {
-  border-color: var(--line);
-  color: var(--muted);
-  cursor: default;
-}
 
 .transport__more:focus-visible,
-.transport__action:focus-visible,
+.transport__stop:focus-visible,
+.transport__beat:focus-visible,
+.transport__resume:focus-visible,
 .transport__select:focus-visible,
 .tempo-step:focus-visible,
 .tempo-presets__preset:focus-visible,
@@ -1153,50 +1194,13 @@ a {
   grid-template-columns: repeat(4, 44px);
 }
 
-/* The chronos number over its dots; the first dot is the accented chronos. */
-.metronome-count {
-  display: grid;
-  justify-items: start;
-  gap: 3px;
-}
 
-.metronome-count__number {
-  min-height: 1em;
-  font-size: 1.35rem;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
 
-.metronome-count__number.is-accent {
-  color: var(--cinnabar);
-}
 
-.metronome-count__dots {
-  display: flex;
-  gap: 4px;
-}
 
-.metronome-count__dot {
-  width: 8px;
-  height: 8px;
-  border: 1.5px solid var(--muted);
-  border-radius: 50%;
-}
 
-.metronome-count__dot.is-first {
-  border-color: var(--cinnabar);
-}
 
-.metronome-count__dot.is-on {
-  border-color: var(--text);
-  background: var(--text);
-}
 
-.metronome-count__dot.is-first.is-on {
-  border-color: var(--cinnabar);
-  background: var(--cinnabar);
-}
 
 /* The five Tempo Presets in one row: the name a teacher says, and its range. */
 .tempo-presets {
@@ -1268,17 +1272,28 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-/* The eight Modes as a jump row on the long pages. */
+/*
+ * The eight Modes as a jump row that stays at the top of the long pages. On a phone it is one line that scrolls
+ * sideways, so it never takes more than a strip of the screen.
+ */
 .mode-jump {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
   gap: 6px;
-  margin: 8px 0 4px;
+  margin: 8px calc(-1 * max(16px, env(safe-area-inset-left, 0px))) 4px;
+  padding: 6px max(16px, env(safe-area-inset-left, 0px));
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
 }
 
 .mode-jump button {
+  flex: 1 0 auto;
   min-height: 44px;
-  padding: 0 4px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface);
@@ -1292,24 +1307,128 @@ a {
   border-color: var(--cinnabar);
 }
 
-@media (min-width: 480px) {
-  .mode-jump {
-    grid-template-columns: repeat(8, 1fr);
-  }
-}
-
-/* The card a jump lands on keeps its heading clear of the top of the screen. */
+/* The card a jump lands on keeps its heading clear of the jump row. */
 .mode-card,
 .tables__card {
-  scroll-margin-top: 12px;
+  scroll-margin-top: 72px;
 }
 
-.mode-card h3:focus,
-.tables__card h3:focus {
+.mode-card h3:focus {
   outline: none;
 }
 
 ::selection {
   background: var(--cinnabar-soft);
   color: var(--text);
+}
+
+/* "Nothing sounds" and the way back, at the top of the bar where the thumb already is. */
+.transport__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--pending-bg);
+  color: var(--pending-text);
+  font-size: 0.85rem;
+}
+
+.transport__resume {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* The Ison's Stop: filled while the Ison sounds, inert otherwise. */
+.transport__stop {
+  flex: none;
+  min-width: 76px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+}
+
+.transport__stop.is-sounding {
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+
+/*
+ * The metronome's one button, a different shape from the Ison's Stop: taller and rounder, Start while silent, and
+ * while it runs the chronos number with Stop under it, the number in cinnabar on the accent.
+ */
+.transport__beat {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  flex: none;
+  width: 76px;
+  min-height: 56px;
+  padding: 0 6px;
+  border: 1px solid var(--cinnabar);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.transport__beat.is-running {
+  border-width: 2px;
+  background: var(--cinnabar-soft);
+  color: var(--text);
+}
+
+.transport__beat-count {
+  min-height: 1em;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.transport__beat.is-accent .transport__beat-count {
+  color: var(--cinnabar);
+}
+
+.transport__beat-action {
+  color: var(--cinnabar);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The horizontal keyboard sits in the middle of the free height rather than on top of it. */
+.practice__body > .ladder-strip--horizontal {
+  margin-block: auto;
+}
+
+.setup__sources summary {
+  min-height: 32px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.setup__sources[open] {
+  display: grid;
+  gap: 6px;
 }

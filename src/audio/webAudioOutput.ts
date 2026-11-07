@@ -185,6 +185,8 @@ export function createWebAudioOutput(): AudioOutput {
 
   return {
     playClickTrack,
+    // Before anything has been played there is nothing to hear yet, so nothing is held back either.
+    isRunning: () => context === null || context.state === "running",
     playSound(sound: SoundRequest) {
       const ctx = getContext();
       const start = ctx.currentTime + (sound.startMs ?? 0) / 1000;

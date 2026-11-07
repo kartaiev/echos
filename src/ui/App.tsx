@@ -9,15 +9,19 @@ import {
 } from "../core/practice/PracticeSession";
 import type { ModeVariantKey } from "../core/theory/modeVariants";
 import type { GenusId } from "../core/theory/tuningSystems";
+import { chronosMs } from "../core/practice/metronomeSettings";
 import { degreeLabel, setLanguage, t, type Language } from "../i18n/translations";
 import { Ladder, type LadderLayout } from "./Ladder";
+import { useMetronomeCount } from "./MetronomePanel";
 import { ModesPage } from "./ModesPage";
 import { PracticeSetup } from "./PracticeSetup";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, type Theme } from "./theme";
 import { TheoryTablesPage } from "./TheoryTablesPage";
 import { TransportBar } from "./TransportBar";
+import { useSoundHeld, useWakeLock } from "./whileSinging";
 import {
+  loadHeldADegree,
   loadIsonVoice,
   loadLadderLayout,
   loadLanguage,
@@ -25,6 +29,7 @@ import {
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
+  saveHeldADegree,
   saveIsonVoice,
   saveLadderLayout,
   saveLanguage,
@@ -82,6 +87,12 @@ export function App() {
   const readCount = useCallback(() => session.metronome().count, [session]);
   // Read aloud by screen readers: the Ison can start and stop from a long press, away from its menu.
   const [announcement, setAnnouncement] = useState("");
+  const count = useMetronomeCount(metronome.running, readCount);
+  const somethingSounds = ison.degreeId !== null || metronome.running;
+  useWakeLock(somethingSounds);
+  const sound = useSoundHeld(somethingSounds, () => session.soundIsHeld());
+  // The hint teaches the long press; once the student has used it, the Ladder gets the room back.
+  const [heldADegree, setHeldADegree] = useState(loadHeldADegree);
 
   useEffect(() => {
     // Each view opens at its top, not at the scroll position the last one was left at.
@@ -159,6 +170,27 @@ export function App() {
       setAnnouncement(degree ? t("ison.announceOn", { degree: degreeLabel(degree.name, degree.octave) }) : t("ison.announceOff"));
     });
 
+  const toggleMetronome = () => act(() => (session.metronome().running ? session.stopMetronome() : session.startMetronome()));
+
+  // Space starts and stops the metronome on the practice view, unless a control has the focus and wants the key.
+  useEffect(() => {
+    if (view !== "practice") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== " " || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target instanceof Element && e.target.closest("button, input, select, textarea, a, summary")) return;
+      e.preventDefault();
+      toggleMetronome();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const resumeSound = () =>
+    act(() => {
+      session.restartSound();
+      sound.clear();
+    });
+
   const changeLayout = (next: LadderLayout) => {
     setLayout(next);
     saveLadderLayout(next);
@@ -214,20 +246,33 @@ export function App() {
             onToggleAttraction={(id) => act(() => session.toggleAttraction(id))}
             onChangeLayout={changeLayout}
           />
-          <p className="practice__hint">{t("ladder.hint")}</p>
+          {!heldADegree && <p className="practice__hint">{t("ladder.hint")}</p>}
           <Ladder
             ladder={ladder}
             layout={layout}
             isonDegreeId={ison.degreeId}
-            onPlayDegree={(id) => session.playDegree(id)}
-            onLongPress={(id) => actOnIson(() => session.toggleIson(id))}
+            beat={count}
+            chronosMs={chronosMs(metronome.chronoiPerMinute)}
+            onPlayDegree={(id) => {
+              session.playDegree(id);
+              sound.checkSoon();
+            }}
+            onLongPress={(id) => {
+              actOnIson(() => session.toggleIson(id));
+              if (!heldADegree) {
+                saveHeldADegree();
+                setHeldADegree(true);
+              }
+            }}
           />
           <TransportBar
             ison={ison}
             degrees={ladder.degrees}
             metronome={metronome}
+            count={count}
             presets={session.tempoPresets()}
-            readCount={readCount}
+            soundHeld={sound.held}
+            onResumeSound={resumeSound}
             onSetIson={(id) => actOnIson(() => session.setIson(id))}
             onStopIson={() => actOnIson(() => session.stopIson())}
             onChangeVoice={changeIsonVoice}

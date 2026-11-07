@@ -22,8 +22,9 @@ function remarkUrl(subject: string, values: string, source: string): string {
   return `${REPOSITORY}/issues/new?${query}`;
 }
 
+/** Only "Reviewed" is marked: everything else is unreviewed, as the page says once at the top. */
 function Status({ status }: { status: ReviewStatus }) {
-  return <span className={`tables__status is-${status}`}>{t(`review.${status}`)}</span>;
+  return status === "reviewed" ? <span className="tables__status is-reviewed">{t("review.reviewed")}</span> : null;
 }
 
 function Sourced({ source, status, remark }: { source: string; status: ReviewStatus; remark: string }) {
@@ -42,14 +43,16 @@ function GenusTable({ session, genus }: { session: PracticeSession; genus: Genus
   const name = t(`genus.${genus}`);
   const cycle = `${t(`degree.${scale.intervals.value.from}`)}: ${scale.intervals.value.intervals.join(", ")}`;
   return (
-    <article className="tables__card">
-      <div className="tables__heading">
+    <details className="tables__card">
+      <summary>
         <h3>{name}</h3>
+      </summary>
+      <div className="tables__heading">
+        <p className="tables__cycle">{t("tables.cycle", { cycle })}</p>
         <button type="button" className="secondary-button" onClick={() => session.playScale(genus)}>
           {t("tables.playScale")}
         </button>
       </div>
-      <p className="tables__cycle">{t("tables.cycle", { cycle })}</p>
       <Sourced
         source={scale.intervals.source}
         status={scale.intervals.reviewStatus}
@@ -117,7 +120,7 @@ function GenusTable({ session, genus }: { session: PracticeSession; genus: Genus
           />
         </div>
       ))}
-    </article>
+    </details>
   );
 }
 
@@ -125,7 +128,7 @@ function ModeVariantRow({ session, variantKey }: { session: PracticeSession; var
   const variant = session.describeModeVariant(variantKey);
   const title = `${t(`mode.${variantKey.mode}`)} ${t(`melos.${variantKey.melos}`)}`;
   const steps = variant.intonation?.steps.map((s) => `${label(s.degree)} ${s.chronoi}`).join(" · ");
-  const cadences = variant.cadences.value.map((c) => `${t(`modes.cadenceKind.${c.kind}`)} ${label(c.degree)}`).join(", ");
+  const cadences = variant.cadences.value.map((c) => `${t(`modes.cadenceKind.${c.kind}`)} ${label(c.degree)}`).join(" · ");
   const values = [
     `${t("modes.genus")} ${t(`genus.${variant.genus}`)}`,
     `${t("modes.base")} ${label(variant.base)}`,
@@ -141,7 +144,7 @@ function ModeVariantRow({ session, variantKey }: { session: PracticeSession; var
         <dt>{t("modes.base")}</dt>
         <dd>{label(variant.base)}</dd>
         <dt>{t("modes.dominants")}</dt>
-        <dd>{variant.dominants.map(label).join(", ")}</dd>
+        <dd>{variant.dominants.map(label).join(" · ")}</dd>
         <dt>{t("modes.intonation")}</dt>
         <dd>
           {variant.intonation ? (
@@ -196,6 +199,7 @@ export function TheoryTablesPage({ session }: TheoryTablesPageProps) {
     <section className="tables">
       <h2>{t("tables.title")}</h2>
       <p className="tables__intro">{t("tables.intro")}</p>
+      <p className="tables__intro">{t("tables.unreviewedNote")}</p>
 
       <h2>{t("tables.tuningSystem", { name: t(`tuning.${pmc.tuningSystemId}`), moria: pmc.moriaPerOctave })}</h2>
       {GENUS_IDS.map((genus) => (
@@ -205,14 +209,16 @@ export function TheoryTablesPage({ session }: TheoryTablesPageProps) {
       <h2>{t("modes.title")}</h2>
       <ModeJump />
       {MODE_IDS.map((mode) => (
-        <article key={mode} id={modeAnchor(mode)} className="tables__card">
-          <h3 tabIndex={-1}>
-            <ModeName mode={mode} />
-          </h3>
+        <details key={mode} id={modeAnchor(mode)} className="tables__card">
+          <summary>
+            <h3>
+              <ModeName mode={mode} />
+            </h3>
+          </summary>
           {MELOS_IDS.map((melos) => (
             <ModeVariantRow key={melos} session={session} variantKey={{ mode, melos }} />
           ))}
-        </article>
+        </details>
       ))}
 
       <h2>{t("metronome.presets")}</h2>

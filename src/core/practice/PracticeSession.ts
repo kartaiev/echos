@@ -436,6 +436,18 @@ export function createPracticeSession({
       if (!clicks) startClicks();
     },
     stopMetronome: stopClicks,
+    /**
+     * Start the Ison and the metronome again where they are, after the device has held the sound back: what was
+     * requested before may be lost with it.
+     */
+    restartSound() {
+      if (ison) holdIson(ison.degreeId);
+      if (clicks) startClicks();
+    },
+    /** True when the device keeps the sound stopped, so what the session plays is not heard. */
+    soundIsHeld(): boolean {
+      return !audio.isRunning();
+    },
     /** Change the Ison vowel and/or volume; a sounding Ison changes with it. */
     setIsonVoice(change: Partial<IsonVoice>) {
       const previous = voice;
