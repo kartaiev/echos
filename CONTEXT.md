@@ -47,9 +47,14 @@ _Avoid_: accidental, sharp, flat, elxis
 _Greek_: έλξη (lowered: ύφεση, raised: δίεση)
 
 **Fthora**:
-A sign that changes the Genus from a given Degree onward (plural: Fthores).
+A sign that switches the Scale to another Genus at a Degree (plural: Fthores). The Degree it is placed on, the pivot, keeps its pitch and becomes that Degree of the new Genus; the whole Scale follows (ADR-0011).
 _Avoid_: phthora, modulation sign
 _Greek_: φθορά, φθορές
+
+**Pivot**:
+The Degree a Fthora is placed on; it keeps its pitch while the Scale around it changes.
+_Avoid_: anchor, root
+_Greek_: φθόγγος της φθοράς
 
 **Neume**:
 Any symbol of Byzantine notation: intervallic, qualitative or rhythmic.

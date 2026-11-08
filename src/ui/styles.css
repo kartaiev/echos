@@ -162,7 +162,8 @@ a {
 .ladder__degree {
   position: absolute;
   width: min(120px, calc(50% - 24px));
-  height: min(48px, var(--ladder-height) * 0.123 - 4px);
+  /* The closest Degrees on one side are 16 moria apart in the current tables; --moria-span is the ladder's range. */
+  height: min(48px, var(--ladder-height) * 16 / var(--moria-span, 130) - 4px);
   transform: translateY(50%);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -729,10 +730,6 @@ a {
   border-color: var(--cinnabar);
 }
 
-.setup.is-open .setup__summary {
-  border-radius: 12px 12px 0 0;
-}
-
 .setup__summary:focus-visible,
 .setup__link:focus-visible {
   outline: 2px solid var(--cinnabar);
@@ -764,10 +761,10 @@ a {
 .setup__panel {
   display: grid;
   gap: 14px;
+  margin-top: 6px;
   padding: 14px;
   border: 1px solid var(--cinnabar);
-  border-top: 0;
-  border-radius: 0 0 12px 12px;
+  border-radius: 12px;
   background: var(--surface);
 }
 
@@ -1232,4 +1229,198 @@ a {
 /* The horizontal keyboard sits in the middle of the free height rather than on top of it. */
 .practice__body > .ladder-strip--horizontal {
   margin-block: auto;
+}
+
+/* The setup line and, beside it, the way to place a Fthora. */
+.setup__top {
+  display: flex;
+  gap: 8px;
+}
+
+.setup__summary {
+  flex: 1;
+  min-width: 0;
+}
+
+.setup__fthora {
+  flex: none;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.setup__fthora[aria-pressed="true"] {
+  border-color: var(--cinnabar);
+  background: var(--cinnabar-soft);
+}
+
+.setup__fthora:focus-visible,
+.fthora-bar button:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+}
+
+/* A Fthora sign from the Neanes font, in the cinnabar it is written in. */
+.fthora-sign {
+  display: inline-block;
+  font-family: "Neanes", serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--cinnabar);
+  font-variant-numeric: normal;
+}
+
+/* The line above the Ladder while placing a Fthora, and while one is placed. */
+.fthora-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--cinnabar);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.fthora-bar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fthora-bar__status {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.fthora-bar__status .fthora-sign {
+  font-size: 2rem;
+}
+
+.fthora-bar__choices {
+  display: flex;
+  flex-basis: 100%;
+  order: 1;
+  gap: 6px;
+}
+
+.fthora-bar__choice .fthora-sign {
+  font-size: 2rem;
+}
+
+.fthora-bar__choice {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fthora-bar__choice:hover {
+  border-color: var(--cinnabar);
+}
+
+.fthora-bar__action {
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--cinnabar);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented--compare {
+  grid-template-columns: repeat(2, auto);
+}
+
+.segmented--compare button {
+  min-height: 36px;
+  padding: 0 8px;
+}
+
+/* The Fthora's sign on its pivot, in the key's top corner. */
+.ladder__fthora-sign {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 1.5rem;
+  pointer-events: none;
+}
+
+.ladder__degree.is-ison .ladder__fthora-sign {
+  color: var(--on-accent);
+}
+
+/* Where a Degree was before the Fthora: a dashed stub from the rail on the Degree's side. */
+.ladder__ghost {
+  position: absolute;
+  width: 20px;
+  height: 0;
+  border-top: 2px dashed var(--muted);
+  transform: translateY(50%);
+  pointer-events: none;
+}
+
+.ladder__ghost.is-left {
+  right: calc(50% + 2px);
+}
+
+.ladder__ghost.is-right {
+  left: calc(50% + 2px);
+}
+
+.ladder--horizontal .ladder__ghost {
+  width: 0;
+  height: 16px;
+  border-top: 0;
+  border-left: 2px dashed var(--muted);
+  transform: translateX(-50%);
+}
+
+.ladder--horizontal .ladder__ghost.is-above {
+  bottom: calc(50% + 2px);
+}
+
+.ladder--horizontal .ladder__ghost.is-below {
+  top: calc(50% + 2px);
+}
+
+/* When the Scale changes (a Fthora, a Genus, an Attraction), the keys glide to their new places. */
+.ladder__degree,
+.ladder__interval {
+  transition:
+    bottom 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    left 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ladder__degree,
+  .ladder__interval {
+    transition: none;
+  }
 }

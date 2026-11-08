@@ -1,6 +1,7 @@
 import type { AudioOutput, PlayingClickTrack, PlayingSound } from "../../audio/AudioOutput";
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
 import { cadencesOf, MODE_VARIANTS, type Cadence, type ModeVariant, type ModeVariantKey } from "../theory/modeVariants";
+import { FTHORA_GENERA, FTHORES, fthoraSign, type FthoraGenus, type FthoraSign } from "../theory/fthora";
 import { buildScale, degreeId, type DegreePosition, type ScaleDegree } from "../theory/scale";
 import {
   GENUS_IDS,
@@ -26,6 +27,8 @@ export type { TempoPreset, TempoPresetId } from "../theory/tempoPresets";
 export type { Martyria, MartyriaFthora, RootSign } from "../theory/martyria";
 export type { AttractionId } from "../theory/tuningSystems";
 export type { Cadence, CadenceKind } from "../theory/modeVariants";
+export type { FthoraGenus, FthoraSign } from "../theory/fthora";
+export { FTHORA_GENERA } from "../theory/fthora";
 
 const DEGREE_DURATION_MS = 1200;
 /** One Chronos of an Intonation or a sung Scale: Melling's Medium (Mesi) tempo, 100 chronoi a minute. */
@@ -68,6 +71,17 @@ export interface LadderDegree extends Omit<ScaleDegree, "frequency"> {
   martyria: Martyria;
   /** Moria an active Attraction moves this Degree by, or null. */
   attraction: number | null;
+  /** Where the Degree was before the Fthora moved it, in moria; null when it did not move or no Fthora shows. */
+  before: number | null;
+}
+
+/** A Fthora placed on a Degree: the Genus it brings in, the sign drawn there, and whether its Scale shows. */
+export interface FthoraState {
+  degreeId: string;
+  genus: FthoraGenus;
+  sign: FthoraSign;
+  /** False while the student listens to the Scale before the Fthora; the Fthora stays placed. */
+  shown: boolean;
 }
 
 /** An Attraction the student can switch on in the current Genus. */
@@ -93,7 +107,7 @@ export interface Ladder {
   totalMoria: number;
   /**
    * The same for every Genus of the Tuning System, so that switching Genus moves only the Degrees that
-   * change; the UI draws the ladder between these positions.
+   * change; a Fthora widens it only as far as it moves Degrees beyond. The UI draws the ladder between these.
    */
   drawingRange: DrawingRange;
   tuningSystemId: TuningSystemId;
@@ -103,6 +117,9 @@ export interface Ladder {
   /** Bibliographic citation of the Martyria. */
   martyriaSource: string;
   attractions: AttractionState[];
+  fthora: FthoraState | null;
+  /** Bibliographic citation of the Fthores. */
+  fthoraSource: string;
 }
 
 /** A Degree as the Theory tables show it: position, sound and Martyria in one Genus. */
@@ -172,23 +189,42 @@ export function createPracticeSession({
   let activeAttractions = new Set<AttractionId>();
   let tempo = metronome;
   let clicks: PlayingClickTrack | null = null;
+  let fthora: { degree: DegreePosition; degreeId: string; genus: FthoraGenus; sign: FthoraSign; shown: boolean } | null = null;
+  /** The Genus that sounds: the Fthora's while it shows, else the Mode Variant's or the one chosen by hand. */
+  const soundingGenus = (): GenusId => (fthora?.shown ? fthora.genus : genus);
 
   const buildScaleIn = (g: GenusId) =>
     buildScale({ tuningSystem, genus: g, referencePitchHz: niFrequency(settings), lowest: LADDER_LOWEST, highest: LADDER_HIGHEST });
   const attractionsIn = (g: GenusId) => tuningSystem.attractions.filter((a) => a.value.genus === g);
-  const activeShifts = () =>
-    attractionsIn(genus)
+  const shiftsIn = (g: GenusId) =>
+    attractionsIn(g)
       .filter((a) => activeAttractions.has(a.value.id))
       .map(({ value: { degree, moria } }) => ({ degree, moria }));
-  const buildCurrentScale = () =>
+  const activeShifts = () => shiftsIn(soundingGenus());
+  /** The Scale before any Fthora: the Genus of the Mode Variant or the one chosen by hand. */
+  const buildBaseScale = () =>
     buildScale({
       tuningSystem,
       genus,
       referencePitchHz: niFrequency(settings),
       lowest: LADDER_LOWEST,
       highest: LADDER_HIGHEST,
-      shifts: activeShifts(),
+      shifts: shiftsIn(genus),
     });
+  /** A shown Fthora lays its Genus around the pivot, which keeps the pitch it has in the Scale before. */
+  const buildCurrentScale = () => {
+    if (!fthora?.shown) return buildBaseScale();
+    const pivot = buildBaseScale().find((d) => d.id === fthora!.degreeId)!;
+    return buildScale({
+      tuningSystem,
+      genus: fthora.genus,
+      referencePitchHz: niFrequency(settings),
+      lowest: LADDER_LOWEST,
+      highest: LADDER_HIGHEST,
+      shifts: activeShifts(),
+      pivot: { degree: fthora.degree, moria: pivot.moria },
+    });
+  };
   let scale = buildCurrentScale();
 
   function findDegree(degreeId: string) {
@@ -257,9 +293,10 @@ export function createPracticeSession({
     ison = null;
   }
 
-  /** A new Genus or Mode Variant starts from the plain Scale. */
+  /** A new Genus or Mode Variant starts from the plain Scale: no Attraction, no Fthora. */
   function clearAttractions() {
     activeAttractions = new Set();
+    fthora = null;
   }
 
   /** After the Scale changes, the Ison follows its Degree; it is left alone if that Degree did not move. */
@@ -269,7 +306,15 @@ export function createPracticeSession({
   }
 
   const allPositions = GENUS_IDS.flatMap((g) => buildScaleIn(g).map((d) => d.moria));
-  const drawingRange: DrawingRange = { lowestMoria: Math.min(...allPositions), highestMoria: Math.max(...allPositions) };
+  const genusRange: DrawingRange = { lowestMoria: Math.min(...allPositions), highestMoria: Math.max(...allPositions) };
+  /** The range of every Genus, widened only as far as a shown Fthora moves the Scale (or its ghosts) beyond it. */
+  const drawingRangeFor = (...scales: readonly ScaleDegree[][]): DrawingRange => {
+    const moria = scales.flatMap((sc) => sc.map((d) => d.moria));
+    return {
+      lowestMoria: Math.min(genusRange.lowestMoria, ...moria),
+      highestMoria: Math.max(genusRange.highestMoria, ...moria),
+    };
+  };
 
   return {
     ladder(): Ladder {
@@ -277,10 +322,13 @@ export function createPracticeSession({
       const baseId = variant ? degreeId(variant.base) : null;
       const dominantIds = new Set(variant?.dominants.map(degreeId));
       const shifts = activeShifts();
+      const sounding = soundingGenus();
+      const before = fthora?.shown ? buildBaseScale() : null;
       const degrees = scale.map(({ frequency: _, ...d }, i) => {
         const next = scale[i + 1];
-        const martyria = martyriaOf(genus, d);
-        if (!martyria) throw new Error(`No Martyria for ${d.id} in ${genus}`);
+        const martyria = martyriaOf(sounding, d);
+        if (!martyria) throw new Error(`No Martyria for ${d.id} in ${sounding}`);
+        const earlier = before?.[i]?.moria ?? null;
         return {
           ...d,
           moriaToNext: next ? next.moria - d.moria : null,
@@ -288,18 +336,21 @@ export function createPracticeSession({
           isDominant: dominantIds.has(d.id),
           martyria,
           attraction: shifts.find(({ degree }) => degree.name === d.name && degree.octave === d.octave)?.moria ?? null,
+          before: earlier !== null && earlier !== d.moria ? earlier : null,
         };
       });
       return {
         degrees,
         genus,
         totalMoria: scale[scale.length - 1]!.moria - scale[0]!.moria,
-        drawingRange,
+        drawingRange: drawingRangeFor(scale, before ?? []),
         tuningSystemId: tuningSystem.id,
         moriaPerOctave: tuningSystem.moriaPerOctave,
         source: tuningSystem.genera[genus].source,
-        martyriaSource: MARTYRIA[genus].source,
-        attractions: attractionsIn(genus).map(({ value: { id, degree, moria }, source, reviewStatus }) => ({
+        martyriaSource: MARTYRIA[sounding].source,
+        fthora: fthora && { degreeId: fthora.degreeId, genus: fthora.genus, sign: fthora.sign, shown: fthora.shown },
+        fthoraSource: FTHORES.source,
+        attractions: attractionsIn(sounding).map(({ value: { id, degree, moria }, source, reviewStatus }) => ({
           id,
           degreeId: degreeId(degree),
           moria,
@@ -354,6 +405,34 @@ export function createPracticeSession({
       );
       return { text: variant.intonation.text, greekText: variant.intonation.greekText, durationMs };
     },
+    /**
+     * Place a Fthora on a Degree: that Degree keeps its pitch and becomes the same Degree of the new Genus, and the
+     * whole Scale follows. A new Fthora takes the place of the last. A sounding Ison stays on its Degree.
+     */
+    placeFthora(id: string, next: FthoraGenus) {
+      const degree = buildBaseScale().find((d) => d.id === id);
+      if (!degree) throw new Error(`Unknown Degree: ${id}`);
+      const position = { name: degree.name, octave: degree.octave };
+      fthora = { degree: position, degreeId: id, genus: next, sign: fthoraSign(tuningSystem, next, position), shown: true };
+      rebuildScale();
+    },
+    /** The Fthores that would change the Scale on a Degree: one for each other Genus, with the sign it draws. */
+    fthoraChoices(id: string): { genus: FthoraGenus; sign: FthoraSign }[] {
+      const degree = buildBaseScale().find((d) => d.id === id);
+      if (!degree) throw new Error(`Unknown Degree: ${id}`);
+      return FTHORA_GENERA.filter((g) => g !== genus).map((g) => ({ genus: g, sign: fthoraSign(tuningSystem, g, degree) }));
+    },
+    /** Hear the Scale before the Fthora (false) or with it (true); the Fthora stays where it is. */
+    showFthora(shown: boolean) {
+      if (!fthora || fthora.shown === shown) return;
+      fthora = { ...fthora, shown };
+      rebuildScale();
+    },
+    clearFthora() {
+      if (!fthora) return;
+      fthora = null;
+      rebuildScale();
+    },
     /** Back to free practice: the Genus and the Ison stay as they are, nothing is marked, Attractions are off. */
     leaveModeVariant() {
       chosenVariant = null;
@@ -362,7 +441,7 @@ export function createPracticeSession({
     },
     /** Switch an Attraction of the current Genus on or off; a sounding Ison on that Degree moves with it. */
     toggleAttraction(id: AttractionId) {
-      if (!attractionsIn(genus).some((a) => a.value.id === id)) throw new Error(`No Attraction ${id} in ${genus}`);
+      if (!attractionsIn(soundingGenus()).some((a) => a.value.id === id)) throw new Error(`No Attraction ${id} in ${soundingGenus()}`);
       if (activeAttractions.has(id)) activeAttractions.delete(id);
       else activeAttractions.add(id);
       rebuildScale();
