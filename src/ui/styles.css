@@ -264,8 +264,11 @@ a {
 
 /*
  * Base and Dominant Degrees of the chosen Mode Variant, from loud to quiet: the Ison filled, the Base outlined in
- * cinnabar on a soft fill, the Dominant marked by its word alone, so it informs without competing.
+ * cinnabar on a soft fill, the Dominant in a dashed cinnabar outline and its word.
  */
+.ladder__degree.is-dominant {
+  border: 2px dashed var(--cinnabar);
+}
 
 .ladder__degree.is-base {
   border: 2px solid var(--cinnabar);
