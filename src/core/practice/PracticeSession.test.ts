@@ -1033,3 +1033,155 @@ describe("Practice Session: sound held back by the device", () => {
     expect(session.soundIsHeld()).toBe(false);
   });
 });
+
+describe("Practice Session: Fthora on a Degree", () => {
+  const moriaOf = (session: ReturnType<typeof setup>["session"], ids: string[]) =>
+    ids.map((id) => session.ladder().degrees.find((d) => d.id === id)!.moria);
+
+  // Trisagion Octoëchos 201, "Fthores, Part II": the nenano Fthora on Di in a Diatonic 1st Mode.
+  it("rebuilds the Scale around the pivot, as the hard chromatic Fthora of Di does in the lesson", () => {
+    const { session } = setup();
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+
+    session.placeFthora("Di", "hard-chromatic");
+
+    expect(moriaOf(session, ["Pa", "Vou", "Ga", "Di", "Ke", "Zo", "Ni'", "Pa'"])).toEqual([12, 18, 38, 42, 54, 60, 80, 84]);
+    expect(session.ladder().fthora).toEqual({ degreeId: "Di", genus: "hard-chromatic", sign: "hard-chromatic-di", shown: true });
+  });
+
+  it("keeps the pivot at its pitch where the Genera place that Degree differently", () => {
+    const { session } = setup();
+
+    session.placeFthora("Pa", "soft-chromatic");
+
+    expect(moriaOf(session, ["Ni", "Pa", "Vou", "Ga"])).toEqual([4, 12, 26, 34]);
+  });
+
+  it.each([
+    ["Ga", "hard-chromatic", "hard-chromatic-pa"],
+    ["Ke", "hard-chromatic", "hard-chromatic-pa"],
+    ["Ni", "hard-chromatic", "hard-chromatic-di"],
+    ["Zo", "hard-chromatic", "hard-chromatic-di"],
+    ["Vou", "soft-chromatic", "soft-chromatic-di"],
+    ["Pa", "soft-chromatic", "soft-chromatic-ke"],
+    ["Ni'", "soft-chromatic", "soft-chromatic-ke"],
+    ["Ni", "diatonic", "diatonic-ni-low"],
+    ["Ni'", "diatonic", "diatonic-ni-high"],
+    ["Zo", "diatonic", "diatonic-zo"],
+  ] as const)("on %s in the %s Genus draws the sign the lesson's table gives (%s)", (degree, genus, sign) => {
+    const { session } = setup();
+    session.setGenus(genus === "diatonic" ? "hard-chromatic" : "diatonic");
+
+    session.placeFthora(degree, genus);
+
+    expect(session.ladder().fthora?.sign).toBe(sign);
+  });
+
+  it("writes the Martyries of the new Genus", () => {
+    const { session } = setup();
+
+    session.placeFthora("Di", "hard-chromatic");
+
+    expect(session.ladder().degrees.find((d) => d.id === "Di")?.martyria.rootSign).toBe("hard-chromatic-di");
+  });
+
+  it("marks where each moved Degree was before the Fthora, and only those", () => {
+    const { session } = setup();
+
+    session.placeFthora("Di", "hard-chromatic");
+
+    const byId = new Map(session.ladder().degrees.map((d) => [d.id, d]));
+    expect(byId.get("Vou")?.before).toBe(22);
+    expect(byId.get("Ga")?.before).toBe(30);
+    expect(byId.get("Di")?.before).toBeNull();
+    expect(byId.get("Pa")?.before).toBeNull();
+  });
+
+  it("switches between the Scale before and after the Fthora without losing it", () => {
+    const { session } = setup();
+    session.placeFthora("Di", "hard-chromatic");
+
+    session.showFthora(false);
+    expect(moriaOf(session, ["Vou", "Ga"])).toEqual([22, 30]);
+    expect(session.ladder().fthora?.shown).toBe(false);
+    expect(session.ladder().degrees.every((d) => d.before === null)).toBe(true);
+
+    session.showFthora(true);
+    expect(moriaOf(session, ["Vou", "Ga"])).toEqual([18, 38]);
+  });
+
+  it("keeps the Ison on its Degree, at the Degree's new pitch", () => {
+    const { audio, session } = setup();
+    session.setIson("Vou");
+
+    session.placeFthora("Di", "hard-chromatic");
+
+    const isons = audio.sounds.filter((s) => s.kind === "ison");
+    expect(isons.map((s) => s.stopped)).toEqual([true, false]);
+    expect(isons[1]?.frequency).toBeCloseTo(130.8128 * 2 ** (18 / 72), 2);
+    expect(session.ison().degreeId).toBe("Vou");
+  });
+
+  it("is removed by choosing a Mode Variant or a Genus, or by hand", () => {
+    const { session } = setup();
+    session.placeFthora("Di", "hard-chromatic");
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+    expect(session.ladder().fthora).toBeNull();
+
+    session.placeFthora("Di", "hard-chromatic");
+    session.setGenus("diatonic");
+    expect(session.ladder().fthora).toBeNull();
+
+    session.placeFthora("Di", "hard-chromatic");
+    session.clearFthora();
+    expect(session.ladder().fthora).toBeNull();
+    expect(moriaOf(session, ["Vou"])).toEqual([22]);
+  });
+
+  it("applies an Attraction only in its own Genus", () => {
+    const { session } = setup();
+    session.toggleAttraction("zo-lowered");
+
+    session.placeFthora("Di", "hard-chromatic");
+
+    expect(moriaOf(session, ["Zo"])).toEqual([60]);
+    expect(session.ladder().attractions).toEqual([]);
+    session.showFthora(false);
+    expect(moriaOf(session, ["Zo"])).toEqual([60]);
+    expect(session.ladder().attractions[0]?.active).toBe(true);
+  });
+
+  it("widens the drawing range only while a Fthora moves Degrees beyond it", () => {
+    const { session } = setup();
+    session.setGenus("hard-chromatic");
+
+    session.placeFthora("Ni'", "soft-chromatic");
+    const widened = session.ladder().drawingRange;
+    const top = session.ladder().degrees.at(-1)!.moria;
+    session.showFthora(false);
+
+    expect(widened.highestMoria).toBe(Math.max(106, top));
+    expect(session.ladder().drawingRange).toEqual({ lowestMoria: -24, highestMoria: 106 });
+  });
+
+  it("offers the Fthores of the other Genera for a Degree, each with the sign it would draw", () => {
+    const { session } = setup();
+
+    expect(session.fthoraChoices("Di")).toEqual([
+      { genus: "soft-chromatic", sign: "soft-chromatic-di" },
+      { genus: "hard-chromatic", sign: "hard-chromatic-di" },
+    ]);
+    session.setGenus("hard-chromatic");
+    expect(session.fthoraChoices("Ga")).toEqual([
+      { genus: "diatonic", sign: "diatonic-ga" },
+      { genus: "soft-chromatic", sign: "soft-chromatic-ke" },
+    ]);
+  });
+
+  it("cites the lesson for the Fthores", () => {
+    const { session } = setup();
+    session.placeFthora("Di", "hard-chromatic");
+
+    expect(session.ladder().fthoraSource).toMatch(/Trisagion.*Fthores/);
+  });
+});

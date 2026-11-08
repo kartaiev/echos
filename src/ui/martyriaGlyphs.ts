@@ -1,4 +1,4 @@
-import type { Martyria, RootSign } from "../core/practice/PracticeSession";
+import type { FthoraSign, Martyria, RootSign } from "../core/practice/PracticeSession";
 import type { DegreeName } from "../core/theory/tuningSystems";
 
 /**
@@ -34,3 +34,21 @@ export function martyriaGlyphs(name: DegreeName, { letterOctave, rootSign, rootS
     fthora: fthora === "enharmonic" ? String.fromCodePoint(FTHORA_ENHARMONIC) : null,
   };
 }
+
+/** Fthora signs in the Neanes font (SBMuFL "fthora..." glyphs), drawn on their own. */
+const FTHORA_SIGNS: Record<FthoraSign, number> = {
+  "diatonic-ni-low": 0xe1d0,
+  "diatonic-pa": 0xe1d1,
+  "diatonic-vou": 0xe1d2,
+  "diatonic-ga": 0xe1d3,
+  "diatonic-di": 0xe1d4,
+  "diatonic-ke": 0xe1d5,
+  "diatonic-zo": 0xe1d6,
+  "diatonic-ni-high": 0xe1d7,
+  "hard-chromatic-pa": 0xe1d8,
+  "hard-chromatic-di": 0xe1d9,
+  "soft-chromatic-di": 0xe1da,
+  "soft-chromatic-ke": 0xe1db,
+};
+
+export const fthoraGlyph = (sign: FthoraSign) => String.fromCodePoint(FTHORA_SIGNS[sign]);

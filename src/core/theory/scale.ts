@@ -22,6 +22,11 @@ export interface ScaleOptions {
   highest: DegreePosition;
   /** Degrees moved off their place in the Genus, in moria. */
   shifts?: readonly { degree: DegreePosition; moria: number }[];
+  /**
+   * A Degree held at a given position, the whole Scale moved with it: the pivot of a Fthora keeps its pitch and
+   * the new Genus is laid around it.
+   */
+  pivot?: { degree: DegreePosition; moria: number };
 }
 
 function degreeIndex({ name, octave }: DegreePosition): number {
@@ -43,16 +48,18 @@ function positions(intervals: readonly number[], from: DegreeName, lowest: numbe
 }
 
 /** The Degrees of a Scale from `lowest` to `highest`, each with its position in moria and its frequency. */
-export function buildScale({ tuningSystem, genus, referencePitchHz, lowest, highest, shifts = [] }: ScaleOptions): ScaleDegree[] {
+export function buildScale({ tuningSystem, genus, referencePitchHz, lowest, highest, shifts = [], pivot }: ScaleOptions): ScaleDegree[] {
   const { from, intervals } = tuningSystem.genera[genus].value;
   const [low, high] = [degreeIndex(lowest), degreeIndex(highest)];
-  const moriaAt = positions(intervals, from, low, high);
+  const pivotIndex = pivot ? degreeIndex(pivot.degree) : 0;
+  const moriaAt = positions(intervals, from, Math.min(low, pivotIndex), Math.max(high, pivotIndex));
+  const offset = pivot ? pivot.moria - moriaAt.get(pivotIndex)! : 0;
   const degrees: ScaleDegree[] = [];
   for (let index = low; index <= high; index++) {
     const octave = Math.floor(index / DEGREE_NAMES.length);
     const position = { name: DEGREE_NAMES[index - octave * DEGREE_NAMES.length]!, octave };
     const shift = shifts.find(({ degree }) => degree.name === position.name && degree.octave === position.octave);
-    const moria = moriaAt.get(index)! + (shift?.moria ?? 0);
+    const moria = moriaAt.get(index)! + offset + (shift?.moria ?? 0);
     degrees.push({
       ...position,
       id: degreeId(position),

@@ -14,6 +14,7 @@ import { degreeLabel, setLanguage, t, type Language } from "../i18n/translations
 import { Ladder, type LadderLayout } from "./Ladder";
 import { useMetronomeCount } from "./MetronomePanel";
 import { ModesPage } from "./ModesPage";
+import { FthoraBar, type FthoraPlacing } from "./FthoraBar";
 import { PracticeSetup } from "./PracticeSetup";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, type Theme } from "./theme";
@@ -92,6 +93,8 @@ export function App() {
   // Read aloud by screen readers: the Ison can start and stop from a long press, away from its menu.
   const [announcement, setAnnouncement] = useState("");
   const count = useMetronomeCount(metronome.running, readCount);
+  // Placing a Fthora: first the Degree, then the Genus. Null when not placing.
+  const [placing, setPlacing] = useState<FthoraPlacing | null>(null);
   const somethingSounds = ison.degreeId !== null || metronome.running;
   useWakeLock(somethingSounds);
   const sound = useSoundHeld(somethingSounds, () => session.soundIsHeld());
@@ -243,6 +246,22 @@ export function App() {
             onChangeGenus={changeGenus}
             onToggleAttraction={(id) => act(() => session.toggleAttraction(id))}
             onChangeLayout={changeLayout}
+            fthoraActive={placing !== null || ladder.fthora !== null}
+            onFthora={() => setPlacing(placing ? null : { step: "degree" })}
+          />
+          <FthoraBar
+            placing={placing}
+            fthora={ladder.fthora}
+            degrees={ladder.degrees}
+            choices={placing?.step === "genus" ? session.fthoraChoices(placing.degreeId) : []}
+            onChooseGenus={(g) => {
+              if (placing?.step !== "genus") return;
+              act(() => session.placeFthora(placing.degreeId, g));
+              setPlacing(null);
+            }}
+            onCancel={() => setPlacing(null)}
+            onShow={(shown) => act(() => session.showFthora(shown))}
+            onRemove={() => act(() => session.clearFthora())}
           />
           <Ladder
             ladder={ladder}
@@ -256,6 +275,8 @@ export function App() {
             }}
             onLongPress={(id) => actOnIson(() => session.toggleIson(id))}
             onSpace={toggleMetronome}
+            choosing={placing !== null}
+            onChoose={(id) => setPlacing({ step: "genus", degreeId: id })}
           />
           <TransportBar
             ison={ison}

@@ -17,6 +17,9 @@ interface PracticeSetupProps {
   onChangeGenus: (genus: GenusId) => void;
   onToggleAttraction: (id: AttractionId) => void;
   onChangeLayout: (layout: LadderLayout) => void;
+  /** A Fthora is being placed or is on the Ladder. */
+  fthoraActive: boolean;
+  onFthora: () => void;
 }
 
 /**
@@ -35,19 +38,25 @@ export function PracticeSetup(props: PracticeSetupProps) {
 
   return (
     <section className={"setup" + (open ? " is-open" : "")}>
-      <button
-        type="button"
-        className="setup__summary"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="setup__text">
-          <span className="setup__title">{title}</span>
-          <span className="setup__details">{details.join(" · ")}</span>
-        </span>
-        <span className="setup__action">{open ? t("setup.close") : t("setup.change")}</span>
-      </button>
+      <div className="setup__top">
+        <button
+          type="button"
+          className="setup__summary"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="setup__text">
+            <span className="setup__title">{title}</span>
+            <span className="setup__details">{details.join(" · ")}</span>
+          </span>
+          <span className="setup__action">{open ? t("setup.close") : t("setup.change")}</span>
+        </button>
+        {/* Placing a Fthora starts here: then a Degree on the Ladder, then the Genus. */}
+        <button type="button" className="setup__fthora" aria-pressed={props.fthoraActive} onClick={props.onFthora}>
+          {t("fthora.button")}
+        </button>
+      </div>
 
       <div id={panelId} className="setup__panel" hidden={!open}>
         <ModePicker choice={modeVariant} onChoose={props.onChooseModeVariant} onLeave={() => props.onChooseModeVariant(null)} />

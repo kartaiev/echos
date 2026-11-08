@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
-import { martyriaGlyphs } from "./martyriaGlyphs";
+import { fthoraGlyph, martyriaGlyphs } from "./martyriaGlyphs";
 
 /** How long a Degree must be held to count as a long press instead of a tap; the hold ring in styles.css matches it. */
 const LONG_PRESS_MS = 500;
@@ -52,6 +52,9 @@ interface LadderProps {
   onLongPress: (degreeId: string) => void;
   /** Space on a Degree: the metronome's key everywhere on the practice view, here too. */
   onSpace: () => void;
+  /** While a Fthora is being placed, a tap picks its Degree instead of playing it. */
+  choosing: boolean;
+  onChoose: (degreeId: string) => void;
 }
 
 /**
@@ -60,7 +63,8 @@ interface LadderProps {
  * (4 moria) still leave room to tap. A tap plays a Degree; a long press is reported separately (it sets or
  * stops the Ison).
  */
-export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace }: LadderProps) {
+export function Ladder(props: LadderProps) {
+  const { ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose } = props;
   // The Degree being held: a ring closes in on it while the long press counts down.
   const [holdingId, setHoldingId] = useState<string | null>(null);
   const hintId = useId();
@@ -189,7 +193,8 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
     press.current = null;
     setFocusedId(degreeId);
     strike(key);
-    onPlayDegree(degreeId);
+    if (choosing) onChoose(degreeId);
+    else onPlayDegree(degreeId);
   }
 
   return (
@@ -202,7 +207,11 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
         onKeyDown={onKeys}
         // A button plays on the release of Space; the key belongs to the metronome here.
         onKeyUp={(e) => e.key === " " && e.preventDefault()}
-        style={horizontal ? { minWidth: keyboardWidth } : undefined}
+        style={{
+          ...(horizontal ? { minWidth: keyboardWidth } : {}),
+          // The keys are sized to the closest pair on one side, which depends on how many moria the ladder spans.
+          ["--moria-span" as string]: highestMoria - lowestMoria,
+        }}
       >
         {/* How to play it, for those who cannot see the rings: a tap plays, a hold sets the Ison. */}
         <p id={hintId} className="visually-hidden">
@@ -222,11 +231,13 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
             degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
             degree.attraction === null ? null : degree.attraction < 0 ? t("ladder.loweredMark") : t("ladder.raisedMark"),
           ].filter((m): m is string => m !== null);
-          // The Ison key is filled, so its mark is only read aloud.
-          const spoken = isIson ? [...marks, t("ladder.isonMark")] : marks;
+          const isPivot = ladder.fthora?.shown === true && ladder.fthora.degreeId === degree.id;
+          // The Ison key is filled, so its mark is only read aloud; so is the Fthora, drawn as its sign.
+          const spoken = [...marks, ...(isIson ? [t("ladder.isonMark")] : []), ...(isPivot ? [t("fthora.mark")] : [])];
+          const side = horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right";
           const classes = [
             "ladder__degree",
-            horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right",
+            side,
             degree.isDominant && "is-dominant",
             holdingId === degree.id && "is-holding",
             degree.isBase && "is-base",
@@ -243,7 +254,7 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
                 tabIndex={degree.id === tabbableId ? 0 : -1}
                 aria-label={[t("ladder.playDegree", { degree: spokenName }), ...spoken].join(", ")}
                 aria-keyshortcuts="I"
-                onPointerDown={(e) => e.button === 0 && startPress(degree.id, e.clientX, e.clientY)}
+                onPointerDown={(e) => e.button === 0 && !choosing && startPress(degree.id, e.clientX, e.clientY)}
                 onPointerMove={(e) => movePress(e.clientX, e.clientY)}
                 onPointerUp={endPress}
                 onPointerLeave={endPress}
@@ -251,6 +262,11 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
                 onContextMenu={(e) => e.preventDefault()}
                 onClick={(e) => click(degree.id, e.currentTarget)}
               >
+                {isPivot && (
+                  <span className="ladder__fthora-sign fthora-sign" aria-hidden="true">
+                    {fthoraGlyph(ladder.fthora!.sign)}
+                  </span>
+                )}
                 <span className="ladder__martyria" aria-hidden="true">
                   {martyria.letterAndSign}
                   {martyria.fthora && <span className="ladder__fthora">{martyria.fthora}</span>}
@@ -264,6 +280,10 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
                   ))}
                 </span>
               </button>
+              {/* Where the Degree was before the Fthora: a dashed stub on its side of the rail. */}
+              {degree.before !== null && (
+                <span className={`ladder__ghost ${side}`} style={position(degree.before)} aria-hidden="true" />
+              )}
               {degree.moriaToNext !== null && (
                 <span className="ladder__interval" style={position(degree.moria + degree.moriaToNext / 2)}>
                   {degree.moriaToNext}
