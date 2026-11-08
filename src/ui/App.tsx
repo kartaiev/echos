@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createWebAudioOutput } from "../audio/webAudioOutput";
 import {
   createPracticeSession,
@@ -74,6 +74,13 @@ export function App() {
   // The Practice Session holds the state; the UI re-reads it after every command.
   const [, setVersion] = useState(0);
   const [view, setView] = useState<View>(viewFromHash);
+  // After "Practise" on a Mode card the focus goes to the setup line, which reads out the Mode just chosen.
+  const focusSetup = useRef(false);
+  useEffect(() => {
+    if (view !== "practice" || !focusSetup.current) return;
+    focusSetup.current = false;
+    document.querySelector<HTMLElement>(".setup__summary")?.focus({ preventScroll: true });
+  }, [view]);
   // How the ladder is drawn is a matter of the screen, not of practice, so it lives in the UI.
   const [layout, setLayout] = useState<LadderLayout>(() => loadLadderLayout() ?? "vertical");
   const pitch = session.pitchSettings();
@@ -194,10 +201,7 @@ export function App() {
   return (
     <main className="practice">
       <header className="practice__header">
-        <div className="practice__brand">
-          <h1>{t("app.title")}</h1>
-          <p>{t("app.tagline")}</p>
-        </div>
+        <h1>{t("app.title")}</h1>
         <nav className="header-nav">
           {VIEWS.map((v) => (
             <a key={v} className="header-link" href={VIEW_HASHES[v]} aria-current={view === v ? "page" : undefined}>
@@ -222,6 +226,7 @@ export function App() {
           describe={(key) => session.describeModeVariant(key)}
           onPlayIntonation={(key) => session.playIntonation(key)}
           onPractise={(key) => {
+            focusSetup.current = true;
             chooseModeVariant(key);
             location.hash = VIEW_HASHES.practice;
           }}
@@ -250,6 +255,7 @@ export function App() {
               sound.checkSoon();
             }}
             onLongPress={(id) => actOnIson(() => session.toggleIson(id))}
+            onSpace={toggleMetronome}
           />
           <TransportBar
             ison={ison}

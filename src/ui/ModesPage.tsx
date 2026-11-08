@@ -14,7 +14,6 @@ interface ModesPageProps {
 }
 
 const label = ({ name, octave }: DegreePosition) => degreeLabel(name, octave);
-const Missing = () => <span className="mode-card__missing">{t("modes.noSource")}</span>;
 const keyOf = ({ mode, melos }: ModeVariantKey) => `${mode}/${melos}`;
 
 /** A card for every Mode Variant: its theory, its Intonation, and the way to practise it. */
@@ -47,6 +46,8 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
             const cadencesOf = (kind: CadenceKind) =>
               variant.cadences.value.filter((c) => c.kind === kind).map((c) => label(c.degree));
             const isPlaying = playingKey === keyOf(key);
+            // Sixteen cards carry the same two buttons; each is read with its own Mode Variant.
+            const variantName = `${t(`mode.${mode}`)}, ${t(`melos.${melos}`)}`;
             return (
               <div key={melos} className="mode-card__variant">
                 <h4>{t(`melos.${melos}`)}</h4>
@@ -67,24 +68,35 @@ export function ModesPage({ describe, onPlayIntonation, onPractise }: ModesPageP
                       ) : null,
                     )}
                   </dd>
-                  <dt>{t("modes.intonation")}</dt>
-                  <dd>
-                    {variant.intonation ? (
-                      <span className={"mode-card__intonation" + (isPlaying ? " is-playing" : "")}>
-                        {intonationText(variant.intonation)}
-                      </span>
-                    ) : (
-                      <Missing />
-                    )}
-                  </dd>
+                  {/* No row at all where the Intonation is not known yet. */}
+                  {variant.intonation && (
+                    <>
+                      <dt>{t("modes.intonation")}</dt>
+                      <dd>
+                        <span className={"mode-card__intonation" + (isPlaying ? " is-playing" : "")}>
+                          {intonationText(variant.intonation)}
+                        </span>
+                      </dd>
+                    </>
+                  )}
                 </dl>
                 <div className="mode-card__actions">
                   {variant.intonation && (
-                    <button type="button" className="secondary-button" onClick={() => playIntonation(key)}>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      aria-label={`${t("modes.playIntonation")}: ${variantName}`}
+                      onClick={() => playIntonation(key)}
+                    >
                       {t("modes.playIntonation")}
                     </button>
                   )}
-                  <button type="button" className="primary-button" onClick={() => onPractise(key)}>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    aria-label={`${t("modes.practise")}: ${variantName}`}
+                    onClick={() => onPractise(key)}
+                  >
                     {t("modes.practise")}
                   </button>
                 </div>

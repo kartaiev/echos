@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
-import { octaveMark, t } from "../i18n/translations";
+import { degreeLabel, t } from "../i18n/translations";
 import { martyriaGlyphs } from "./martyriaGlyphs";
 
 /** How long a Degree must be held to count as a long press instead of a tap; the hold ring in styles.css matches it. */
@@ -50,6 +50,8 @@ interface LadderProps {
   chronosMs: number;
   onPlayDegree: (degreeId: string) => void;
   onLongPress: (degreeId: string) => void;
+  /** Space on a Degree: the metronome's key everywhere on the practice view, here too. */
+  onSpace: () => void;
 }
 
 /**
@@ -58,7 +60,7 @@ interface LadderProps {
  * (4 moria) still leave room to tap. A tap plays a Degree; a long press is reported separately (it sets or
  * stops the Ison).
  */
-export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress }: LadderProps) {
+export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace }: LadderProps) {
   // The Degree being held: a ring closes in on it while the long press counts down.
   const [holdingId, setHoldingId] = useState<string | null>(null);
   const hintId = useId();
@@ -149,12 +151,18 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
 
   /**
    * Up and Right go to the next higher Degree, Down and Left to the next lower; Home and End to the ends. I sets or
-   * stops the Ison on the Degree with the focus, as holding it does.
+   * stops the Ison on the Degree with the focus, as holding it does. Enter plays the Degree; Space is the
+   * metronome's, as on the rest of the practice view.
    */
   function onKeys(e: KeyboardEvent) {
     const ids = ladder.degrees.map((d) => d.id);
     const from = ids.indexOf((e.target as HTMLElement).dataset.degree ?? "");
     if (from < 0) return;
+    if (e.key === " ") {
+      e.preventDefault();
+      if (!e.repeat) onSpace();
+      return;
+    }
     if (e.code === "KeyI" && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
       onLongPress(ids[from]!);
@@ -192,6 +200,8 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
         aria-label={t("ladder.label")}
         aria-describedby={hintId}
         onKeyDown={onKeys}
+        // A button plays on the release of Space; the key belongs to the metronome here.
+        onKeyUp={(e) => e.key === " " && e.preventDefault()}
         style={horizontal ? { minWidth: keyboardWidth } : undefined}
       >
         {/* How to play it, for those who cannot see the rings: a tap plays, a hold sets the Ison. */}
@@ -246,15 +256,7 @@ export function Ladder({ ladder, layout, isonDegreeId, beat, chronosMs, onPlayDe
                   {martyria.fthora && <span className="ladder__fthora">{martyria.fthora}</span>}
                 </span>
                 <span className="ladder__text">
-                  <span className="ladder__name">
-                    {t(`degree.${degree.name}`)}
-                    {/* Below Ni the mark is drawn as a low stroke: the "͵" sign reads as a comma. */}
-                    {degree.octave < 0 ? (
-                      <span className="ladder__low" aria-hidden="true" />
-                    ) : (
-                      octaveMark(degree.octave)
-                    )}
-                  </span>
+                  <span className="ladder__name">{degreeLabel(degree.name, degree.octave)}</span>
                   {marks.map((mark) => (
                     <span key={mark} className="ladder__marks">
                       {mark}

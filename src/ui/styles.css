@@ -78,27 +78,22 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
+/* The name and the three tabs on one line, so the singing screen keeps its height for the Ladder. */
 .practice__header {
-  display: grid;
-  gap: 4px;
-}
-
-.practice__brand {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 a {
   color: var(--cinnabar);
 }
 
-/* Three tabs in one row, each a full thumb's width. */
 .header-nav {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-bottom: 1px solid var(--line);
+  display: flex;
+  min-width: 0;
 }
 
 .header-link {
@@ -106,6 +101,7 @@ a {
   align-items: center;
   justify-content: center;
   min-height: 44px;
+  padding: 0 10px;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   font-size: 0.9rem;
@@ -127,17 +123,12 @@ a {
 
 .practice__header h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   color: var(--cinnabar);
   letter-spacing: 0.02em;
 }
 
-.practice__header p,
-.practice__hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
+
 
 .practice__body h2 {
   margin: 24px 0 0;
@@ -147,12 +138,15 @@ a {
 .ladder {
   position: relative;
   /*
-   * 13 Degrees from low Ke to high Ga' fill the screen between the setup line and the transport bar. With
-   * the current tables the closest Degrees on one side are 16 moria apart in a drawing range of 130 moria,
-   * which at 440px is 54px: a 48px key plus a gap. A new Tuning System may need a taller ladder.
+   * 13 Degrees from low Ke to high Ga' fill the screen between the setup line and the transport bar: the
+   * screen less about 296px for the page top, the tabs, the setup line, these margins and the bar, so that a
+   * 667px phone shows every Degree without scrolling. With the current tables the closest Degrees on one side
+   * are 16 moria apart in a drawing range of 130 moria (12.3% of the height); the keys shrink from 48px to
+   * fit that, leaving a 4px gap. A new Tuning System may need a taller ladder.
    */
-  height: max(440px, min(100svh - 400px, 760px));
-  margin: 28px 0 28px;
+  --ladder-height: clamp(360px, 100svh - 296px, 760px);
+  height: var(--ladder-height);
+  margin: 24px 0;
 }
 
 .ladder__rail {
@@ -168,7 +162,7 @@ a {
 .ladder__degree {
   position: absolute;
   width: min(120px, calc(50% - 24px));
-  height: 48px;
+  height: min(48px, var(--ladder-height) * 0.123 - 4px);
   transform: translateY(50%);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -263,30 +257,15 @@ a {
   border-color: var(--cinnabar);
 }
 
-/*
- * The mark of the octave below Ni, drawn as the prime turned upside down: a short stroke hanging below the line
- * and leaning the other way from a comma. The "͵" sign itself reads as a comma.
- */
-.ladder__low {
-  display: inline-block;
-  width: 0.08em;
-  height: 0.38em;
-  margin-left: 0.1em;
-  border-radius: 0.04em;
-  background: currentColor;
-  vertical-align: -0.34em;
-  transform: skewX(28deg);
-}
-
 .ladder__degree:focus-visible {
   outline: 2px solid var(--cinnabar);
   outline-offset: 2px;
 }
 
-/* Base and Dominant Degrees of the chosen Mode Variant; the Base is filled softly, the Ison fully. */
-.ladder__degree.is-dominant {
-  border: 2px dashed var(--cinnabar);
-}
+/*
+ * Base and Dominant Degrees of the chosen Mode Variant, from loud to quiet: the Ison filled, the Base outlined in
+ * cinnabar on a soft fill, the Dominant marked by its word alone, so it informs without competing.
+ */
 
 .ladder__degree.is-base {
   border: 2px solid var(--cinnabar);
@@ -656,10 +635,6 @@ a {
   margin: 0;
 }
 
-.mode-card__missing {
-  color: var(--muted);
-  font-style: italic;
-}
 
 .mode-card__intonation {
   font-weight: 600;
@@ -722,10 +697,6 @@ a {
   padding-bottom: 32px;
 }
 
-.practice__hint {
-  margin-top: 12px;
-  font-size: 0.85rem;
-}
 
 /* What is being practised, in one tappable line; the choices fold out under it. */
 .setup {
@@ -738,8 +709,8 @@ a {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  min-height: 56px;
-  padding: 8px 14px;
+  min-height: 52px;
+  padding: 6px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -868,7 +839,8 @@ a {
   display: grid;
   /* Lanes may shrink below their widest option or tempo text; the menu and the tempo give way first. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  /* 12px between the Ison's Stop and the metronome's button, so a thumb doesn't take one for the other. */
+  gap: 10px;
   margin-inline: calc(-1 * var(--gutter));
   padding: 8px var(--gutter) max(8px, env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--line);
@@ -970,7 +942,7 @@ a {
   align-content: center;
   flex: 1;
   min-width: 0;
-  min-height: 56px;
+  min-height: 48px;
   padding: 2px 28px 2px 10px;
   text-align: left;
 }
@@ -1191,16 +1163,19 @@ a {
   cursor: pointer;
 }
 
-/* The Ison's Stop, shown only while the Ison sounds. */
+/*
+ * The Ison's Stop, shown only while the Ison sounds, and quiet: the filled key on the Ladder already says the
+ * Ison is on, and the metronome's button below it is the loud one.
+ */
 .transport__stop {
   flex: none;
   min-width: 76px;
   min-height: 44px;
   padding: 0 10px;
-  border: 1px solid var(--accent-fill);
+  border: 1px solid var(--cinnabar);
   border-radius: 10px;
-  background: var(--accent-fill);
-  color: var(--on-accent);
+  background: transparent;
+  color: var(--cinnabar);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -1216,7 +1191,7 @@ a {
   align-content: center;
   flex: none;
   width: 76px;
-  min-height: 56px;
+  min-height: 48px;
   padding: 0 6px;
   border: 1px solid var(--cinnabar);
   border-radius: 14px;
@@ -1235,7 +1210,7 @@ a {
 
 .transport__beat-count {
   min-height: 1em;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;

@@ -4,7 +4,6 @@ import type { NoteName } from "../core/theory/westernPitch";
 /** Every UI string goes through these tables; domain terms follow CONTEXT.md in both languages. */
 const en = {
   "app.title": "Echos",
-  "app.tagline": "Byzantine chant practice",
   "genus.diatonic": "Diatonic",
   "genus.soft-chromatic": "Soft Chromatic",
   "genus.hard-chromatic": "Hard Chromatic",
@@ -65,7 +64,7 @@ const en = {
   "setup.change": "Change",
   "degree.high": "high",
   "degree.low": "low",
-  "ladder.keysHint": "Arrow keys move between Degrees; the I key starts or stops the Ison on the Degree in focus.",
+  "ladder.keysHint": "Arrow keys move between Degrees, Enter plays one, I starts or stops the Ison on it, and Space starts or stops the metronome.",
   "ison.stopLabel": "Stop the Ison",
   "metronome.startLabel": "Start the metronome",
   "metronome.stopLabel": "Stop the metronome",
@@ -104,7 +103,6 @@ const en = {
   "modes.cadence.incomplete": "Incomplete on {degrees}",
   "modes.playIntonation": "Play Intonation",
   "modes.intonation": "Intonation",
-  "modes.noSource": "No source yet",
   "modes.practise": "Practise",
   "settings.title": "Settings",
   "settings.register": "Voice register",
@@ -139,7 +137,6 @@ export type TranslationKey = keyof typeof en;
 /** Greek. Degree, Genus and Mode names are the ones Greek chant books use; sources stay as written. */
 const el: Record<TranslationKey, string> = {
   "app.title": "Echos",
-  "app.tagline": "Μελέτη βυζαντινής μουσικής",
   "genus.diatonic": "Διατονικό",
   "genus.soft-chromatic": "Μαλακό χρωματικό",
   "genus.hard-chromatic": "Σκληρό χρωματικό",
@@ -200,7 +197,7 @@ const el: Record<TranslationKey, string> = {
   "setup.change": "Αλλαγή",
   "degree.high": "άνω",
   "degree.low": "κάτω",
-  "ladder.keysHint": "Τα βέλη μετακινούν από φθόγγο σε φθόγγο· το πλήκτρο I ξεκινά ή σταματά το ίσον στον επιλεγμένο φθόγγο.",
+  "ladder.keysHint": "Τα βέλη μετακινούν από φθόγγο σε φθόγγο, το Enter τον παίζει, το I ξεκινά ή σταματά το ίσον σε αυτόν και το διάστημα ξεκινά ή σταματά τον μετρονόμο.",
   "ison.stopLabel": "Διακοπή του ίσου",
   "metronome.startLabel": "Έναρξη του μετρονόμου",
   "metronome.stopLabel": "Διακοπή του μετρονόμου",
@@ -239,7 +236,6 @@ const el: Record<TranslationKey, string> = {
   "modes.cadence.incomplete": "Ατελής: {degrees}",
   "modes.playIntonation": "Ακρόαση απηχήματος",
   "modes.intonation": "Απήχημα",
-  "modes.noSource": "Χωρίς πηγή ακόμη",
   "modes.practise": "Μελέτη",
   "settings.title": "Ρυθμίσεις",
   "settings.register": "Φωνή",
