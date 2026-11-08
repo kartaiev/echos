@@ -1,4 +1,4 @@
-import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, SoundRequest, Vowel } from "./AudioOutput";
+import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest, Vowel } from "./AudioOutput";
 
 interface Formant {
   frequency: number;
@@ -70,12 +70,21 @@ function playThroughSilentSwitch() {
 }
 
 /**
- * When a gesture asked a stopped context to resume and it still is not running a second later, iOS has left it
- * stuck after an interruption; the next gesture then builds a fresh context.
+ * When the context was asked to resume (by a gesture, or by the page coming back into view) and still is not
+ * running a second later, iOS has left it stuck after an interruption; the next gesture then builds a fresh context.
  */
 const STUCK_AFTER_MS = 1000;
-/** When a gesture first asked the current context to resume without success; null while it runs. */
+/** When the current context was first asked to resume without success; null while it runs. */
 let resumeAskedAt: number | null = null;
+
+/**
+ * Sounds that last until they are stopped (the Ison) and the metronome. A fresh context starts in silence, so each
+ * of these is built again on it: the student hears what was sounding before the interruption.
+ */
+interface Lasting {
+  moveTo(ctx: AudioContext): void;
+}
+const lasting = new Set<Lasting>();
 
 /**
  * The page's AudioContext, started if it is not running. Safari stops it as "interrupted" when the student switches
@@ -83,14 +92,14 @@ let resumeAskedAt: number | null = null;
  */
 function getContext(fromGesture = false) {
   playThroughSilentSwitch();
-  if (fromGesture && context && context.state !== "running" && resumeAskedAt !== null
-    && performance.now() - resumeAskedAt > STUCK_AFTER_MS) {
-    void context.close().catch(() => {});
-    context = null;
-  }
-  if (!context || context.state === "closed") {
+  const stuck = fromGesture && context !== null && context.state !== "running" && resumeAskedAt !== null
+    && performance.now() - resumeAskedAt > STUCK_AFTER_MS;
+  const replaced = context !== null && (stuck || context.state === "closed");
+  if (stuck) void context!.close().catch(() => {});
+  if (!context || replaced) {
     context = new AudioContext();
     resumeAskedAt = null;
+    if (replaced) for (const sound of lasting) sound.moveTo(context);
   }
   const ctx = context;
   if (ctx.state === "running") {
@@ -120,8 +129,11 @@ function listenForUnlock() {
   for (const type of ["pointerdown", "pointerup", "touchend", "keydown"]) {
     window.addEventListener(type, () => getContext(true), { capture: true });
   }
+  // Coming back counts as asking: if the context is still stopped a second later, the next touch rebuilds it.
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && context) getContext();
+    if (document.visibilityState !== "visible" || !context) return;
+    if (context.state !== "running") resumeAskedAt ??= performance.now();
+    getContext();
   });
 }
 
@@ -138,14 +150,17 @@ function scheduleClick(ctx: AudioContext, output: AudioNode, at: number, accent:
   osc.stop(at + CLICK_DECAY_S + 0.01);
 }
 
-/** The metronome: its own output node, so it never touches the voices that sound beside it. */
+/**
+ * The metronome: its own output node, so it never touches the voices that sound beside it. If the context is
+ * replaced it starts again on the new one from the first of the group, as a tempo change does.
+ */
 function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): PlayingClickTrack {
-  const ctx = getContext();
   const interval = intervalMs / 1000;
-  const first = ctx.currentTime + FIRST_CLICK_DELAY_S;
-  const output = ctx.createGain();
-  output.connect(ctx.destination);
+  let ctx!: AudioContext;
+  let output!: GainNode;
+  let first = 0;
   let index = 0;
+  let timer = 0;
 
   function schedule() {
     const horizon = ctx.currentTime + (document.hidden ? HIDDEN_LOOKAHEAD_S : LOOKAHEAD_S);
@@ -156,25 +171,107 @@ function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): Playing
     }
   }
 
-  schedule();
-  const timer = setInterval(schedule, SCHEDULER_INTERVAL_MS);
+  function startOn(next: AudioContext) {
+    clearInterval(timer);
+    ctx = next;
+    first = ctx.currentTime + FIRST_CLICK_DELAY_S;
+    output = ctx.createGain();
+    output.connect(ctx.destination);
+    index = 0;
+    schedule();
+    timer = window.setInterval(schedule, SCHEDULER_INTERVAL_MS);
+  }
+
+  const track: Lasting = { moveTo: startOn };
+  startOn(getContext());
+  lasting.add(track);
   let stopped = false;
 
   return {
     stop() {
       if (stopped) return;
       stopped = true;
+      lasting.delete(track);
       clearInterval(timer);
       // Silence clicks already placed ahead, then let go of the node.
+      const placed = output;
       const now = ctx.currentTime;
-      output.gain.setValueAtTime(output.gain.value, now);
-      output.gain.linearRampToValueAtTime(0, now + 0.01);
-      setTimeout(() => output.disconnect(), (HIDDEN_LOOKAHEAD_S + 0.1) * 1000);
+      placed.gain.setValueAtTime(placed.gain.value, now);
+      placed.gain.linearRampToValueAtTime(0, now + 0.01);
+      setTimeout(() => placed.disconnect(), (HIDDEN_LOOKAHEAD_S + 0.1) * 1000);
     },
     elapsedMs() {
       // What is heard now left the audio clock one output latency ago.
       const latency = ctx.outputLatency || ctx.baseLatency || 0;
       return (ctx.currentTime - latency - first) * 1000;
+    },
+  };
+}
+
+/** One sung sound on a given context: a sawtooth with vibrato through vowel formants, under an envelope. */
+function singVoice(ctx: AudioContext, sound: SoundRequest): PlayingSound {
+  const start = ctx.currentTime + (sound.startMs ?? 0) / 1000;
+  const end = sound.durationMs === null ? null : start + sound.durationMs / 1000;
+
+  const source = ctx.createOscillator();
+  source.type = "sawtooth";
+  source.frequency.value = sound.frequency;
+
+  // Gentle vibrato so the voice sounds sung rather than electronic.
+  const vibrato = ctx.createOscillator();
+  const vibratoDepth = ctx.createGain();
+  vibrato.frequency.value = 5;
+  vibratoDepth.gain.value = sound.frequency * 0.004;
+  vibrato.connect(vibratoDepth).connect(source.frequency);
+
+  const envelope = ctx.createGain();
+  envelope.gain.setValueAtTime(0, start);
+  envelope.gain.linearRampToValueAtTime(PEAK_GAIN, start + ATTACK_S);
+  if (end !== null) {
+    envelope.gain.setValueAtTime(PEAK_GAIN, end);
+    envelope.gain.linearRampToValueAtTime(0, end + RELEASE_S);
+  }
+  envelope.connect(ctx.destination);
+
+  const loudness = ctx.createGain();
+  loudness.gain.value = sound.volume;
+  loudness.connect(envelope);
+
+  for (const formant of FORMANTS[sound.vowel]) {
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = formant.frequency;
+    filter.Q.value = formant.q;
+    const gain = ctx.createGain();
+    gain.gain.value = formant.gain;
+    source.connect(filter).connect(gain).connect(loudness);
+  }
+
+  source.start(start);
+  vibrato.start(start);
+  if (end !== null) {
+    source.stop(end + RELEASE_S);
+    vibrato.stop(end + RELEASE_S);
+  }
+
+  const finished = () => end !== null && ctx.currentTime >= end + RELEASE_S;
+  let stopped = false;
+
+  return {
+    stop() {
+      if (stopped || finished()) return;
+      stopped = true;
+      const now = ctx.currentTime;
+      // Hold the current level, then fade out fast enough to avoid overlap but slow enough to avoid a click.
+      envelope.gain.cancelScheduledValues(now);
+      envelope.gain.setValueAtTime(envelope.gain.value, now);
+      envelope.gain.linearRampToValueAtTime(0, now + CUT_OFF_S);
+      source.stop(now + CUT_OFF_S);
+      vibrato.stop(now + CUT_OFF_S);
+    },
+    setVolume(volume: number) {
+      if (stopped || finished()) return;
+      loudness.gain.setTargetAtTime(volume, ctx.currentTime, VOLUME_GLIDE_S);
     },
   };
 }
@@ -187,70 +284,21 @@ export function createWebAudioOutput(): AudioOutput {
     playClickTrack,
     // Before anything has been played there is nothing to hear yet, so nothing is held back either.
     isRunning: () => context === null || context.state === "running",
-    playSound(sound: SoundRequest) {
-      const ctx = getContext();
-      const start = ctx.currentTime + (sound.startMs ?? 0) / 1000;
-      const end = sound.durationMs === null ? null : start + sound.durationMs / 1000;
-
-      const source = ctx.createOscillator();
-      source.type = "sawtooth";
-      source.frequency.value = sound.frequency;
-
-      // Gentle vibrato so the voice sounds sung rather than electronic.
-      const vibrato = ctx.createOscillator();
-      const vibratoDepth = ctx.createGain();
-      vibrato.frequency.value = 5;
-      vibratoDepth.gain.value = sound.frequency * 0.004;
-      vibrato.connect(vibratoDepth).connect(source.frequency);
-
-      const envelope = ctx.createGain();
-      envelope.gain.setValueAtTime(0, start);
-      envelope.gain.linearRampToValueAtTime(PEAK_GAIN, start + ATTACK_S);
-      if (end !== null) {
-        envelope.gain.setValueAtTime(PEAK_GAIN, end);
-        envelope.gain.linearRampToValueAtTime(0, end + RELEASE_S);
-      }
-      envelope.connect(ctx.destination);
-
-      const loudness = ctx.createGain();
-      loudness.gain.value = sound.volume;
-      loudness.connect(envelope);
-
-      for (const formant of FORMANTS[sound.vowel]) {
-        const filter = ctx.createBiquadFilter();
-        filter.type = "bandpass";
-        filter.frequency.value = formant.frequency;
-        filter.Q.value = formant.q;
-        const gain = ctx.createGain();
-        gain.gain.value = formant.gain;
-        source.connect(filter).connect(gain).connect(loudness);
-      }
-
-      source.start(start);
-      vibrato.start(start);
-      if (end !== null) {
-        source.stop(end + RELEASE_S);
-        vibrato.stop(end + RELEASE_S);
-      }
-
-      const finished = () => end !== null && ctx.currentTime >= end + RELEASE_S;
-      let stopped = false;
-
+    playSound(sound: SoundRequest): PlayingSound {
+      let current = sound;
+      let voice = singVoice(getContext(), current);
+      // A sound held until stopped (the Ison) is sung again on a fresh context; a timed one is over by then.
+      const held: Lasting | null =
+        sound.durationMs === null ? { moveTo: (ctx) => (voice = singVoice(ctx, { ...current, startMs: 0 })) } : null;
+      if (held) lasting.add(held);
       return {
         stop() {
-          if (stopped || finished()) return;
-          stopped = true;
-          const now = ctx.currentTime;
-          // Hold the current level, then fade out fast enough to avoid overlap but slow enough to avoid a click.
-          envelope.gain.cancelScheduledValues(now);
-          envelope.gain.setValueAtTime(envelope.gain.value, now);
-          envelope.gain.linearRampToValueAtTime(0, now + CUT_OFF_S);
-          source.stop(now + CUT_OFF_S);
-          vibrato.stop(now + CUT_OFF_S);
+          if (held) lasting.delete(held);
+          voice.stop();
         },
         setVolume(volume: number) {
-          if (stopped || finished()) return;
-          loudness.gain.setTargetAtTime(volume, ctx.currentTime, VOLUME_GLIDE_S);
+          current = { ...current, volume };
+          voice.setVolume(volume);
         },
       };
     },
