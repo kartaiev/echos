@@ -47,7 +47,7 @@ _Avoid_: accidental, sharp, flat, elxis
 _Greek_: έλξη (lowered: ύφεση, raised: δίεση)
 
 **Fthora**:
-A sign that switches the Scale to another Genus at a Degree (plural: Fthores). The Degree it is placed on, the pivot, keeps its pitch and becomes that Degree of the new Genus; the whole Scale follows (ADR-0011).
+A sign that switches the Scale to another Genus, or to another Degree's place, at a Degree (plural: Fthores). The Degree it is placed on, the pivot, keeps its pitch and becomes the Degree the Fthora names, in the Fthora's Genus; the whole Scale follows and is sung under the new names (ADR-0011, ADR-0012). Fthores chain: each acts on the Scale the ones before it made.
 _Avoid_: phthora, modulation sign
 _Greek_: φθορά, φθορές
 

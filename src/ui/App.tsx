@@ -254,9 +254,9 @@ export function App() {
             fthora={ladder.fthora}
             degrees={ladder.degrees}
             choices={placing?.step === "genus" ? session.fthoraChoices(placing.degreeId) : []}
-            onChooseGenus={(g) => {
+            onChoose={(sign) => {
               if (placing?.step !== "genus") return;
-              act(() => session.placeFthora(placing.degreeId, g));
+              act(() => session.placeFthora(placing.degreeId, sign));
               setPlacing(null);
             }}
             onCancel={() => setPlacing(null)}

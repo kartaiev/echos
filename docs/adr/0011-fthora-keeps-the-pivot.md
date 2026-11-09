@@ -4,6 +4,6 @@ A Fthora placed on a Degree switches the Scale to another Genus. The Trisagion S
 
 Since Genera are stored as interval cycles (ADR-0003), a Fthora needs no table of its own positions: the Scale is the new Genus's cycle, named Degree for named Degree, moved so the pivot stays where it was. The sign drawn on the pivot follows from the Genus and the Degree, using the course's table of Fthores: a chromatic sign stands for every Degree that shares its place in the four-Degree cycle.
 
-The Enharmonic Fthora (ajem, on Zo') is left out for now. The same rule would move Ke and Di, and no source example confirms that this is how it is sung. A Fthora that renames its pivot (metathesis), chains of Fthores and the chroai are also not covered.
+The Enharmonic Fthora (ajem, on Zo') is left out for now. The same rule would move Ke and Di, and no source example confirms that this is how it is sung. The chroai are also not covered; a Fthora that renames its pivot and chains of Fthores came later (ADR-0012).
 
 The drawing range of the Ladder stays the range of the plain Genera and widens only while a shown Fthora moves Degrees beyond it, so Degrees do not shrink for every student because some Fthora could move them.

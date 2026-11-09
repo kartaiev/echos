@@ -333,6 +333,15 @@ a {
   line-height: 1.05;
 }
 
+/* The name a Fthora took from the key: smaller, under the name it is sung by now. */
+.ladder__former {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 0.75;
+}
+
 .ladder__marks {
   display: block;
   font-size: 0.72rem;
@@ -1308,17 +1317,55 @@ a {
 }
 
 .fthora-bar__status .fthora-sign {
+  padding-top: 0.3em;
   font-size: 2rem;
+}
+
+.fthora-bar__groups {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 100%;
+  order: 1;
+  gap: 8px;
+}
+
+.fthora-bar__group-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .fthora-bar__choices {
   display: flex;
-  flex-basis: 100%;
-  order: 1;
   gap: 6px;
 }
 
+/* One key per Degree the pivot can become, all in one row: the sign over the Degree's name. */
+.fthora-bar__choices--degrees {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+}
+
+.fthora-bar__choices--degrees .fthora-bar__choice {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 64px;
+  padding: 4px 2px 6px;
+}
+
+.fthora-bar__choices--degrees .fthora-sign {
+  padding-top: 0.35em;
+  font-size: 1.6rem;
+}
+
+/* The signs stand on the baseline and rise well above it: room above, so none touches the key's edge. */
 .fthora-bar__choice .fthora-sign {
+  padding-top: 0.3em;
   font-size: 2rem;
 }
 
