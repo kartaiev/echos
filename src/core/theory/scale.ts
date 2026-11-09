@@ -29,8 +29,20 @@ export interface ScaleOptions {
   pivot?: { degree: DegreePosition; moria: number };
 }
 
-function degreeIndex({ name, octave }: DegreePosition): number {
+/** The place of a Degree counted in Degrees from Ni of octave 0. */
+export function degreeIndex({ name, octave }: DegreePosition): number {
   return octave * DEGREE_NAMES.length + DEGREE_NAMES.indexOf(name);
+}
+
+export function positionAt(index: number): DegreePosition {
+  const octave = Math.floor(index / DEGREE_NAMES.length);
+  return { name: DEGREE_NAMES[index - octave * DEGREE_NAMES.length]!, octave };
+}
+
+/** The Degree of that name nearest to a place, so that a pivot renamed by a Fthora moves no more than it must. */
+export function nearestPosition(name: DegreeName, index: number): DegreePosition {
+  const octave = Math.round((index - DEGREE_NAMES.indexOf(name)) / DEGREE_NAMES.length);
+  return { name, octave };
 }
 
 export function degreeId({ name, octave }: DegreePosition): string {
@@ -56,8 +68,7 @@ export function buildScale({ tuningSystem, genus, referencePitchHz, lowest, high
   const offset = pivot ? pivot.moria - moriaAt.get(pivotIndex)! : 0;
   const degrees: ScaleDegree[] = [];
   for (let index = low; index <= high; index++) {
-    const octave = Math.floor(index / DEGREE_NAMES.length);
-    const position = { name: DEGREE_NAMES[index - octave * DEGREE_NAMES.length]!, octave };
+    const position = positionAt(index);
     const shift = shifts.find(({ degree }) => degree.name === position.name && degree.octave === position.octave);
     const moria = moriaAt.get(index)! + offset + (shift?.moria ?? 0);
     degrees.push({

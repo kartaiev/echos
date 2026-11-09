@@ -1043,16 +1043,22 @@ describe("Practice Session: Fthora on a Degree", () => {
     const { session } = setup();
     session.setModeVariant({ mode: "first", melos: "heirmologic" });
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     expect(moriaOf(session, ["Pa", "Vou", "Ga", "Di", "Ke", "Zo", "Ni'", "Pa'"])).toEqual([12, 18, 38, 42, 54, 60, 80, 84]);
-    expect(session.ladder().fthora).toEqual({ degreeId: "Di", genus: "hard-chromatic", sign: "hard-chromatic-di", shown: true });
+    expect(session.ladder().fthora).toEqual({
+      degreeId: "Di",
+      placedOn: "Di",
+      genus: "hard-chromatic",
+      sign: "hard-chromatic-di",
+      shown: true,
+    });
   });
 
   it("keeps the pivot at its pitch where the Genera place that Degree differently", () => {
     const { session } = setup();
 
-    session.placeFthora("Pa", "soft-chromatic");
+    session.placeFthora("Pa", "soft-chromatic-ke");
 
     expect(moriaOf(session, ["Ni", "Pa", "Vou", "Ga"])).toEqual([4, 12, 26, 34]);
   });
@@ -1071,16 +1077,17 @@ describe("Practice Session: Fthora on a Degree", () => {
   ] as const)("on %s in the %s Genus draws the sign the lesson's table gives (%s)", (degree, genus, sign) => {
     const { session } = setup();
     session.setGenus(genus === "diatonic" ? "hard-chromatic" : "diatonic");
+    const name = degree.replace("'", "");
 
-    session.placeFthora(degree, genus);
+    const choice = session.fthoraChoices(degree).find((c) => c.genus === genus && c.degree === name);
 
-    expect(session.ladder().fthora?.sign).toBe(sign);
+    expect(choice?.sign).toBe(sign);
   });
 
   it("writes the Martyries of the new Genus", () => {
     const { session } = setup();
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     expect(session.ladder().degrees.find((d) => d.id === "Di")?.martyria.rootSign).toBe("hard-chromatic-di");
   });
@@ -1088,7 +1095,7 @@ describe("Practice Session: Fthora on a Degree", () => {
   it("marks where each moved Degree was before the Fthora, and only those", () => {
     const { session } = setup();
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     const byId = new Map(session.ladder().degrees.map((d) => [d.id, d]));
     expect(byId.get("Vou")?.before).toBe(22);
@@ -1099,7 +1106,7 @@ describe("Practice Session: Fthora on a Degree", () => {
 
   it("switches between the Scale before and after the Fthora without losing it", () => {
     const { session } = setup();
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     session.showFthora(false);
     expect(moriaOf(session, ["Vou", "Ga"])).toEqual([22, 30]);
@@ -1114,7 +1121,7 @@ describe("Practice Session: Fthora on a Degree", () => {
     const { audio, session } = setup();
     session.setIson("Vou");
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     const isons = audio.sounds.filter((s) => s.kind === "ison");
     expect(isons.map((s) => s.stopped)).toEqual([true, false]);
@@ -1124,15 +1131,15 @@ describe("Practice Session: Fthora on a Degree", () => {
 
   it("is removed by choosing a Mode Variant or a Genus, or by hand", () => {
     const { session } = setup();
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
     session.setModeVariant({ mode: "first", melos: "heirmologic" });
     expect(session.ladder().fthora).toBeNull();
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
     session.setGenus("diatonic");
     expect(session.ladder().fthora).toBeNull();
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
     session.clearFthora();
     expect(session.ladder().fthora).toBeNull();
     expect(moriaOf(session, ["Vou"])).toEqual([22]);
@@ -1142,7 +1149,7 @@ describe("Practice Session: Fthora on a Degree", () => {
     const { session } = setup();
     session.toggleAttraction("zo-lowered");
 
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     expect(moriaOf(session, ["Zo"])).toEqual([60]);
     expect(session.ladder().attractions).toEqual([]);
@@ -1155,7 +1162,7 @@ describe("Practice Session: Fthora on a Degree", () => {
     const { session } = setup();
     session.setGenus("hard-chromatic");
 
-    session.placeFthora("Ni'", "soft-chromatic");
+    session.placeFthora("Ni'", "soft-chromatic-ke");
     const widened = session.ladder().drawingRange;
     const top = session.ladder().degrees.at(-1)!.moria;
     session.showFthora(false);
@@ -1164,24 +1171,181 @@ describe("Practice Session: Fthora on a Degree", () => {
     expect(session.ladder().drawingRange).toEqual({ lowestMoria: -24, highestMoria: 106 });
   });
 
-  it("offers the Fthores of the other Genera for a Degree, each with the sign it would draw", () => {
+  it("offers every Diatonic Fthora that changes the Degree, then the Chromatic ones of the other Genera", () => {
     const { session } = setup();
 
-    expect(session.fthoraChoices("Di")).toEqual([
-      { genus: "soft-chromatic", sign: "soft-chromatic-di" },
-      { genus: "hard-chromatic", sign: "hard-chromatic-di" },
+    expect(session.fthoraChoices("Pa")).toEqual([
+      { genus: "diatonic", degree: "Ni", sign: "diatonic-ni-low" },
+      { genus: "diatonic", degree: "Vou", sign: "diatonic-vou" },
+      { genus: "diatonic", degree: "Ga", sign: "diatonic-ga" },
+      { genus: "diatonic", degree: "Di", sign: "diatonic-di" },
+      { genus: "diatonic", degree: "Ke", sign: "diatonic-ke" },
+      { genus: "diatonic", degree: "Zo", sign: "diatonic-zo" },
+      { genus: "soft-chromatic", degree: "Pa", sign: "soft-chromatic-ke" },
+      { genus: "hard-chromatic", degree: "Pa", sign: "hard-chromatic-pa" },
     ]);
     session.setGenus("hard-chromatic");
-    expect(session.fthoraChoices("Ga")).toEqual([
-      { genus: "diatonic", sign: "diatonic-ga" },
-      { genus: "soft-chromatic", sign: "soft-chromatic-ke" },
+    expect(session.fthoraChoices("Ga").map((c) => [c.genus, c.degree])).toEqual([
+      ["diatonic", "Ni"],
+      ["diatonic", "Pa"],
+      ["diatonic", "Vou"],
+      ["diatonic", "Ga"],
+      ["diatonic", "Di"],
+      ["diatonic", "Ke"],
+      ["diatonic", "Zo"],
+      ["soft-chromatic", "Ga"],
     ]);
+  });
+
+  it("draws the high Ni sign where the pivot becomes the Ni above", () => {
+    const { session } = setup();
+
+    expect(session.fthoraChoices("Ke").find((c) => c.degree === "Ni")?.sign).toBe("diatonic-ni-high");
   });
 
   it("cites the lesson for the Fthores", () => {
     const { session } = setup();
-    session.placeFthora("Di", "hard-chromatic");
+    session.placeFthora("Di", "hard-chromatic-di");
 
     expect(session.ladder().fthoraSource).toMatch(/Trisagion.*Fthores/);
+  });
+});
+
+describe("Practice Session: a Fthora of another Degree", () => {
+  type Rung = [id: string, moria: number, formerly: string | null];
+  const rungs = (session: ReturnType<typeof setup>["session"]): Rung[] =>
+    session.ladder().degrees.map((d) => [d.id, d.moria, d.formerName && degreeId(d.formerName)]);
+
+  // 1st Eothinon Doxasticon, "As the disciples were hastening": at "And they" the diatonic Fthora of Ke stands on Pa.
+  // Pa keeps its pitch and is sung as Ke; every key of the Ladder takes its new name.
+  it("sings the pivot under the Fthora's name and renames the whole Ladder", () => {
+    const { session } = setup();
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+
+    session.placeFthora("Pa", "diatonic-ke");
+
+    expect(rungs(session)).toEqual([
+      ["Vou,", -20, "Ke,"],
+      ["Ga,", -12, "Zo,"],
+      ["Di,", 0, "Ni"],
+      ["Ke,", 12, "Pa"],
+      ["Zo,", 22, "Vou"],
+      ["Ni", 30, "Ga"],
+      ["Pa", 42, "Di"],
+      ["Vou", 52, "Ke"],
+      ["Ga", 60, "Zo"],
+      ["Di", 72, "Ni'"],
+      ["Ke", 84, "Pa'"],
+      ["Zo", 94, "Vou'"],
+      ["Ni'", 102, "Ga'"],
+    ]);
+    expect(session.ladder().fthora).toEqual({ degreeId: "Ke,", placedOn: "Pa", genus: "diatonic", sign: "diatonic-ke", shown: true });
+  });
+
+  it("marks where the renamed Degrees were, and only those that moved", () => {
+    const { session } = setup();
+
+    session.placeFthora("Pa", "diatonic-ke");
+
+    const before = new Map(session.ladder().degrees.map((d) => [d.id, d.before]));
+    expect(before.get("Ga,")).toBe(-8);
+    expect(before.get("Vou")).toBe(54);
+    expect(before.get("Pa")).toBeNull();
+  });
+
+  it("writes the Martyria of the new name, also beyond the chart", () => {
+    const { session } = setup();
+
+    session.placeFthora("Pa", "diatonic-ke");
+
+    const signs = new Map(session.ladder().degrees.map((d) => [d.id, d.martyria.rootSign]));
+    expect(signs.get("Pa")).toBe("alpha");
+    expect(signs.get("Vou,")).toBe("legetos");
+  });
+
+  // At "and learned" the melody goes up six Degrees to the new Ni', where the diatonic Fthora of Ga stands:
+  // the old Ga'. The Scale is back where it started, in pitch and in name.
+  it("chains a second Fthora on the renamed Ladder: Ga on the new Ni' brings the Scale back", () => {
+    const { session } = setup();
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+    const plain = rungs(session);
+
+    session.placeFthora("Pa", "diatonic-ke");
+    session.placeFthora("Ni'", "diatonic-ga");
+
+    expect(rungs(session)).toEqual(plain);
+    expect(session.ladder().fthora).toEqual({ degreeId: "Ga'", placedOn: "Ni'", genus: "diatonic", sign: "diatonic-ga", shown: true });
+    expect(session.ladder().fthores).toEqual([
+      { degreeId: "Pa", sign: "diatonic-ke" },
+      { degreeId: "Ga'", sign: "diatonic-ga" },
+    ]);
+  });
+
+  it("compares and removes the last Fthora of a chain", () => {
+    const { session } = setup();
+    session.placeFthora("Pa", "diatonic-ke");
+    const renamed = rungs(session);
+    session.placeFthora("Ni'", "diatonic-ga");
+
+    session.showFthora(false);
+    expect(rungs(session).map(([id, moria]) => [id, moria])).toEqual(renamed.map(([id, moria]) => [id, moria]));
+
+    session.showFthora(true);
+    session.clearFthora();
+    expect(rungs(session)).toEqual(renamed);
+    expect(session.ladder().fthora?.sign).toBe("diatonic-ke");
+
+    session.clearFthora();
+    expect(session.ladder().fthora).toBeNull();
+    expect(session.ladder().degrees.every((d) => d.formerName === null)).toBe(true);
+  });
+
+  it("puts a Fthora placed on the last pivot in the place of the last one", () => {
+    const { session } = setup();
+    session.placeFthora("Pa", "diatonic-ke");
+
+    session.placeFthora("Ke,", "diatonic-di");
+
+    expect(session.ladder().fthores).toEqual([{ degreeId: "Di", sign: "diatonic-di" }]);
+    expect(session.ladder().degrees.find((d) => d.id === "Di")?.moria).toBe(12);
+  });
+
+  it("drops a Fthora set aside with Before when another is placed", () => {
+    const { session } = setup();
+    session.placeFthora("Pa", "diatonic-ke");
+    session.showFthora(false);
+
+    session.placeFthora("Di", "hard-chromatic-di");
+
+    expect(session.ladder().fthores).toEqual([{ degreeId: "Di", sign: "hard-chromatic-di" }]);
+  });
+
+  it("keeps the Ison on its key, which now has another name", () => {
+    const { audio, session } = setup();
+    session.setIson("Pa");
+
+    session.placeFthora("Pa", "diatonic-ke");
+
+    expect(session.ison().degreeId).toBe("Ke,");
+    expect(audio.sounds.filter((s) => s.kind === "ison").map((s) => s.stopped)).toEqual([false]);
+  });
+
+  it("keeps the Base and Dominant marks on their keys", () => {
+    const { session } = setup();
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+
+    session.placeFthora("Pa", "diatonic-ke");
+
+    expect(session.ladder().degrees.find((d) => d.isBase)?.id).toBe("Ke,");
+  });
+
+  it("offers the choices of the Scale before the last Fthora on its pivot", () => {
+    const { session } = setup();
+    session.placeFthora("Pa", "diatonic-ke");
+
+    const diatonic = session.fthoraChoices("Ke,").filter((c) => c.genus === "diatonic").map((c) => c.degree);
+
+    expect(diatonic).not.toContain("Pa");
+    expect(diatonic).toContain("Ke");
   });
 });

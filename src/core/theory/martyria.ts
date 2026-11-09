@@ -1,4 +1,4 @@
-import type { DegreePosition } from "./scale";
+import { degreeIndex, type DegreePosition } from "./scale";
 import type { DegreeName, GenusId, SourcedValue } from "./tuningSystems";
 
 /** The sign written with a Degree's letter in a Martyria; it tells the Genus and the place in it. */
@@ -133,4 +133,29 @@ export function martyriaOf(genus: GenusId, position: DegreePosition): Martyria |
   const [, , rootSign, fthora] = entry;
   const lettersFrom = letterOctave(position);
   return { letterOctave: lettersFrom, rootSign, rootSignAbove: lettersFrom === -1, fthora: fthora ?? null };
+}
+
+/**
+ * How many Degrees on the same root sign repeats: the octave in the Diatonic (and the Enharmonic below Ga), every
+ * other Degree in the Chromatic Genera.
+ */
+const SIGN_PERIOD: Record<GenusId, number> = { diatonic: 7, enharmonic: 7, "soft-chromatic": 2, "hard-chromatic": 2 };
+
+/**
+ * The Martyria of any Degree a Fthora can bring onto the Ladder. Beyond the chart, the chart's own pattern goes on
+ * (as for the Degrees marked * above): the sign of the nearest Degree a period away, without the dots, which mark
+ * the upper tetrachord of the chart's middle octave only. Unreviewed, like the rest of the extension.
+ */
+export function martyriaAnywhere(genus: GenusId, position: DegreePosition): Martyria {
+  const exact = martyriaOf(genus, position);
+  if (exact) return exact;
+  const index = degreeIndex(position);
+  const period = SIGN_PERIOD[genus];
+  const [nearest] = MARTYRIA[genus].value
+    .filter(([name, octave]) => (((degreeIndex({ name, octave }) - index) % period) + period) % period === 0)
+    .sort(([a, ao], [b, bo]) => Math.abs(degreeIndex({ name: a, octave: ao }) - index) - Math.abs(degreeIndex({ name: b, octave: bo }) - index));
+  if (!nearest) throw new Error(`No Martyria pattern for ${position.name} in ${genus}`);
+  const rootSign = nearest[2].replace("-dotted", "") as RootSign;
+  const lettersFrom = letterOctave(position);
+  return { letterOctave: lettersFrom, rootSign, rootSignAbove: lettersFrom === -1, fthora: nearest[3] ?? null };
 }

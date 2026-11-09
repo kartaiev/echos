@@ -231,9 +231,15 @@ export function Ladder(props: LadderProps) {
             degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
             degree.attraction === null ? null : degree.attraction < 0 ? t("ladder.loweredMark") : t("ladder.raisedMark"),
           ].filter((m): m is string => m !== null);
-          const isPivot = ladder.fthora?.shown === true && ladder.fthora.degreeId === degree.id;
+          const pivotSign = ladder.fthores.find((f) => f.degreeId === degree.id)?.sign;
+          const former = degree.formerName && degreeLabel(degree.formerName.name, degree.formerName.octave);
           // The Ison key is filled, so its mark is only read aloud; so is the Fthora, drawn as its sign.
-          const spoken = [...marks, ...(isIson ? [t("ladder.isonMark")] : []), ...(isPivot ? [t("fthora.mark")] : [])];
+          const spoken = [
+            ...(former ? [t("ladder.formerName", { degree: former })] : []),
+            ...marks,
+            ...(isIson ? [t("ladder.isonMark")] : []),
+            ...(pivotSign ? [t("fthora.mark")] : []),
+          ];
           const side = horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right";
           const classes = [
             "ladder__degree",
@@ -245,7 +251,8 @@ export function Ladder(props: LadderProps) {
             degree.attraction !== null && "is-attracted",
           ];
           return (
-            <div key={degree.id}>
+            // Keyed by place: a Fthora renames keys, and a key keeps its focus and its press through that.
+            <div key={index}>
               <button
                 type="button"
                 className={classes.filter(Boolean).join(" ")}
@@ -262,9 +269,9 @@ export function Ladder(props: LadderProps) {
                 onContextMenu={(e) => e.preventDefault()}
                 onClick={(e) => click(degree.id, e.currentTarget)}
               >
-                {isPivot && (
+                {pivotSign && (
                   <span className="ladder__fthora-sign fthora-sign" aria-hidden="true">
-                    {fthoraGlyph(ladder.fthora!.sign)}
+                    {fthoraGlyph(pivotSign)}
                   </span>
                 )}
                 <span className="ladder__martyria" aria-hidden="true">
@@ -273,6 +280,11 @@ export function Ladder(props: LadderProps) {
                 </span>
                 <span className="ladder__text">
                   <span className="ladder__name">{degreeLabel(degree.name, degree.octave)}</span>
+                  {former && (
+                    <span className="ladder__former" aria-hidden="true">
+                      {former}
+                    </span>
+                  )}
                   {marks.map((mark) => (
                     <span key={mark} className="ladder__marks">
                       {mark}
