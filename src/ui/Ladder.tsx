@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
 import { fthoraGlyph, martyriaGlyphs } from "./martyriaGlyphs";
@@ -37,8 +37,23 @@ function strike(key: HTMLElement) {
 }
 
 /** Vertical like a Parallage chart, or horizontal like a keyboard. */
-export const LADDER_LAYOUTS = ["vertical", "horizontal"] as const;
-export type LadderLayout = (typeof LADDER_LAYOUTS)[number];
+export type LadderLayout = "vertical" | "horizontal";
+
+const LANDSCAPE = "(orientation: landscape)";
+const watchOrientation = (onChange: () => void) => {
+  const query = matchMedia(LANDSCAPE);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+
+/**
+ * The layout follows the screen: a phone or tablet held upright gets the vertical Ladder, turned sideways (and a
+ * desktop window, wider than tall) the horizontal one.
+ */
+export function useLadderLayout(): LadderLayout {
+  const landscape = useSyncExternalStore(watchOrientation, () => matchMedia(LANDSCAPE).matches);
+  return landscape ? "horizontal" : "vertical";
+}
 
 interface LadderProps {
   ladder: LadderModel;

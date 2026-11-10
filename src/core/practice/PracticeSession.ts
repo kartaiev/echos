@@ -122,7 +122,8 @@ export interface FthoraState {
 /** An Attraction the student can switch on in the current Genus. */
 export interface AttractionState {
   id: AttractionId;
-  degreeId: string;
+  /** The Degree it moves, in every octave. */
+  degree: DegreeName;
   moria: number;
   active: boolean;
   source: string;
@@ -245,7 +246,7 @@ export function createPracticeSession({
   const shiftsIn = (g: GenusId) =>
     attractionsIn(g)
       .filter((a) => activeAttractions.has(a.value.id))
-      .map(({ value: { degree, moria } }) => ({ degree, moria }));
+      .map(({ value: { degree, moria } }) => ({ name: degree, moria }));
   /**
    * The keys of the Ladder, as places in the plain Scale: low Ke to high Ga, and a fifth beyond every placed pivot.
    * A Fthora set aside with Before keeps its room, so Before and After have the same keys.
@@ -435,7 +436,7 @@ export function createPracticeSession({
           isBase: former.id === baseId,
           isDominant: dominantIds.has(former.id),
           martyria: martyriaAnywhere(sounding, d),
-          attraction: shifts.find(({ degree }) => degree.name === d.name && degree.octave === d.octave)?.moria ?? null,
+          attraction: shifts.find(({ name }) => name === d.name)?.moria ?? null,
           before: earlier !== null && earlier !== d.moria ? earlier : null,
           formerName: former.id === d.id ? null : { name: former.name, octave: former.octave },
         };
@@ -457,7 +458,7 @@ export function createPracticeSession({
         fthoraSource: FTHORES.source,
         attractions: attractionsIn(sounding).map(({ value: { id, degree, moria }, source, reviewStatus }) => ({
           id,
-          degreeId: degreeId(degree),
+          degree,
           moria,
           active: activeAttractions.has(id),
           source,

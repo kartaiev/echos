@@ -793,13 +793,14 @@ describe("Practice Session: Martyria", () => {
 
 // Attraction of Zo' in the Diatonic, from the Trisagion School course Octoëchos 201 ("1st Mode Sticheraric –
 // Theoretical Overview"): Ke to Zo' is 10 moria natural and 6 when Zo' is flat, so the flat Zo' is 4 moria lower.
-// Our "Zo" is their Zo': the Zo above Ke. Ni = C3 = 130.8128 Hz; Zo at 64 moria is 242.23 Hz, at 60 moria 233.08 Hz.
+// Our "Zo" is their Zo': the Zo above Ke. The rule goes with the name, so it lowers every Zo on the Ladder.
+// Ni = C3 = 130.8128 Hz; Zo at 64 moria is 242.23 Hz, at 60 moria 233.08 Hz.
 describe("Practice Session: Attractions", () => {
   it("offers Zo lowered by 4 moria in the Diatonic, off at first, with its source", () => {
     const { session } = setup();
 
     expect(session.ladder().attractions).toEqual([
-      { id: "zo-lowered", degreeId: "Zo", moria: -4, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
+      { id: "zo-lowered", degree: "Zo", moria: -4, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
     ]);
   });
 
@@ -814,7 +815,7 @@ describe("Practice Session: Attractions", () => {
     expect(audio.sounds.map((s) => s.frequency)).toEqual([expect.closeTo(233.08, 2), expect.closeTo(242.23, 2)]);
   });
 
-  it("marks the lowered Degree and moves it on the ladder: Ke to Zo becomes 6 moria, Zo to Ni' 12", () => {
+  it("marks the lowered Degrees and moves them on the ladder: Ke to Zo becomes 6 moria, Zo to Ni' 12", () => {
     const { session } = setup();
 
     session.toggleAttraction("zo-lowered");
@@ -824,7 +825,10 @@ describe("Practice Session: Attractions", () => {
 
     expect(zo).toMatchObject({ moria: 60, moriaToNext: 12, attraction: -4 });
     expect(ke.moriaToNext).toBe(6);
-    expect(ladder.degrees.filter((d) => d.attraction !== null).map((d) => d.id)).toEqual(["Zo"]);
+    expect(ladder.degrees.filter((d) => d.attraction !== null).map((d) => [d.id, d.moria])).toEqual([
+      ["Zo,", -12],
+      ["Zo", 60],
+    ]);
     expect(ladder.attractions[0]?.active).toBe(true);
   });
 
@@ -1381,5 +1385,19 @@ describe("Practice Session: a Fthora of another Degree", () => {
 
     expect(session.ladder().degrees.map((d) => d.id)[0]).toBe("Di,");
     expect(session.ladder().degrees).toHaveLength(14);
+  });
+
+  // After Ke on Pa, the Doxasticon sings Ke, Zo, Di under the new names with the Zo flat: the Zo above the new Ke.
+  it("lowers the Zo of the new names after a Fthora that renames the Scale", () => {
+    const { session } = setup();
+    session.placeFthora("Pa", "diatonic-ke");
+
+    session.toggleAttraction("zo-lowered");
+
+    const lowered = session.ladder().degrees.filter((d) => d.attraction !== null);
+    expect(lowered.map((d) => [d.id, d.moria])).toEqual([
+      ["Zo,", 18],
+      ["Zo", 90],
+    ]);
   });
 });
