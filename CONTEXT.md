@@ -129,3 +129,20 @@ _Greek_: χρόνος, χρόνοι
 A named tempo range of the tradition (e.g. Bradeia, Mesi, Metria) expressed in chronoi per minute.
 _Avoid_: speed
 _Greek_: αγωγή: Βραδεία, Μέση, Μετρία, Ταχεία, Ταχυτάτη
+
+### Study
+
+**Card**:
+A question on one sign of the notation (a Fthora, a Martyria) with its answer. The student answers in mind, turns the Card, and says whether they remembered; a Card remembered comes back later and later (ADR-0013).
+_Avoid_: flashcard, quiz, question
+_Greek_: κάρτα
+
+**Deck**:
+The Cards on one kind of sign: Fthores or Martyries.
+_Avoid_: set, collection, topic
+_Greek_: σειρά καρτών (named by its sign: Φθορές, Μαρτυρίες)
+
+**Review**:
+One pass through a Deck: the Cards due today, then a few new ones.
+_Avoid_: session, lesson, practice (Practice is the singing view)
+_Greek_: επανάληψη

@@ -78,7 +78,7 @@ body {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
-/* The name and the three tabs on one line, so the singing screen keeps its height for the Ladder. */
+/* The name and the four tabs on one line, so the singing screen keeps its height for the Ladder. */
 .practice__header {
   display: flex;
   align-items: center;
@@ -126,6 +126,28 @@ a {
   font-size: 1.35rem;
   color: var(--cinnabar);
   letter-spacing: 0.02em;
+}
+
+/* Four tabs in Greek fill a phone's width: the tabs draw closer, and on the narrowest phones the name shrinks. */
+@media (max-width: 400px) {
+  .practice__header {
+    gap: 8px;
+  }
+
+  .header-link {
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .practice__header h1 {
+    font-size: 1.1rem;
+  }
+
+  .header-link {
+    padding: 0 4px;
+    font-size: 0.82rem;
+  }
 }
 
 
@@ -701,6 +723,7 @@ a {
 
 /* The views other than Practice end with room below them; Practice ends with its transport bar. */
 .modes,
+.cards,
 .settings {
   padding-bottom: 32px;
 }
@@ -1496,4 +1519,160 @@ a {
     --stem: 7px;
     height: 160px;
   }
+}
+
+/* Cards: a Deck per row, then one Card at a time with the sign large, as on the page of a score. */
+.cards h2 {
+  margin: 20px 0 8px;
+  font-size: 1.1rem;
+}
+
+.cards__intro {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 60ch;
+}
+
+.deck {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.deck h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--cinnabar);
+}
+
+.deck__standing {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck .primary-button:disabled {
+  background: var(--line);
+  color: var(--muted);
+  cursor: default;
+}
+
+.cards__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cards__bar h2 {
+  margin-right: auto;
+}
+
+.cards__bar h2:focus {
+  outline: none;
+}
+
+.cards__left {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.flashcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 12px auto 0;
+  max-width: 420px;
+  padding: 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.flashcard__question {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/*
+ * The sign drawn in the font of the Ladder, large enough to read every stroke of it. A Fthora is drawn to sit
+ * above a Neume: its ink runs from about 0.63em to 1.31em above the baseline, so with a line height of 1em it is
+ * centred on the top edge of the line, and is moved down half a line into the middle of the box.
+ */
+.flashcard__sign {
+  display: block;
+  height: 1em;
+  margin: 0.15em 0;
+  font-family: "Neanes", serif;
+  font-size: 5rem;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  /* Number features such as tabular figures make the browser drop the glyphs. */
+  font-variant-numeric: normal;
+  color: var(--text);
+}
+
+.flashcard__ink {
+  position: relative;
+  top: 0.5em;
+}
+
+/* A Martyria hangs its sign under the letter; the same box rules as on the Ladder keep it whole. */
+.flashcard__sign--martyria {
+  height: 1.27em;
+  margin: 0.1em 0;
+  font-size: 4rem;
+  line-height: 0.286em;
+}
+
+.flashcard__fthora {
+  position: relative;
+  top: 0.35em;
+  font-size: 0.7em;
+}
+
+.flashcard__reveal {
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.flashcard__answer {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--cinnabar);
+}
+
+.flashcard__also {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.flashcard__grades {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.flashcard__show {
+  width: 100%;
+}
+
+.flashcard--done {
+  padding: 28px 16px;
 }
