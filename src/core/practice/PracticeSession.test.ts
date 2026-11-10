@@ -1158,7 +1158,7 @@ describe("Practice Session: Fthora on a Degree", () => {
     expect(session.ladder().attractions[0]?.active).toBe(true);
   });
 
-  it("widens the drawing range only while a Fthora moves Degrees beyond it", () => {
+  it("widens the drawing range only as far as the keys reach, and only while a Fthora is placed", () => {
     const { session } = setup();
     session.setGenus("hard-chromatic");
 
@@ -1166,8 +1166,11 @@ describe("Practice Session: Fthora on a Degree", () => {
     const widened = session.ladder().drawingRange;
     const top = session.ladder().degrees.at(-1)!.moria;
     session.showFthora(false);
+    const beforeTop = session.ladder().degrees.at(-1)!.moria;
 
     expect(widened.highestMoria).toBe(Math.max(106, top));
+    expect(session.ladder().drawingRange.highestMoria).toBe(Math.max(106, top, beforeTop));
+    session.clearFthora();
     expect(session.ladder().drawingRange).toEqual({ lowestMoria: -24, highestMoria: 106 });
   });
 
@@ -1225,6 +1228,7 @@ describe("Practice Session: a Fthora of another Degree", () => {
     session.placeFthora("Pa", "diatonic-ke");
 
     expect(rungs(session)).toEqual([
+      ["Pa,", -30, "Di,"],
       ["Vou,", -20, "Ke,"],
       ["Ga,", -12, "Zo,"],
       ["Di,", 0, "Ni"],
@@ -1273,7 +1277,11 @@ describe("Practice Session: a Fthora of another Degree", () => {
     session.placeFthora("Pa", "diatonic-ke");
     session.placeFthora("Ni'", "diatonic-ga");
 
-    expect(rungs(session)).toEqual(plain);
+    // Keys added for room around the pivots (a fifth below Pa, a fifth above Ga') stay while those Fthores do.
+    const back = rungs(session);
+    expect(back.slice(1, plain.length + 1)).toEqual(plain);
+    expect(back.map(([id]) => id)).toEqual(["Di,", ...plain.map(([id]) => id), "Di'", "Ke'", "Zo'", "Ni''"]);
+    expect(back.every(([, , formerly]) => formerly === null)).toBe(true);
     expect(session.ladder().fthora).toEqual({ degreeId: "Ga'", placedOn: "Ni'", genus: "diatonic", sign: "diatonic-ga", shown: true });
     expect(session.ladder().fthores).toEqual([
       { degreeId: "Pa", sign: "diatonic-ke" },
@@ -1287,8 +1295,10 @@ describe("Practice Session: a Fthora of another Degree", () => {
     const renamed = rungs(session);
     session.placeFthora("Ni'", "diatonic-ga");
 
+    // Before shows the renamed Scale on the same keys, including those added above the new pivot (Ga').
     session.showFthora(false);
-    expect(rungs(session).map(([id, moria]) => [id, moria])).toEqual(renamed.map(([id, moria]) => [id, moria]));
+    const before = rungs(session).map(([id, moria]) => [id, moria]);
+    expect(before.slice(0, renamed.length)).toEqual(renamed.map(([id, moria]) => [id, moria]));
 
     session.showFthora(true);
     session.clearFthora();
@@ -1347,5 +1357,29 @@ describe("Practice Session: a Fthora of another Degree", () => {
 
     expect(diatonic).not.toContain("Pa");
     expect(diatonic).toContain("Ke");
+  });
+
+  // After Ke on Pa, the Doxasticon goes from the new low Ke down a fifth, to the new low Pa.
+  it("leaves a fifth of keys below and above every pivot, adding keys where the Ladder ends", () => {
+    const { session } = setup();
+    session.setModeVariant({ mode: "first", melos: "heirmologic" });
+
+    session.placeFthora("Pa", "diatonic-ke");
+
+    const ids = session.ladder().degrees.map((d) => d.id);
+    expect(ids.slice(0, ids.indexOf("Ke,"))).toEqual(["Pa,", "Vou,", "Ga,", "Di,"]);
+    expect(ids.at(-1)).toBe("Ni'");
+    session.clearFthora();
+    expect(session.ladder().degrees[0]?.id).toBe("Ke,");
+  });
+
+  it("keeps the same keys between Before and After, so each key can be compared with itself", () => {
+    const { session } = setup();
+    session.placeFthora("Pa", "diatonic-ke");
+
+    session.showFthora(false);
+
+    expect(session.ladder().degrees.map((d) => d.id)[0]).toBe("Di,");
+    expect(session.ladder().degrees).toHaveLength(14);
   });
 });

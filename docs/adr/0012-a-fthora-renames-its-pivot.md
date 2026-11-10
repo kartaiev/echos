@@ -4,7 +4,7 @@ ADR-0011 left out the Fthora that renames its pivot. Every Diatonic Fthora names
 
 The rule of ADR-0011 still holds: the pivot keeps its pitch and the Fthora's Genus is laid around it. Only the name changes. The pivot takes the Fthora's Degree in the octave nearest to where it is, so it moves at most three Degrees.
 
-The Ladder keeps its keys, and a Fthora gives them new names, Martyries and pitches. Base and Dominant marks, the Ison and the focus stay on their keys. A renamed key also shows the name it has in the plain Scale, which is where the student started.
+The Ladder keeps its keys, and a Fthora gives them new names, Martyries and pitches. Base and Dominant marks, the Ison and the focus stay on their keys. A renamed key also shows the name it has in the plain Scale, which is where the student started. The Ladder keeps a fifth of keys (four Degrees) on each side of every placed pivot and adds keys where it would end sooner: in the Doxasticon the melody goes from the new low Ke down to the new low Pa. Before and After share these keys, so each key is compared with itself.
 
 Fthores chain: each is placed on the Scale the ones before it made. Before/After and Remove act on the last one. A Fthora placed on the key of the last one, or while the last one is set aside with Before, takes its place.
 
