@@ -1,5 +1,6 @@
 import { FTHORA_GENERA, FTHORES, type FthoraGenus, type FthoraSign } from "../theory/fthora";
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
+import { INTERVAL_NEUMES, NEUME_NAMES, type NeumeName, type NeumeSign } from "../theory/neumes";
 import { degreeId, positionAt, type DegreePosition } from "../theory/scale";
 import { GENUS_IDS, type GenusId } from "../theory/tuningSystems";
 
@@ -22,9 +23,25 @@ export interface MartyriaCard {
   martyria: Martyria;
 }
 
-export type Card = FthoraCard | MartyriaCard;
+/** A Neume to name. */
+export interface NeumeCard {
+  kind: "neume";
+  id: string;
+  neume: NeumeName;
+}
 
-export const DECK_IDS = ["fthores", "martyries"] as const;
+/** A written interval to read: where the melody goes from the Degree before it. */
+export interface IntervalCard {
+  kind: "interval";
+  id: string;
+  sign: NeumeSign;
+  steps: readonly number[];
+  ornament: boolean;
+}
+
+export type Card = NeumeCard | IntervalCard | FthoraCard | MartyriaCard;
+
+export const DECK_IDS = ["neumes", "fthores", "martyries"] as const;
 export type DeckId = (typeof DECK_IDS)[number];
 
 export interface Deck {
@@ -33,6 +50,12 @@ export interface Deck {
   /** Where the answers come from: the same tables the Ladder draws from. */
   source: string;
 }
+
+/** The names first, so the signs the intervals are built from are known before the intervals come up. */
+const neumeCards: (NeumeCard | IntervalCard)[] = [
+  ...NEUME_NAMES.map((neume) => ({ kind: "neume" as const, id: `neume:${neume}`, neume })),
+  ...INTERVAL_NEUMES.value.map(({ sign, steps, ornament }) => ({ kind: "interval" as const, id: `interval:${sign}`, sign, steps, ornament })),
+];
 
 const fthoraCards: FthoraCard[] = FTHORA_GENERA.flatMap((genus) =>
   (Object.entries(FTHORES.value[genus]) as [FthoraSign, readonly DegreePosition[]][]).map(([sign, degrees]) => ({
@@ -58,6 +81,7 @@ const martyriaCards: MartyriaCard[] = GENUS_IDS.flatMap((genus) =>
 );
 
 export const DECKS: Record<DeckId, Deck> = {
+  neumes: { id: "neumes", cards: neumeCards, source: INTERVAL_NEUMES.source },
   fthores: { id: "fthores", cards: fthoraCards, source: FTHORES.source },
   martyries: { id: "martyries", cards: martyriaCards, source: MARTYRIA.diatonic.source },
 };

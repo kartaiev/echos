@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { deckStanding, startReview, type CardProgressRecord, type CardReview, type Grade } from "../core/cards/cardReview";
 import { DECK_IDS, DECKS, type Card, type DeckId } from "../core/cards/decks";
 import { currentLanguage, degreeLabel, t } from "../i18n/translations";
-import { fthoraGlyph, martyriaGlyphs } from "./martyriaGlyphs";
+import { fthoraGlyph, martyriaGlyphs, neumeGlyph } from "./martyriaGlyphs";
 
 interface CardsPageProps {
   progress: CardProgressRecord;
@@ -25,6 +25,13 @@ function dayLabel(day: string): string {
 
 /** The sign on the face of a Card, in the Neanes font; it is the question, so it is not read out. */
 function CardFace({ card }: { card: Card }) {
+  if (card.kind === "neume" || card.kind === "interval") {
+    return (
+      <span className="flashcard__sign flashcard__sign--neume" aria-hidden="true">
+        <span className="flashcard__ink">{neumeGlyph(card.kind === "neume" ? card.neume : card.sign)}</span>
+      </span>
+    );
+  }
   if (card.kind === "fthora") {
     return (
       <span className="flashcard__sign" aria-hidden="true">
@@ -41,7 +48,20 @@ function CardFace({ card }: { card: Card }) {
   );
 }
 
+/** One step of the melody in words: up or down so many Degrees, or the same Degree. */
+const stepLabel = (step: number) => (step === 0 ? t("cards.same") : t(step > 0 ? "cards.up" : "cards.down", { n: Math.abs(step) }));
+
 function CardAnswer({ card }: { card: Card }) {
+  if (card.kind === "neume") return <p className="flashcard__answer">{t(`neume.${card.neume}`)}</p>;
+  if (card.kind === "interval") {
+    const [first, ...rest] = card.steps.map(stepLabel);
+    return (
+      <>
+        <p className="flashcard__answer">{rest.reduce((said, next) => t("cards.then", { first: said, next: next.toLowerCase() }), first!)}</p>
+        {card.ornament && <p className="flashcard__also">{t("cards.withPetasti")}</p>}
+      </>
+    );
+  }
   if (card.kind === "fthora") {
     const [named, ...others] = card.degrees;
     return (

@@ -1629,6 +1629,21 @@ a {
   top: 0.5em;
 }
 
+/*
+ * Neumes stand on the baseline as on a line of a score, and the tallest (an Ypsili over a Petasti) reaches 1.37em
+ * above it. A line height of the font's full 1.866em puts the baseline 1.4em from the top, so every Neume sits on
+ * the same line and the box ends just under it.
+ */
+.flashcard__sign--neume {
+  height: 1.5em;
+  font-size: 4rem;
+  line-height: 1.866em;
+}
+
+.flashcard__sign--neume .flashcard__ink {
+  top: 0;
+}
+
 /* A Martyria hangs its sign under the letter; the same box rules as on the Ladder keep it whole. */
 .flashcard__sign--martyria {
   height: 1.27em;
