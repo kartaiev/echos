@@ -14,6 +14,8 @@ import { degreeLabel, setLanguage, t, type Language } from "../i18n/translations
 import { Ladder, useLadderLayout } from "./Ladder";
 import { useMetronomeCount } from "./MetronomePanel";
 import { ModesPage } from "./ModesPage";
+import { CardsPage } from "./CardsPage";
+import { localToday, type CardProgressRecord } from "../core/cards/cardReview";
 import { FthoraBar, type FthoraPlacing } from "./FthoraBar";
 import { PracticeSetup } from "./PracticeSetup";
 import { SettingsPage } from "./SettingsPage";
@@ -21,12 +23,14 @@ import { applyTheme, type Theme } from "./theme";
 import { TransportBar } from "./TransportBar";
 import { useSoundHeld, useWakeLock } from "./whileSinging";
 import {
+  loadCardProgress,
   loadIsonVoice,
   loadLanguage,
   loadTheme,
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
+  saveCardProgress,
   saveIsonVoice,
   saveLanguage,
   saveTheme,
@@ -36,7 +40,7 @@ import {
 } from "./storedSettings";
 
 /** Plain "#name" hashes only: they survive being opened inside claude.ai and other embeds. */
-const VIEW_HASHES = { practice: "#practice", modes: "#modes", settings: "#pitch" } as const;
+const VIEW_HASHES = { practice: "#practice", modes: "#modes", cards: "#cards", settings: "#pitch" } as const;
 type View = keyof typeof VIEW_HASHES;
 const VIEWS = Object.keys(VIEW_HASHES) as View[];
 
@@ -80,6 +84,7 @@ export function App() {
     focusSetup.current = false;
     document.querySelector<HTMLElement>(".setup__summary")?.focus({ preventScroll: true });
   }, [view]);
+  const [cardProgress, setCardProgress] = useState<CardProgressRecord>(() => loadCardProgress() ?? {});
   // How the ladder is drawn is a matter of the screen, not of practice, so it lives in the UI.
   const layout = useLadderLayout();
   const pitch = session.pitchSettings();
@@ -216,6 +221,15 @@ export function App() {
           onChangeLanguage={changeLanguage}
           theme={theme}
           onChangeTheme={changeTheme}
+        />
+      ) : view === "cards" ? (
+        <CardsPage
+          progress={cardProgress}
+          today={localToday()}
+          onProgress={(progress) => {
+            setCardProgress(progress);
+            saveCardProgress(progress);
+          }}
         />
       ) : view === "modes" ? (
         <ModesPage

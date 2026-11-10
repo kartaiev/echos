@@ -1,3 +1,4 @@
+import { isCardProgressRecord, type CardProgressRecord } from "../core/cards/cardReview";
 import { isIsonVoice, type IsonVoice } from "../core/practice/isonVoice";
 import { isModeVariantKey, type ModeVariantKey } from "../core/theory/modeVariants";
 import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
@@ -11,6 +12,7 @@ const MODE_VARIANT_KEY = "echos.modeVariant.v1";
 const METRONOME_KEY = "echos.metronome.v1";
 const LANGUAGE_KEY = "echos.language.v1";
 const THEME_KEY = "echos.theme.v1";
+const CARD_PROGRESS_KEY = "echos.cardProgress.v1";
 
 /** A value saved on this device, or undefined when there is none, it is invalid, or storage is unavailable. */
 function load<T>(key: string, isValid: (value: unknown) => value is T): T | undefined {
@@ -44,4 +46,6 @@ export const saveMetronomeSettings = (settings: MetronomeSettings) => save(METRO
 export const loadLanguage = () => load(LANGUAGE_KEY, isLanguage);
 export const saveLanguage = (language: Language) => save(LANGUAGE_KEY, language);
 export const loadTheme = () => load(THEME_KEY, isTheme);
-export const saveTheme = (theme: Theme) => save(THEME_KEY, theme);
+export const saveTheme = (theme: Theme) => save(THEME_KEY, theme);/** One record for every Deck: Card ids do not repeat across Decks. */
+export const loadCardProgress = () => load(CARD_PROGRESS_KEY, isCardProgressRecord);
+export const saveCardProgress = (progress: CardProgressRecord) => save(CARD_PROGRESS_KEY, progress);
