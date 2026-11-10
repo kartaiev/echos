@@ -11,7 +11,7 @@ import type { ModeVariantKey } from "../core/theory/modeVariants";
 import type { GenusId } from "../core/theory/tuningSystems";
 import { chronosMs } from "../core/practice/metronomeSettings";
 import { degreeLabel, setLanguage, t, type Language } from "../i18n/translations";
-import { Ladder, type LadderLayout } from "./Ladder";
+import { Ladder, useLadderLayout } from "./Ladder";
 import { useMetronomeCount } from "./MetronomePanel";
 import { ModesPage } from "./ModesPage";
 import { FthoraBar, type FthoraPlacing } from "./FthoraBar";
@@ -22,14 +22,12 @@ import { TransportBar } from "./TransportBar";
 import { useSoundHeld, useWakeLock } from "./whileSinging";
 import {
   loadIsonVoice,
-  loadLadderLayout,
   loadLanguage,
   loadTheme,
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
   saveIsonVoice,
-  saveLadderLayout,
   saveLanguage,
   saveTheme,
   saveMetronomeSettings,
@@ -83,7 +81,7 @@ export function App() {
     document.querySelector<HTMLElement>(".setup__summary")?.focus({ preventScroll: true });
   }, [view]);
   // How the ladder is drawn is a matter of the screen, not of practice, so it lives in the UI.
-  const [layout, setLayout] = useState<LadderLayout>(() => loadLadderLayout() ?? "vertical");
+  const layout = useLadderLayout();
   const pitch = session.pitchSettings();
   const ison = session.ison();
   const ladder = session.ladder();
@@ -196,11 +194,6 @@ export function App() {
       sound.clear();
     });
 
-  const changeLayout = (next: LadderLayout) => {
-    setLayout(next);
-    saveLadderLayout(next);
-  };
-
   return (
     <main className="practice">
       <header className="practice__header">
@@ -240,12 +233,10 @@ export function App() {
             modeVariant={modeVariant}
             ladder={ladder}
             pitch={pitch}
-            layout={layout}
             settingsHref={VIEW_HASHES.settings}
             onChooseModeVariant={chooseModeVariant}
             onChangeGenus={changeGenus}
             onToggleAttraction={(id) => act(() => session.toggleAttraction(id))}
-            onChangeLayout={changeLayout}
             fthoraActive={placing !== null || ladder.fthora !== null}
             onFthora={() => setPlacing(placing ? null : { step: "degree" })}
           />

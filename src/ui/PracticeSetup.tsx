@@ -3,7 +3,6 @@ import type { Ladder, PitchState } from "../core/practice/PracticeSession";
 import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type AttractionId, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
-import { LADDER_LAYOUTS, type LadderLayout } from "./Ladder";
 import { ModePicker } from "./ModePicker";
 import { Segmented } from "./Segmented";
 
@@ -11,12 +10,10 @@ interface PracticeSetupProps {
   modeVariant: ModeVariantKey | null;
   ladder: Ladder;
   pitch: PitchState;
-  layout: LadderLayout;
   settingsHref: string;
   onChooseModeVariant: (key: ModeVariantKey | null) => void;
   onChangeGenus: (genus: GenusId) => void;
   onToggleAttraction: (id: AttractionId) => void;
-  onChangeLayout: (layout: LadderLayout) => void;
   /** A Fthora is being placed or is on the Ladder. */
   fthoraActive: boolean;
   onFthora: () => void;
@@ -27,7 +24,7 @@ interface PracticeSetupProps {
  * per practice, so it stays folded and leaves the screen to the Ladder.
  */
 export function PracticeSetup(props: PracticeSetupProps) {
-  const { modeVariant, ladder, pitch, layout } = props;
+  const { modeVariant, ladder, pitch } = props;
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const activeAttractions = ladder.attractions.filter((a) => a.active).map((a) => t(`attraction.${a.id}`));
@@ -87,17 +84,6 @@ export function PracticeSetup(props: PracticeSetupProps) {
             ))}
           </div>
         )}
-        <div className="setup__row">
-          <span className="setup__label">{t("ladder.layout")}</span>
-          <Segmented
-            className="segmented segmented--layout"
-            options={LADDER_LAYOUTS}
-            value={layout}
-            label={t("ladder.layout")}
-            render={(l) => t(`layout.${l}`)}
-            onChange={props.onChangeLayout}
-          />
-        </div>
         <a className="setup__row setup__link" href={props.settingsHref}>
           <span className="setup__label">{t("settings.referencePitch")}</span>
           <span className="setup__value">{t("ladder.niPitch", { note: noteLabel(pitch.niNote), hz: pitch.niHz.toFixed(2) })}</span>

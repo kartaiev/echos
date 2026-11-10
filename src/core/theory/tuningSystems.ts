@@ -40,8 +40,8 @@ export type AttractionId = (typeof ATTRACTION_IDS)[number];
 export interface Attraction {
   id: AttractionId;
   genus: GenusId;
-  /** The Degree that moves; octave 0 is the octave of Ni. */
-  degree: { name: DegreeName; octave: number };
+  /** The Degree that moves, in every octave: the rule goes with the name, so it follows a Fthora that renames. */
+  degree: DegreeName;
   /** Negative lowers the Degree. */
   moria: number;
 }
@@ -84,7 +84,7 @@ export const PMC_1881: TuningSystem = {
   },
   attractions: [
     {
-      value: { id: "zo-lowered", genus: "diatonic", degree: { name: "Zo", octave: 0 }, moria: -4 },
+      value: { id: "zo-lowered", genus: "diatonic", degree: "Zo", moria: -4 },
       source: TRISAGION_OCTOECHOS_201,
       reviewStatus: "unreviewed",
     },

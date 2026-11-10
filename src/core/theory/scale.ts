@@ -20,8 +20,8 @@ export interface ScaleOptions {
   referencePitchHz: number;
   lowest: DegreePosition;
   highest: DegreePosition;
-  /** Degrees moved off their place in the Genus, in moria. */
-  shifts?: readonly { degree: DegreePosition; moria: number }[];
+  /** Degrees moved off their place in the Genus, in moria, in every octave. */
+  shifts?: readonly { name: DegreeName; moria: number }[];
   /**
    * A Degree held at a given position, the whole Scale moved with it: the pivot of a Fthora keeps its pitch and
    * the new Genus is laid around it.
@@ -69,7 +69,7 @@ export function buildScale({ tuningSystem, genus, referencePitchHz, lowest, high
   const degrees: ScaleDegree[] = [];
   for (let index = low; index <= high; index++) {
     const position = positionAt(index);
-    const shift = shifts.find(({ degree }) => degree.name === position.name && degree.octave === position.octave);
+    const shift = shifts.find(({ name }) => name === position.name);
     const moria = moriaAt.get(index)! + offset + (shift?.moria ?? 0);
     degrees.push({
       ...position,
