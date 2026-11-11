@@ -829,6 +829,44 @@ a {
   cursor: pointer;
 }
 
+/* The Attractions stand under their label in even columns: the move on top, its size in moria under it. */
+.setup__attractions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup__toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.setup__toggle--attraction {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.setup__toggle-name {
+  line-height: 1.2;
+}
+
+.setup__toggle-size {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.setup__toggle[aria-pressed="true"] .setup__toggle-size {
+  color: inherit;
+}
+
 .setup__toggle[aria-pressed="true"] {
   border-color: var(--cinnabar);
   background: var(--cinnabar-soft);
