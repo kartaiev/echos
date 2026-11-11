@@ -34,7 +34,7 @@ export interface IntervalCycle {
 }
 
 /** A Degree raised or lowered by a neighbouring structural Degree, by a fixed number of moria. */
-export const ATTRACTION_IDS = ["zo-lowered"] as const;
+export const ATTRACTION_IDS = ["zo-lowered", "vou-lowered", "vou-raised", "pa-raised"] as const;
 export type AttractionId = (typeof ATTRACTION_IDS)[number];
 
 export interface Attraction {
@@ -44,6 +44,8 @@ export interface Attraction {
   degree: DegreeName;
   /** Negative lowers the Degree. */
   moria: number;
+  /** No source gives the size: it is the project's assumption until a reviewer gives one (ADR-0016). */
+  assumed: boolean;
 }
 
 export interface TuningSystem {
@@ -72,6 +74,14 @@ const TRISAGION_SCALES =
 const TRISAGION_OCTOECHOS_201 =
   'Trisagion School of Byzantine Music, Octoëchos 201: 1st Mode (2026), "1st Mode Sticheraric – Theoretical Overview", Melodic Attractions';
 
+/** The size the courses leave unsaid ("slightly"), taken as 2 moria until a reviewer gives one (ADR-0016). */
+const ASSUMED_MORIA = 2;
+const ASSUMED = `; the course gives no size, ${ASSUMED_MORIA} moria is assumed`;
+const TRISAGION_MODAL_THEORY =
+  'Trisagion School of Byzantine Music, Octoëchos 201: 1st Mode (2026), "A Systematic Overview of Byzantine Modal Theory", Melodic Attractions (Pa towards Vou in the Plagal 4th Mode)';
+const TRISAGION_OCTOECHOS_203 =
+  'Trisagion School of Byzantine Music, Octoëchos 203: 3rd Mode (2026), "3rd Mode Theoretical Overview", Melodic Attractions (Vou towards Ga)';
+
 export const PMC_1881: TuningSystem = {
   id: "pmc-1881",
   name: "Patriarchal Music Committee 1881",
@@ -84,8 +94,28 @@ export const PMC_1881: TuningSystem = {
   },
   attractions: [
     {
-      value: { id: "zo-lowered", genus: "diatonic", degree: "Zo", moria: -4 },
+      value: { id: "zo-lowered", genus: "diatonic", degree: "Zo", moria: -4, assumed: false },
       source: TRISAGION_OCTOECHOS_201,
+      reviewStatus: "unreviewed",
+    },
+    {
+      value: { id: "vou-lowered", genus: "diatonic", degree: "Vou", moria: -ASSUMED_MORIA, assumed: true },
+      source: `${TRISAGION_OCTOECHOS_201} (Vou towards Pa)${ASSUMED}`,
+      reviewStatus: "unreviewed",
+    },
+    {
+      value: { id: "vou-raised", genus: "diatonic", degree: "Vou", moria: ASSUMED_MORIA, assumed: true },
+      source: `${TRISAGION_OCTOECHOS_201} (Vou towards Ga)${ASSUMED}`,
+      reviewStatus: "unreviewed",
+    },
+    {
+      value: { id: "pa-raised", genus: "diatonic", degree: "Pa", moria: ASSUMED_MORIA, assumed: true },
+      source: `${TRISAGION_MODAL_THEORY}${ASSUMED}`,
+      reviewStatus: "unreviewed",
+    },
+    {
+      value: { id: "vou-raised", genus: "enharmonic", degree: "Vou", moria: ASSUMED_MORIA, assumed: true },
+      source: `${TRISAGION_OCTOECHOS_203}${ASSUMED}`,
       reviewStatus: "unreviewed",
     },
   ],

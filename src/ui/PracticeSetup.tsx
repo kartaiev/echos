@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import type { Ladder, PitchState } from "../core/practice/PracticeSession";
+import type { AttractionState, Ladder, PitchState } from "../core/practice/PracticeSession";
 import type { ModeVariantKey } from "../core/theory/modeVariants";
 import { GENUS_IDS, type AttractionId, type GenusId } from "../core/theory/tuningSystems";
 import { noteLabel, t } from "../i18n/translations";
@@ -23,11 +23,15 @@ interface PracticeSetupProps {
  * What is being practised, read in one line above the Ladder; tapping it opens the choices. Setup is chosen once
  * per practice, so it stays folded and leaves the screen to the Ladder.
  */
+/** An Attraction's button text; a size no source gives says so (ADR-0016). */
+const attractionLabel = ({ id, assumed }: AttractionState) =>
+  assumed ? t("attractions.assumed", { label: t(`attraction.${id}`) }) : t(`attraction.${id}`);
+
 export function PracticeSetup(props: PracticeSetupProps) {
   const { modeVariant, ladder, pitch } = props;
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const activeAttractions = ladder.attractions.filter((a) => a.active).map((a) => t(`attraction.${a.id}`));
+  const activeAttractions = ladder.attractions.filter((a) => a.active).map(attractionLabel);
   const title = modeVariant
     ? `${t(`mode.${modeVariant.mode}`)} · ${t(`melos.${modeVariant.melos}`)}`
     : t("setup.noMode");
@@ -79,7 +83,7 @@ export function PracticeSetup(props: PracticeSetupProps) {
                 aria-pressed={a.active}
                 onClick={() => props.onToggleAttraction(a.id)}
               >
-                {t(`attraction.${a.id}`)}
+                {attractionLabel(a)}
               </button>
             ))}
           </div>

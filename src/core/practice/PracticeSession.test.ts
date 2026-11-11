@@ -796,12 +796,62 @@ describe("Practice Session: Martyria", () => {
 // Our "Zo" is their Zo': the Zo above Ke. The rule goes with the name, so it lowers every Zo on the Ladder.
 // Ni = C3 = 130.8128 Hz; Zo at 64 moria is 242.23 Hz, at 60 moria 233.08 Hz.
 describe("Practice Session: Attractions", () => {
+  const moriaOf = (session: ReturnType<typeof setup>["session"], ids: string[]) =>
+    ids.map((id) => session.ladder().degrees.find((d) => d.id === id)!.moria);
+
   it("offers Zo lowered by 4 moria in the Diatonic, off at first, with its source", () => {
     const { session } = setup();
 
     expect(session.ladder().attractions).toEqual([
-      { id: "zo-lowered", degree: "Zo", moria: -4, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
+      { id: "zo-lowered", degree: "Zo", moria: -4, assumed: false, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
+      { id: "vou-lowered", degree: "Vou", moria: -2, assumed: true, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
+      { id: "vou-raised", degree: "Vou", moria: 2, assumed: true, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
+      { id: "pa-raised", degree: "Pa", moria: 2, assumed: true, active: false, source: expect.stringMatching(/Trisagion.*Octoëchos 201/), reviewStatus: "unreviewed" },
     ]);
+  });
+
+  // The courses describe these moves as slight and give no size; 2 moria is the project's assumption (ADR-0016).
+  it.each([
+    ["vou-lowered", "Vou", 20],
+    ["vou-raised", "Vou", 24],
+    ["pa-raised", "Pa", 14],
+  ] as const)("with %s in the Diatonic, %s moves to %i moria and is marked", (id, degree, moria) => {
+    const { session } = setup();
+
+    session.toggleAttraction(id);
+
+    expect(session.ladder().degrees.find((d) => d.id === degree)).toMatchObject({ moria, attraction: moria - (degree === "Vou" ? 22 : 12) });
+  });
+
+  it("never lowers and raises the same Degree at once: switching one on switches the other off", () => {
+    const { session } = setup();
+
+    session.toggleAttraction("vou-lowered");
+    session.toggleAttraction("vou-raised");
+
+    expect(session.ladder().attractions.filter((a) => a.active).map((a) => a.id)).toEqual(["vou-raised"]);
+    expect(moriaOf(session, ["Vou"])).toEqual([24]);
+  });
+
+  it("keeps Attractions on different Degrees on together", () => {
+    const { session } = setup();
+
+    session.toggleAttraction("zo-lowered");
+    session.toggleAttraction("vou-lowered");
+
+    expect(moriaOf(session, ["Vou", "Zo"])).toEqual([20, 60]);
+  });
+
+  it("offers Vou raised towards Ga in the Enharmonic of the 3rd Mode, also with an assumed size", () => {
+    const { session } = setup();
+
+    session.setGenus("enharmonic");
+    session.toggleAttraction("vou-raised");
+
+    expect(session.ladder().attractions).toEqual([
+      expect.objectContaining({ id: "vou-raised", moria: 2, assumed: true, active: true, source: expect.stringMatching(/Octoëchos 203/) }),
+    ]);
+    expect(moriaOf(session, ["Vou", "Ga"])).toEqual([26, 30]);
   });
 
   it("with Zo lowered, playing Zo requests the altered frequency; switching it off restores the regular one", () => {
@@ -939,8 +989,9 @@ describe("Practice Session: Theory tables", () => {
   it("lists the sourced Attractions of a Genus with the Scale", () => {
     const { session } = setup();
 
-    expect(session.describeScale("diatonic").attractions.map((a) => a.value.id)).toEqual(["zo-lowered"]);
-    expect(session.describeScale("enharmonic").attractions).toEqual([]);
+    expect(session.describeScale("diatonic").attractions.map((a) => a.value.id)).toEqual(["zo-lowered", "vou-lowered", "vou-raised", "pa-raised"]);
+    expect(session.describeScale("enharmonic").attractions.map((a) => a.value.id)).toEqual(["vou-raised"]);
+    expect(session.describeScale("soft-chromatic").attractions).toEqual([]);
   });
 
   it("plays a Degree of any Genus without changing the practice screen", () => {
