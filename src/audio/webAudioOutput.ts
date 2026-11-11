@@ -1,41 +1,15 @@
-import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest, Vowel } from "./AudioOutput";
-
-interface Formant {
-  frequency: number;
-  gain: number;
-  q: number;
-}
+import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest } from "./AudioOutput";
 
 /**
- * Formants of sung vowels (Hz), after the adult male averages of Peterson & Barney (1952).
- * A rough vocal colour, not a real voice.
+ * The soft tone: a fundamental with a few quiet overtones, with no vibrato or drift, so its pitch is exact and
+ * intervals can be checked by ear. It sings no vowel; a sung voice comes later from recordings.
  */
-const FORMANTS: Record<Vowel, Formant[]> = {
-  a: [
-    { frequency: 730, gain: 1.0, q: 8 },
-    { frequency: 1090, gain: 0.5, q: 10 },
-    { frequency: 2440, gain: 0.18, q: 12 },
-  ],
-  e: [
-    { frequency: 530, gain: 1.0, q: 8 },
-    { frequency: 1840, gain: 0.4, q: 10 },
-    { frequency: 2480, gain: 0.2, q: 12 },
-  ],
-  o: [
-    { frequency: 570, gain: 1.0, q: 8 },
-    { frequency: 840, gain: 0.55, q: 10 },
-    { frequency: 2410, gain: 0.12, q: 12 },
-  ],
-  ou: [
-    { frequency: 300, gain: 1.0, q: 7 },
-    { frequency: 870, gain: 0.35, q: 10 },
-    { frequency: 2240, gain: 0.08, q: 12 },
-  ],
-};
+const SOFT_TONE_HARMONICS = [1, 0.3, 0.12, 0.05, 0.02];
 
-const ATTACK_S = 0.06;
-const RELEASE_S = 0.25;
-const PEAK_GAIN = 0.35;
+const ATTACK_S = 0.05;
+const RELEASE_S = 0.15;
+/** The wave is scaled to a peak of 1; the Ison, a Degree and a click may sound together without clipping. */
+const PEAK_GAIN = 0.3;
 /** Fade-out when a sound is cut off by the next one. */
 const CUT_OFF_S = 0.03;
 /** How quickly a volume change settles (time constant). */
@@ -208,21 +182,26 @@ function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): Playing
   };
 }
 
-/** One sung sound on a given context: a sawtooth with vibrato through vowel formants, under an envelope. */
-function singVoice(ctx: AudioContext, sound: SoundRequest): PlayingSound {
+/** The soft tone's wave, made once per context. */
+const softWaves = new WeakMap<AudioContext, PeriodicWave>();
+function softWave(ctx: AudioContext) {
+  let wave = softWaves.get(ctx);
+  if (!wave) {
+    const imag = new Float32Array([0, ...SOFT_TONE_HARMONICS]);
+    wave = ctx.createPeriodicWave(new Float32Array(imag.length), imag);
+    softWaves.set(ctx, wave);
+  }
+  return wave;
+}
+
+/** One sound on a given context: the soft tone under an envelope. */
+function playTone(ctx: AudioContext, sound: SoundRequest): PlayingSound {
   const start = ctx.currentTime + (sound.startMs ?? 0) / 1000;
   const end = sound.durationMs === null ? null : start + sound.durationMs / 1000;
 
   const source = ctx.createOscillator();
-  source.type = "sawtooth";
+  source.setPeriodicWave(softWave(ctx));
   source.frequency.value = sound.frequency;
-
-  // Gentle vibrato so the voice sounds sung rather than electronic.
-  const vibrato = ctx.createOscillator();
-  const vibratoDepth = ctx.createGain();
-  vibrato.frequency.value = 5;
-  vibratoDepth.gain.value = sound.frequency * 0.004;
-  vibrato.connect(vibratoDepth).connect(source.frequency);
 
   const envelope = ctx.createGain();
   envelope.gain.setValueAtTime(0, start);
@@ -237,22 +216,10 @@ function singVoice(ctx: AudioContext, sound: SoundRequest): PlayingSound {
   loudness.gain.value = sound.volume;
   loudness.connect(envelope);
 
-  for (const formant of FORMANTS[sound.vowel]) {
-    const filter = ctx.createBiquadFilter();
-    filter.type = "bandpass";
-    filter.frequency.value = formant.frequency;
-    filter.Q.value = formant.q;
-    const gain = ctx.createGain();
-    gain.gain.value = formant.gain;
-    source.connect(filter).connect(gain).connect(loudness);
-  }
+  source.connect(loudness);
 
   source.start(start);
-  vibrato.start(start);
-  if (end !== null) {
-    source.stop(end + RELEASE_S);
-    vibrato.stop(end + RELEASE_S);
-  }
+  if (end !== null) source.stop(end + RELEASE_S);
 
   const finished = () => end !== null && ctx.currentTime >= end + RELEASE_S;
   let stopped = false;
@@ -267,7 +234,6 @@ function singVoice(ctx: AudioContext, sound: SoundRequest): PlayingSound {
       envelope.gain.setValueAtTime(envelope.gain.value, now);
       envelope.gain.linearRampToValueAtTime(0, now + CUT_OFF_S);
       source.stop(now + CUT_OFF_S);
-      vibrato.stop(now + CUT_OFF_S);
     },
     setVolume(volume: number) {
       if (stopped || finished()) return;
@@ -286,10 +252,10 @@ export function createWebAudioOutput(): AudioOutput {
     isRunning: () => context === null || context.state === "running",
     playSound(sound: SoundRequest): PlayingSound {
       let current = sound;
-      let voice = singVoice(getContext(), current);
-      // A sound held until stopped (the Ison) is sung again on a fresh context; a timed one is over by then.
+      let voice = playTone(getContext(), current);
+      // A sound held until stopped (the Ison) starts again on a fresh context; a timed one is over by then.
       const held: Lasting | null =
-        sound.durationMs === null ? { moveTo: (ctx) => (voice = singVoice(ctx, { ...current, startMs: 0 })) } : null;
+        sound.durationMs === null ? { moveTo: (ctx) => (voice = playTone(ctx, { ...current, startMs: 0 })) } : null;
       if (held) lasting.add(held);
       return {
         stop() {

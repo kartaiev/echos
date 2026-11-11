@@ -1,7 +1,5 @@
 import type { IsonState, IsonVoice, LadderDegree } from "../core/practice/PracticeSession";
-import { VOWELS } from "../audio/AudioOutput";
 import { degreeLabel, t } from "../i18n/translations";
-import { Segmented } from "./Segmented";
 
 interface IsonLaneProps {
   ison: IsonState;
@@ -56,20 +54,13 @@ interface IsonVoicePanelProps {
   onChangeVoice: (change: Partial<IsonVoice>) => void;
 }
 
+/**
+ * The Ison's loudness. The vowel it sings is kept but not offered while the sound is the soft tone, which sings no
+ * vowel; it comes back with a sung voice.
+ */
 export function IsonVoicePanel({ ison, onChangeVoice }: IsonVoicePanelProps) {
   return (
     <>
-      <div className="transport__row">
-        <span className="transport__label">{t("ison.vowel")}</span>
-        <Segmented
-          className="segmented segmented--vowel"
-          options={VOWELS}
-          value={ison.vowel}
-          label={t("ison.vowel")}
-          render={(v) => t(`vowel.${v}`)}
-          onChange={(vowel) => onChangeVoice({ vowel })}
-        />
-      </div>
       <label className="transport__row">
         <span className="transport__label">{t("ison.volume")}</span>
         <input
