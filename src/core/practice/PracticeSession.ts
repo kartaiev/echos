@@ -125,6 +125,8 @@ export interface AttractionState {
   /** The Degree it moves, in every octave. */
   degree: DegreeName;
   moria: number;
+  /** The size is the project's assumption, not a source's (ADR-0016). */
+  assumed: boolean;
   active: boolean;
   source: string;
   reviewStatus: ReviewStatus;
@@ -456,10 +458,11 @@ export function createPracticeSession({
           : null,
         fthores: fthores.slice(0, appliedCount()).map((f) => ({ degreeId: scale[f.key - lowestKey]!.id, sign: f.sign })),
         fthoraSource: FTHORES.source,
-        attractions: attractionsIn(sounding).map(({ value: { id, degree, moria }, source, reviewStatus }) => ({
+        attractions: attractionsIn(sounding).map(({ value: { id, degree, moria, assumed }, source, reviewStatus }) => ({
           id,
           degree,
           moria,
+          assumed,
           active: activeAttractions.has(id),
           source,
           reviewStatus,
@@ -556,11 +559,19 @@ export function createPracticeSession({
       clearAttractions();
       rebuildScale();
     },
-    /** Switch an Attraction of the current Genus on or off; a sounding Ison on that Degree moves with it. */
+    /**
+     * Switch an Attraction of the current Genus on or off; a sounding Ison on that Degree moves with it. A Degree
+     * moves one way at a time, so switching one on switches off any other on the same Degree.
+     */
     toggleAttraction(id: AttractionId) {
-      if (!attractionsIn(sounding).some((a) => a.value.id === id)) throw new Error(`No Attraction ${id} in ${sounding}`);
+      const offered = attractionsIn(sounding);
+      const attraction = offered.find((a) => a.value.id === id);
+      if (!attraction) throw new Error(`No Attraction ${id} in ${sounding}`);
       if (activeAttractions.has(id)) activeAttractions.delete(id);
-      else activeAttractions.add(id);
+      else {
+        for (const other of offered) if (other.value.degree === attraction.value.degree) activeAttractions.delete(other.value.id);
+        activeAttractions.add(id);
+      }
       rebuildScale();
     },
     /** The theory of a Mode Variant for its card, without choosing it. */
