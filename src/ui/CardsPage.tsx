@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { deckStanding, startReview, type CardProgressRecord, type CardReview, type Grade } from "../core/cards/cardReview";
-import { DECK_IDS, DECKS, type Card, type DeckId } from "../core/cards/decks";
+import { DECK_IDS, DECKS, type AttractionCard, type Card, type DeckId } from "../core/cards/decks";
 import { currentLanguage, degreeLabel, t } from "../i18n/translations";
 import { fthoraGlyph, martyriaGlyphs, neumeGlyph } from "./martyriaGlyphs";
 
@@ -23,8 +23,28 @@ function dayLabel(day: string): string {
   return new Intl.DateTimeFormat(currentLanguage(), { day: "numeric", month: "long" }).format(new Date(year, month - 1, date));
 }
 
-/** The sign on the face of a Card, in the Neanes font; it is the question, so it is not read out. */
+/** Where an Attraction rule holds: its Modes (and Melos), every Diatonic Mode, or after an Ajem. */
+function scopeLabel({ where }: AttractionCard): string {
+  if (where === "diatonic") return t("cards.everyDiatonic");
+  if (where === "ajem") return t("cards.afterAjem");
+  const modes = where.modes.map((mode) => t(`mode.${mode}`)).join(", ");
+  return where.melos ? t("cards.modeInMelos", { mode: modes, melos: t(`melos.${where.melos}`) }) : modes;
+}
+
+/** The question line above the face: what to name. */
+const questionOf = (card: Card) =>
+  card.kind === "attraction" ? t("cards.question.attraction", { degree: degreeLabel(card.degree, 0) }) : t(`cards.question.${card.kind}`);
+
+/** The sign on the face of a Card, in the Neanes font; it is the question, so it is not read out. An Attraction Card shows its situation in words instead. */
 function CardFace({ card }: { card: Card }) {
+  if (card.kind === "attraction") {
+    return (
+      <div className="flashcard__situation">
+        <p className="flashcard__where">{scopeLabel(card)}</p>
+        <p className="flashcard__text">{t(`attraction.${card.rule}`)}</p>
+      </div>
+    );
+  }
   if (card.kind === "neume" || card.kind === "interval") {
     return (
       <span className="flashcard__sign flashcard__sign--neume" aria-hidden="true">
@@ -52,6 +72,16 @@ function CardFace({ card }: { card: Card }) {
 const stepLabel = (step: number) => (step === 0 ? t("cards.same") : t(step > 0 ? "cards.up" : "cards.down", { n: Math.abs(step) }));
 
 function CardAnswer({ card }: { card: Card }) {
+  if (card.kind === "attraction") {
+    const turn = card.slightly && card.turn !== "natural" ? (`slightly-${card.turn}` as const) : card.turn;
+    return (
+      <>
+        <p className="flashcard__answer">{t(`cards.turn.${turn}`)}</p>
+        {card.aboveKe !== undefined && <p className="flashcard__also">{t("cards.aboveKe", { n: card.aboveKe })}</p>}
+        {card.disputed && <p className="flashcard__also">{t("cards.disputed")}</p>}
+      </>
+    );
+  }
   if (card.kind === "neume") return <p className="flashcard__answer">{t(`neume.${card.neume}`)}</p>;
   if (card.kind === "interval") {
     const [first, ...rest] = card.steps.map(stepLabel);
@@ -132,7 +162,7 @@ export function CardsPage({ progress, today, onProgress }: CardsPageProps) {
         </div>
         {card ? (
           <article className="flashcard" aria-live="polite">
-            <p className="flashcard__question">{t(`cards.question.${card.kind}`)}</p>
+            <p className="flashcard__question">{questionOf(card)}</p>
             <CardFace card={card} />
             {revealed ? (
               <>
