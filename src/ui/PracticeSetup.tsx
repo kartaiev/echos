@@ -23,9 +23,8 @@ interface PracticeSetupProps {
  * What is being practised, read in one line above the Ladder; tapping it opens the choices. Setup is chosen once
  * per practice, so it stays folded and leaves the screen to the Ladder.
  */
-/** An Attraction's button text; a size no source gives says so (ADR-0016). */
-const attractionLabel = ({ id, assumed }: AttractionState) =>
-  assumed ? t("attractions.assumed", { label: t(`attraction.${id}`) }) : t(`attraction.${id}`);
+/** An Attraction as the summary line names it: the Degree and which way it moves. */
+const attractionLabel = ({ id }: AttractionState) => t(`attraction.${id}`);
 
 export function PracticeSetup(props: PracticeSetupProps) {
   const { modeVariant, ladder, pitch } = props;
@@ -73,19 +72,22 @@ export function PracticeSetup(props: PracticeSetupProps) {
           />
         )}
         {ladder.attractions.length > 0 && (
-          <div className="setup__row" role="group" aria-label={t("attractions.title")}>
+          <div className="setup__attractions" role="group" aria-label={t("attractions.title")}>
             <span className="setup__label">{t("attractions.title")}</span>
-            {ladder.attractions.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className="setup__toggle"
-                aria-pressed={a.active}
-                onClick={() => props.onToggleAttraction(a.id)}
-              >
-                {attractionLabel(a)}
-              </button>
-            ))}
+            <div className="setup__toggles">
+              {ladder.attractions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className="setup__toggle setup__toggle--attraction"
+                  aria-pressed={a.active}
+                  onClick={() => props.onToggleAttraction(a.id)}
+                >
+                  <span className="setup__toggle-name">{attractionLabel(a)}</span>
+                  <span className="setup__toggle-size">{t("attractions.moria", { n: Math.abs(a.moria) })}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <a className="setup__row setup__link" href={props.settingsHref}>
