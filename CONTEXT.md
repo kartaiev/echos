@@ -133,14 +133,14 @@ _Greek_: αγωγή: Βραδεία, Μέση, Μετρία, Ταχεία, Τα�
 ### Study
 
 **Card**:
-A question on one sign of the notation (a Neume, a Fthora, a Martyria) with its answer. The student answers in mind, turns the Card, and says whether they remembered; a Card remembered comes back later and later (ADR-0013).
+A question on one sign of the notation (a Neume, a Fthora, a Martyria), or on one Attraction in a situation of the melody, with its answer. The student answers in mind, turns the Card, and says whether they remembered; a Card remembered comes back later and later (ADR-0013).
 _Avoid_: flashcard, quiz, question
 _Greek_: κάρτα
 
 **Deck**:
-The Cards on one kind of sign: Neumes (their names and the intervals they write), Fthores or Martyries.
+The Cards on one kind of sign: Neumes (their names and the intervals they write), Fthores or Martyries; or on the Attractions, each in the Modes and the turn of the melody where it happens.
 _Avoid_: set, collection, topic
-_Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Φθορές, Μαρτυρίες)
+_Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Φθορές, Μαρτυρίες, Έλξεις)
 
 **Review**:
 One pass through a Deck: the Cards due today, then a few new ones.

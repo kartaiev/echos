@@ -1658,6 +1658,31 @@ a {
   font-size: 0.7em;
 }
 
+/* An Attraction Card has no sign: its face is the Mode and the turn of the melody, in words. */
+.flashcard__situation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 34ch;
+}
+
+.flashcard__where {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cinnabar);
+}
+
+.flashcard__text {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: var(--text);
+  text-wrap: pretty;
+}
+
 .flashcard__reveal {
   width: 100%;
   padding-top: 12px;

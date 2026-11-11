@@ -80,6 +80,49 @@ describe("Decks", () => {
     expect(reached(true)).toEqual(all);
   });
 
+  it("has an Attraction Card for every rule from the courses, each with the Degree it moves and how", () => {
+    const attractions = cardsOf("attractions");
+
+    expect(attractions).toHaveLength(16);
+    expect(attractions.find((c) => c.id === "attraction:first-vou-down-to-pa")).toMatchObject({
+      kind: "attraction",
+      where: { modes: ["first"] },
+      degree: "Vou",
+      turn: "lowered",
+      slightly: true,
+    });
+    expect(attractions.find((c) => c.id === "attraction:diatonic-zo-turns-back")).toMatchObject({
+      where: "diatonic",
+      degree: "Zo",
+      turn: "lowered",
+      slightly: false,
+    });
+    expect(attractions.find((c) => c.id === "attraction:fourth-pa-ends-on-pa")).toMatchObject({ degree: "Pa", turn: "natural" });
+    expect(attractions.find((c) => c.id === "attraction:plagal-first-vou-down-to-pa")).toMatchObject({ turn: "lowered", disputed: true });
+  });
+
+  it("asks about Zo going up and coming down in every Diatonic Mode, so the student meets both answers", () => {
+    const zo = cardsOf("attractions").filter((c) => c.kind === "attraction" && c.where === "diatonic" && c.degree === "Zo");
+
+    expect(new Set(zo.map((c) => (c.kind === "attraction" ? c.turn : null)))).toEqual(new Set(["natural", "lowered"]));
+  });
+
+  it("gives Zo its place above Ke in moria, the one Attraction a source sizes, and no other Degree a size", () => {
+    const attractions = cardsOf("attractions");
+
+    expect(attractions.find((c) => c.id === "attraction:diatonic-zo-turns-back")).toMatchObject({ aboveKe: 6 });
+    expect(attractions.find((c) => c.id === "attraction:diatonic-zo-up-to-ni")).toMatchObject({ aboveKe: 10 });
+    for (const card of attractions) {
+      if (card.kind === "attraction" && card.degree !== "Zo") expect(card).not.toHaveProperty("aboveKe");
+    }
+  });
+
+  it("names a course for every Attraction rule", () => {
+    for (const card of cardsOf("attractions")) {
+      if (card.kind === "attraction") expect(card.source).toMatch(/Trisagion School of Byzantine Music, (Octoëchos|ByzB) \d{3}/);
+    }
+  });
+
   it("gives every Card an id of its own", () => {
     const ids = Object.values(DECKS).flatMap((deck) => deck.cards.map((c) => c.id));
 
