@@ -1,8 +1,9 @@
-import { ATTRACTION_RULES, ATTRACTION_RULES_SOURCE, type AttractionRule, type AttractionRuleId } from "../theory/attractionRules";
+import { ATTRACTION_RULES, ATTRACTION_RULES_SOURCE, type AttractionRule, type AttractionRuleId, type AttractionScope, type PathNote } from "../theory/attractionRules";
 import { FTHORA_GENERA, FTHORES, type FthoraGenus, type FthoraSign } from "../theory/fthora";
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
+import { MODE_VARIANTS } from "../theory/modeVariants";
 import { INTERVAL_NEUMES, NEUME_NAMES, type NeumeName, type NeumeSign } from "../theory/neumes";
-import { degreeId, positionAt, type DegreePosition } from "../theory/scale";
+import { buildScale, degreeId, positionAt, type DegreePosition } from "../theory/scale";
 import { DEGREE_NAMES, GENUS_IDS, PMC_1881, type GenusId } from "../theory/tuningSystems";
 
 /** A Fthora sign to name: its Genus and the Degree it makes of its pivot (with the others a chromatic sign stands for). */
@@ -40,11 +41,19 @@ export interface IntervalCard {
   ornament: boolean;
 }
 
+/** A note of a Melody Path placed on the Scale of its Mode. */
+export interface PathStep extends PathNote {
+  /** Its place above Ni in the Genus of the Mode, before any Attraction moves it. */
+  moria: number;
+}
+
 /** A situation in the melody: how the Degree in it is sung. */
-export interface AttractionCard extends Omit<AttractionRule, "id" | "reviewStatus"> {
+export interface AttractionCard extends Omit<AttractionRule, "id" | "reviewStatus" | "paths"> {
   kind: "attraction";
   id: string;
   rule: AttractionRuleId;
+  /** How the melody moves in the situation, each note at its place on the Scale. */
+  paths: readonly (readonly PathStep[])[];
   /** For Zo, the one Attraction a source sizes: its place in moria above Ke, natural or lowered (ADR-0008). */
   aboveKe?: number;
 }
@@ -95,11 +104,25 @@ const DIATONIC = PMC_1881.genera.diatonic.value;
 const NATURAL_ZO_ABOVE_KE = DIATONIC.intervals[DEGREE_NAMES.indexOf("Ke") - DEGREE_NAMES.indexOf(DIATONIC.from)]!;
 const ZO_LOWERED_BY = PMC_1881.attractions.find(({ value }) => value.id === "zo-lowered")!.value.moria;
 
-const attractionCards: AttractionCard[] = ATTRACTION_RULES.map(({ id, reviewStatus: _, ...rule }) => ({
+/** The Genus a rule's Melody Paths are drawn in: that of its Modes, or the Diatonic. */
+function genusOf(where: AttractionScope): GenusId {
+  if (where === "diatonic" || where === "ajem") return "diatonic";
+  return MODE_VARIANTS[where.modes[0]!][where.melos ?? "heirmologic"].value.genus;
+}
+
+/** The Degrees from Ni to Ni' of a Genus, in moria above Ni. */
+const scaleOf = (genus: GenusId) =>
+  buildScale({ tuningSystem: PMC_1881, genus, referencePitchHz: 1, lowest: { name: "Ni", octave: 0 }, highest: { name: "Ni", octave: 1 } });
+
+const attractionCards: AttractionCard[] = ATTRACTION_RULES.map(({ id, reviewStatus: _, paths, ...rule }) => ({
   kind: "attraction" as const,
   id: `attraction:${id}`,
   rule: id,
   ...rule,
+  paths: paths.map((path) => {
+    const scale = scaleOf(genusOf(rule.where));
+    return path.map((note) => ({ ...note, moria: scale.find((d) => d.name === note.name && d.octave === note.octave)!.moria }));
+  }),
   ...(rule.degree === "Zo" && { aboveKe: NATURAL_ZO_ABOVE_KE + (rule.turn === "lowered" ? ZO_LOWERED_BY : 0) }),
 }));
 

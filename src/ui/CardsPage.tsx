@@ -3,6 +3,7 @@ import { deckStanding, startReview, type CardProgressRecord, type CardReview, ty
 import { DECK_IDS, DECKS, type AttractionCard, type Card, type DeckId } from "../core/cards/decks";
 import { currentLanguage, degreeLabel, t } from "../i18n/translations";
 import { fthoraGlyph, martyriaGlyphs, neumeGlyph } from "./martyriaGlyphs";
+import { MelodyPath } from "./MelodyPath";
 
 interface CardsPageProps {
   progress: CardProgressRecord;
@@ -76,6 +77,14 @@ function CardAnswer({ card }: { card: Card }) {
     const turn = card.slightly && card.turn !== "natural" ? (`slightly-${card.turn}` as const) : card.turn;
     return (
       <>
+        <div className="flashcard__paths">
+          {card.paths.map((path, i) => (
+            <div key={i} className="flashcard__path">
+              {i > 0 && <span className="flashcard__or">{t("cards.or")}</span>}
+              <MelodyPath path={path} turn={card.turn} />
+            </div>
+          ))}
+        </div>
         <p className="flashcard__answer">{t(`cards.turn.${turn}`)}</p>
         {card.aboveKe !== undefined && <p className="flashcard__also">{t("cards.aboveKe", { n: card.aboveKe })}</p>}
         {card.disputed && <p className="flashcard__also">{t("cards.disputed")}</p>}
