@@ -86,8 +86,8 @@ describe("Web Audio output", () => {
     expect(tone!.frequency.value).toBe(130.81);
     expect(tone!.frequency.modulatedBy).toEqual([]);
     expect(tone!.detune.modulatedBy).toEqual([]);
-    // A few quiet overtones over the fundamental.
-    expect(tone!.wave).toEqual([1, 0.3, 0.12, 0.05, 0.02]);
+    // A few overtones over the fundamental, falling away.
+    expect(tone!.wave).toEqual([1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03]);
   });
 
   it("sounds the Ison the same way, whatever vowel the student chose", async () => {
@@ -96,7 +96,7 @@ describe("Web Audio output", () => {
     createWebAudioOutput().playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "ou", volume: 0.6 });
 
     expect(oscillators).toHaveLength(1);
-    expect(oscillators[0]!.wave).toEqual([1, 0.3, 0.12, 0.05, 0.02]);
+    expect(oscillators[0]!.wave).toEqual([1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03]);
     expect(oscillators[0]!.frequency.value).toBe(196);
   });
 });
