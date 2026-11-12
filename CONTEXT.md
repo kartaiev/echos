@@ -142,6 +142,11 @@ The Cards on one kind of sign: Neumes (their names and the intervals they write)
 _Avoid_: set, collection, topic
 _Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Φθορές, Μαρτυρίες, Έλξεις)
 
+**Melody Path**:
+A drawing on the answer of an Attraction Card: the Degrees the melody passes in that situation, in order, with arrows, and the Degree asked about moved the way it is sung. It pictures the rule; it is not a melody from a book.
+_Avoid_: contour, melodic line, example
+_Greek_: πορεία της μελωδίας
+
 **Review**:
 One pass through a Deck: the Cards due today, then a few new ones.
 _Avoid_: session, lesson, practice (Practice is the singing view)

@@ -117,6 +117,52 @@ describe("Decks", () => {
     }
   });
 
+  it("draws for every Attraction the path of the melody through the Degree it asks about", () => {
+    for (const card of cardsOf("attractions")) {
+      if (card.kind !== "attraction") continue;
+      expect(card.paths.length).toBeGreaterThan(0);
+      for (const path of card.paths) {
+        expect(path.length).toBeGreaterThanOrEqual(2);
+        expect(path.some((step) => step.asked && step.name === card.degree)).toBe(true);
+      }
+    }
+  });
+
+  it("places each step of a path on the Scale of its Mode, in moria above Ni", () => {
+    const at = (id: string) => cardsOf("attractions").find((c) => c.id === `attraction:${id}`);
+    const steps = (id: string) => {
+      const card = at(id);
+      return card?.kind === "attraction" ? card.paths.map((path) => path.map(({ name, octave, moria, asked, ends }) => ({ name, octave, moria, asked, ends }))) : [];
+    };
+
+    expect(steps("first-vou-down-to-pa")).toEqual([
+      [
+        { name: "Ga", octave: 0, moria: 30, asked: false, ends: false },
+        { name: "Vou", octave: 0, moria: 22, asked: true, ends: false },
+        { name: "Pa", octave: 0, moria: 12, asked: false, ends: false },
+      ],
+    ]);
+    // The 3rd Mode is Enharmonic: Vou sits a half step under Ga.
+    expect(steps("third-vou-to-ga")[0]!.map(({ moria }) => moria)).toEqual([12, 24, 30]);
+    // Either way the melody may go, two paths.
+    expect(steps("fourth-pa-down-to-ni").map((path) => path.map(({ name }) => name))).toEqual([
+      ["Vou", "Pa", "Ni"],
+      ["Vou", "Pa", "Vou"],
+    ]);
+    expect(steps("diatonic-zo-down-from-ni")[0]![0]).toMatchObject({ name: "Ni", octave: 1, moria: 72 });
+  });
+
+  it("marks where a phrase ends when the rule depends on it", () => {
+    const last = (id: string) => {
+      const card = cardsOf("attractions").find((c) => c.id === `attraction:${id}`);
+      return card?.kind === "attraction" ? card.paths[0]!.at(-1) : undefined;
+    };
+
+    expect(last("fourth-pa-ends-on-pa")).toMatchObject({ name: "Pa", asked: true, ends: true });
+    expect(last("diatonic-zo-ends-above")).toMatchObject({ name: "Ni", octave: 1, asked: false, ends: true });
+    expect(last("diatonic-zo-up-to-ni")).toMatchObject({ ends: false });
+  });
+
   it("names a course for every Attraction rule", () => {
     for (const card of cardsOf("attractions")) {
       if (card.kind === "attraction") expect(card.source).toMatch(/Trisagion School of Byzantine Music, (Octoëchos|ByzB) \d{3}/);

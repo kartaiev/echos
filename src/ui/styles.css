@@ -1727,6 +1727,78 @@ a {
   border-top: 1px solid var(--line);
 }
 
+/* The melody of an Attraction, drawn above its answer; two ways stack, with "or" between them. */
+.flashcard__paths {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.flashcard__path {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.flashcard__or {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.melody-path {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.melody-path__degree {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.melody-path__label {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+.melody-path__step {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.melody-path__arrow {
+  fill: var(--muted);
+}
+
+.melody-path__note {
+  fill: var(--text);
+}
+
+.melody-path__note--asked {
+  fill: var(--cinnabar);
+}
+
+.melody-path__home {
+  fill: var(--surface);
+  stroke: var(--cinnabar);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 2;
+}
+
+.melody-path__move {
+  stroke: var(--cinnabar);
+  stroke-width: 1.5;
+}
+
+.melody-path__end {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
 .flashcard__answer {
   margin: 0;
   font-size: 1.25rem;
