@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./ui/App";
@@ -9,8 +10,9 @@ createRoot(document.getElementById("root")!).render(
   </StrictMode>,
 );
 
-// Offline support for the built app; skipped in development and where service workers are not allowed (embeds).
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
+// Offline support for the built app; skipped in development, where service workers are not allowed (embeds), and in
+// the store apps, which carry every file inside them already.
+if (import.meta.env.PROD && "serviceWorker" in navigator && !Capacitor.isNativePlatform()) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
