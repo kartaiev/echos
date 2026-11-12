@@ -1,10 +1,10 @@
 import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest } from "./AudioOutput";
 
 /**
- * The soft tone: a fundamental with a few quiet overtones, with no vibrato or drift, so its pitch is exact and
+ * The soft tone: a fundamental with a few overtones, with no vibrato or drift, so its pitch is exact and
  * intervals can be checked by ear. It sings no vowel; a sung voice comes later from recordings.
  */
-const SOFT_TONE_HARMONICS = [1, 0.3, 0.12, 0.05, 0.02];
+const SOFT_TONE_HARMONICS = [1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03];
 
 const ATTACK_S = 0.05;
 const RELEASE_S = 0.15;
