@@ -1,0 +1,7 @@
+{
+  "appId": "io.github.kartaiev.echos",
+  "appName": "Echos",
+  "webDir": "dist",
+  "ios": { "backgroundColor": "#f7f4ee" },
+  "android": { "backgroundColor": "#f7f4ee" }
+}

@@ -9,6 +9,7 @@ Status: planning. See the issues for the spec and the build plan.
 - `npm run dev` starts the app for development; `npm test` runs the tests.
 - `npm run build` makes the installable, offline app in `dist/` (relative paths, a service worker that precaches every file).
 - Every push to `main` is tested, built and published to GitHub Pages by `.github/workflows/deploy.yml`. One-time setup: Settings → Pages → Source: GitHub Actions.
+- The store apps are Capacitor shells around the same build (ADR-0017). After `npm run build`, `npx cap sync` copies it into `ios/` and `android/`; `npx cap open ios` opens the iPhone app in Xcode, `npx cap open android` the Android app in Android Studio. `.github/workflows/native.yml` builds both on every pull request.
 
 ## Licenses
 

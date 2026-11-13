@@ -73,7 +73,8 @@ body {
   min-height: 100svh;
   max-width: 480px;
   margin: 0 auto;
-  padding-top: 16px;
+  /* Below the clock and the camera cut-out where the page fills the whole screen (the iPhone store app). */
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -164,9 +165,10 @@ a {
    * screen less about 296px for the page top, the tabs, the setup line, these margins and the bar, so that a
    * 667px phone shows every Degree without scrolling. With the current tables the closest Degrees on one side
    * are 16 moria apart in a drawing range of 130 moria (12.3% of the height); the keys shrink from 48px to
-   * fit that, leaving a 4px gap. A new Tuning System may need a taller ladder.
+   * fit that, leaving a 4px gap. A new Tuning System may need a taller ladder. Where the page top grows to clear
+   * the clock and the camera cut-out, the ladder gives up the same height.
    */
-  --ladder-height: clamp(360px, 100svh - 296px, 760px);
+  --ladder-height: clamp(360px, 100svh - 280px - max(16px, env(safe-area-inset-top, 0px)), 760px);
   height: var(--ladder-height);
   margin: 24px 0;
 }
