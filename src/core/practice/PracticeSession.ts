@@ -19,11 +19,13 @@ import {
 import { DEFAULT_PITCH_SETTINGS, niFrequency, soundingNote, type PitchSettings } from "./pitchSettings";
 import type { NoteName } from "../theory/westernPitch";
 import { DEFAULT_ISON_VOICE, type IsonVoice } from "./isonVoice";
+import { readVoice, type VoiceReading } from "./voiceCheck";
 import { TEMPO_PRESETS, tempoPreset, tempoPresetOf, type TempoPreset, type TempoPresetId } from "../theory/tempoPresets";
 import { chronosMs, clampTempo, DEFAULT_METRONOME_SETTINGS, type MetronomeSettings } from "./metronomeSettings";
 
 export type { PitchSettings, ReferencePitch, Register } from "./pitchSettings";
 export type { IsonVoice } from "./isonVoice";
+export type { VoiceReading } from "./voiceCheck";
 export type { Grouping, MetronomeSettings } from "./metronomeSettings";
 export type { TempoPreset, TempoPresetId } from "../theory/tempoPresets";
 export type { Martyria, MartyriaFthora, RootSign } from "../theory/martyria";
@@ -650,6 +652,10 @@ export function createPracticeSession({
     restartSound() {
       if (ison) holdIson(ison.degreeId);
       if (clicks) startClicks();
+    },
+    /** Voice Check: where a sung frequency falls on the Ladder as it sounds now. */
+    readVoice(frequency: number): VoiceReading | null {
+      return readVoice(frequency, scale, niFrequency(settings), tuningSystem.moriaPerOctave);
     },
     /** True when the device keeps the sound stopped, so what the session plays is not heard. */
     soundIsHeld(): boolean {

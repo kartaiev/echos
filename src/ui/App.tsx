@@ -22,6 +22,7 @@ import { SettingsPage } from "./SettingsPage";
 import { applyTheme, type Theme } from "./theme";
 import { TransportBar } from "./TransportBar";
 import { useSoundHeld, useWakeLock } from "./whileSinging";
+import { useVoiceCheck } from "./voiceCheck";
 import {
   loadCardProgress,
   loadIsonVoice,
@@ -99,7 +100,10 @@ export function App() {
   // Placing a Fthora: first the Degree, then the Genus. Null when not placing.
   const [placing, setPlacing] = useState<FthoraPlacing | null>(null);
   const somethingSounds = ison.degreeId !== null || metronome.running;
-  useWakeLock(somethingSounds);
+  // Voice Check listens only on the practice view; it stops when the student leaves it.
+  const [listening, setListening] = useState(false);
+  const voice = useVoiceCheck(listening && view === "practice", (hz) => session.readVoice(hz));
+  useWakeLock(somethingSounds || (listening && view === "practice"));
   const sound = useSoundHeld(somethingSounds, () => session.soundIsHeld());
 
   useEffect(() => {
@@ -253,7 +257,14 @@ export function App() {
             onToggleAttraction={(id) => act(() => session.toggleAttraction(id))}
             fthoraActive={placing !== null || ladder.fthora !== null}
             onFthora={() => setPlacing(placing ? null : { step: "degree" })}
+            listening={listening && voice.problem === null}
+            onListen={() => setListening(!(listening && voice.problem === null))}
           />
+          {listening && voice.problem && (
+            <p className="voice-notice" role="status">
+              {t(voice.problem === "refused" ? "voice.refused" : "voice.unavailable")}
+            </p>
+          )}
           <FthoraBar
             placing={placing}
             fthora={ladder.fthora}
@@ -282,6 +293,7 @@ export function App() {
             onSpace={toggleMetronome}
             choosing={placing !== null}
             onChoose={(id) => setPlacing({ step: "genus", degreeId: id })}
+            voice={voice.reading}
           />
           <TransportBar
             ison={ison}

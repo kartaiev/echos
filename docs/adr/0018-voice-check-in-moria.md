@@ -1,0 +1,8 @@
+# Voice Check in moria, on the Ladder
+
+Students check their singing in other apps against a Western tuner in cents, or against a needle that knows nothing of the Mode. Voice Check reads the voice against the Scale as it sounds now (Genus, Attractions, Fthores, Reference Pitch) and shows it on the Ladder itself: a dot on the rail where the voice is, and on the nearest Degree how many whole moria above or below it the voice is ("+2", "−3"; a filled "0" when on it). A moria is about 17 cents, about as fine as a singer can steer by.
+
+- **Pitch.** The McLeod Pitch Method on 2048-sample frames, 20 times a second, the shown pitch the median of the last five. It finds the fundamental of a sung vowel even where an overtone is louder; silence, breath and noise give no reading.
+- **Octaves.** A voice beyond the ends of the Ladder is read an octave nearer: the Degree matters, not the octave, so a woman on a male Register still sees where she is.
+- **Microphone.** Echo cancellation is on, so the device can keep the page's own Ison out of what it hears; noise suppression and automatic gain are off, since both bend a held note. Whether the Ison stays out on a phone, and whether the phone's speaker gets quieter while the microphone is open, is to be checked on devices; headphones avoid both.
+- **Only on the practice view**, only after the student taps Listen; leaving the view stops the microphone.

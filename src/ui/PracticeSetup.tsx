@@ -17,6 +17,9 @@ interface PracticeSetupProps {
   /** A Fthora is being placed or is on the Ladder. */
   fthoraActive: boolean;
   onFthora: () => void;
+  /** Voice Check: the microphone listens and the Ladder shows where the voice is. */
+  listening: boolean;
+  onListen: () => void;
 }
 
 /**
@@ -55,6 +58,9 @@ export function PracticeSetup(props: PracticeSetupProps) {
         {/* Placing a Fthora starts here: then a Degree on the Ladder, then the Genus. */}
         <button type="button" className="setup__fthora" aria-pressed={props.fthoraActive} onClick={props.onFthora}>
           {t("fthora.button")}
+        </button>
+        <button type="button" className="setup__fthora" aria-pressed={props.listening} onClick={props.onListen}>
+          {t("voice.listen")}
         </button>
       </div>
 
