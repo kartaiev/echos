@@ -16,6 +16,8 @@ export type VoiceCheckProblem = "refused" | "unavailable";
 export function useVoiceCheck(active: boolean, read: (hz: number) => VoiceReading | null) {
   const [reading, setReading] = useState<VoiceReading | null>(null);
   const [problem, setProblem] = useState<VoiceCheckProblem | null>(null);
+  /** The browser's own name for what went wrong, shown with the problem so a report from a phone says it. */
+  const [problemName, setProblemName] = useState("");
   const latestRead = useRef(read);
   latestRead.current = read;
 
@@ -47,7 +49,9 @@ export function useVoiceCheck(active: boolean, read: (hz: number) => VoiceReadin
       },
       (error: unknown) => {
         if (stopped) return;
-        const refused = error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError");
+        const name = error instanceof Error ? error.name : String(error);
+        const refused = name === "NotAllowedError" || name === "SecurityError";
+        setProblemName(name);
         setProblem(refused ? "refused" : "unavailable");
       },
     );
@@ -58,7 +62,7 @@ export function useVoiceCheck(active: boolean, read: (hz: number) => VoiceReadin
     };
   }, [active]);
 
-  return { reading, problem };
+  return { reading, problem, problemName };
 }
 
 /** Close enough that redrawing would not move anything the eye can see. */

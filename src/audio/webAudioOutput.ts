@@ -1,4 +1,5 @@
 import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest } from "./AudioOutput";
+import { applyAudioSession } from "./audioSession";
 
 /**
  * The soft tone: a fundamental with a few overtones, with no vibrato or drift, so its pitch is exact and
@@ -35,15 +36,6 @@ const HIDDEN_LOOKAHEAD_S = 1.5;
 let context: AudioContext | null = null;
 
 /**
- * iPhones mute Web Audio when the ring/silent switch is on, unless the page says it plays media. Safari 16.4 and
- * later read navigator.audioSession for that; other browsers ignore it.
- */
-function playThroughSilentSwitch() {
-  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
-  if (session && session.type !== "playback") session.type = "playback";
-}
-
-/**
  * When the context was asked to resume (by a gesture, or by the page coming back into view) and still is not
  * running a second later, iOS has left it stuck after an interruption; the next gesture then builds a fresh context.
  */
@@ -65,7 +57,8 @@ const lasting = new Set<Lasting>();
  * to another app or takes a call, and as "suspended" before the first gesture; both resume here.
  */
 function getContext(fromGesture = false) {
-  playThroughSilentSwitch();
+  // iPhones mute Web Audio when the ring/silent switch is on, unless the page says it plays media.
+  applyAudioSession();
   const stuck = fromGesture && context !== null && context.state !== "running" && resumeAskedAt !== null
     && performance.now() - resumeAskedAt > STUCK_AFTER_MS;
   const replaced = context !== null && (stuck || context.state === "closed");
