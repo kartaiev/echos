@@ -399,6 +399,8 @@ a {
 .ladder-strip--horizontal {
   --strip-width: min(100vw - 2 * max(16px, env(safe-area-inset-left, 0px)), 960px);
   width: var(--strip-width);
+  /* Room above the upper keys for the Voice Check mark at their corner, which the scrolling strip would cut. */
+  padding-top: 10px;
   margin: 20px calc((100% - var(--strip-width)) / 2);
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -1827,4 +1829,104 @@ a {
 
 .flashcard--done {
   padding: 28px 16px;
+}
+
+/* Voice Check: where the voice is, a dot on the rail that follows the singer. */
+.ladder__voice {
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  transform: translateY(50%);
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  background: var(--cinnabar);
+  pointer-events: none;
+  transition: bottom 90ms linear;
+  /* Above the moria numbers on the rail, which sit right where a voice between two Degrees is. */
+  z-index: 1;
+}
+
+.ladder--horizontal .ladder__voice {
+  top: 50%;
+  margin: -8px 0 0;
+  transform: translateX(-50%);
+  transition: left 90ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ladder__voice {
+    transition: none;
+  }
+}
+
+/* The Degree nearest the voice: its tick in cinnabar, and how many moria off it the voice is, at its corner. */
+.ladder__degree.is-sung::after {
+  height: 2px;
+  background: var(--cinnabar);
+}
+
+.ladder--horizontal .ladder__degree.is-sung::after {
+  width: 2px;
+  height: var(--stem);
+}
+
+.ladder__off {
+  position: absolute;
+  top: -10px;
+  min-width: 26px;
+  padding: 0 5px;
+  border: 2px solid var(--cinnabar);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--cinnabar);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Right on the Degree: filled. */
+.ladder__off.is-on {
+  background: var(--cinnabar);
+  color: var(--on-accent);
+}
+
+.ladder__degree.is-left .ladder__off,
+.ladder--horizontal .ladder__off {
+  right: -10px;
+}
+
+.ladder__degree.is-right .ladder__off {
+  left: -10px;
+}
+
+.voice-notice {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--pending-bg);
+  color: var(--pending-text);
+  font-size: 0.85rem;
+}
+
+/*
+ * A phone held upright: three buttons share the setup line, so the summary drops its "Change" word (the box is
+ * still the button that opens the choices) and the side buttons come in a little.
+ */
+@media (max-width: 419px) {
+  .setup__summary {
+    padding-inline: 12px;
+  }
+
+  .setup__action {
+    display: none;
+  }
+
+  .setup__fthora {
+    padding-inline: 10px;
+  }
 }

@@ -43,6 +43,8 @@
       </array>
     </dict>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Echos listens while you sing to show where your voice is on the Ladder.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

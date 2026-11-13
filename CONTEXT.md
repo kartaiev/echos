@@ -125,6 +125,11 @@ The basic unit of time against which note durations are counted (plural: chronoi
 _Avoid_: beat, pulse
 _Greek_: χρόνος, χρόνοι
 
+**Voice Check**:
+Listening to the student through the microphone and showing on the Ladder where the voice is: the nearest Degree and how many moria above or below it, against the Scale as it sounds now.
+_Avoid_: tuner, pitch detection, intonation (Intonation is the sung formula of a Mode)
+_Greek_: ακρόαση
+
 **Tempo Preset**:
 A named tempo range of the tradition (e.g. Bradeia, Mesi, Metria) expressed in chronoi per minute.
 _Avoid_: speed

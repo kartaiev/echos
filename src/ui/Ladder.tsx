@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent } from "react";
-import type { Ladder as LadderModel } from "../core/practice/PracticeSession";
+import type { Ladder as LadderModel, VoiceReading } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
 import { fthoraGlyph, martyriaGlyphs } from "./martyriaGlyphs";
 
@@ -70,6 +70,8 @@ interface LadderProps {
   /** While a Fthora is being placed, a tap picks its Degree instead of playing it. */
   choosing: boolean;
   onChoose: (degreeId: string) => void;
+  /** Voice Check: where the student's voice is now, or null when not listening or between notes. */
+  voice: VoiceReading | null;
 }
 
 /**
@@ -79,7 +81,7 @@ interface LadderProps {
  * stops the Ison).
  */
 export function Ladder(props: LadderProps) {
-  const { ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose } = props;
+  const { ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice } = props;
   // The Degree being held: a ring closes in on it while the long press counts down.
   const [holdingId, setHoldingId] = useState<string | null>(null);
   const hintId = useId();
@@ -234,6 +236,8 @@ export function Ladder(props: LadderProps) {
         </p>
         <div ref={pulse} className="ladder__pulse" aria-hidden="true" />
         <div ref={rail} className="ladder__rail" />
+        {/* The voice on the rail, moving as the student sings. */}
+        {voice && <span className="ladder__voice" style={position(voice.moria)} aria-hidden="true" />}
         {ladder.degrees.map((degree, index) => {
           // Spoken with a word for the octave: screen readers say "͵" and "′" unpredictably.
           const spokenName =
@@ -241,6 +245,8 @@ export function Ladder(props: LadderProps) {
             (degree.octave < 0 ? ` ${t("degree.low")}` : degree.octave > 0 ? ` ${t("degree.high")}` : "");
           const martyria = martyriaGlyphs(degree.name, degree.martyria);
           const isIson = degree.id === isonDegreeId;
+          // Voice Check: the Degree nearest the voice carries how many moria off it the voice is.
+          const sungOff = voice?.degreeId === degree.id ? Math.round(voice.offMoria) : null;
           // Base outranks Dominant: the Base is often listed among the Dominant Degrees too.
           const marks = [
             degree.isBase ? t("ladder.baseMark") : degree.isDominant ? t("ladder.dominantMark") : null,
@@ -264,6 +270,7 @@ export function Ladder(props: LadderProps) {
             degree.isBase && "is-base",
             isIson && "is-ison",
             degree.attraction !== null && "is-attracted",
+            sungOff !== null && "is-sung",
           ];
           return (
             // Keyed by place: a Fthora renames keys, and a key keeps its focus and its press through that.
@@ -284,6 +291,11 @@ export function Ladder(props: LadderProps) {
                 onContextMenu={(e) => e.preventDefault()}
                 onClick={(e) => click(degree.id, e.currentTarget)}
               >
+                {sungOff !== null && (
+                  <span className={"ladder__off" + (sungOff === 0 ? " is-on" : "")} aria-hidden="true">
+                    {sungOff > 0 ? `+${sungOff}` : sungOff < 0 ? `\u2212${-sungOff}` : "0"}
+                  </span>
+                )}
                 {pivotSign && (
                   <span className="ladder__fthora-sign fthora-sign" aria-hidden="true">
                     {fthoraGlyph(pivotSign)}
