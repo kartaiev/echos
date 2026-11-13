@@ -263,6 +263,7 @@ export function App() {
           {listening && voice.problem && (
             <p className="voice-notice" role="status">
               {t(voice.problem === "refused" ? "voice.refused" : "voice.unavailable")}
+              {voice.problem === "unavailable" && voice.problemName && ` (${voice.problemName})`}
             </p>
           )}
           <FthoraBar
