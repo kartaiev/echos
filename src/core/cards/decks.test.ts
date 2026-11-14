@@ -40,6 +40,37 @@ describe("Decks", () => {
     });
   });
 
+  it("has a Modal Signature Card for every Mode, with the Base and the Fthora written after it", () => {
+    const signatures = cardsOf("signatures");
+
+    expect(signatures.map((c) => (c.kind === "signature" ? c.mode : null))).toEqual([
+      "first",
+      "second",
+      "third",
+      "fourth",
+      "plagal-first",
+      "plagal-second",
+      "grave",
+      "plagal-fourth",
+    ]);
+    expect(signatures.find((c) => c.id === "signature:first")).toMatchObject({
+      kind: "signature",
+      base: { name: "Pa", octave: 0 },
+      fthora: "diatonic-pa",
+    });
+    expect(signatures.find((c) => c.id === "signature:second")).toMatchObject({ base: { name: "Di", octave: 0 }, fthora: "soft-chromatic-di" });
+    expect(signatures.find((c) => c.id === "signature:fourth")).toMatchObject({ base: { name: "Di", octave: 0 }, fthora: "diatonic-di" });
+    expect(signatures.find((c) => c.id === "signature:plagal-second")).toMatchObject({
+      base: { name: "Pa", octave: 0 },
+      fthora: "hard-chromatic-pa",
+      fthoraGenus: "hard-chromatic",
+      fthoraDegree: { name: "Pa", octave: 0 },
+    });
+    // The Grave is on the low Zo, with the sign the Diatonic Fthora of Pa is written with.
+    expect(signatures.find((c) => c.id === "signature:grave")).toMatchObject({ base: { name: "Zo", octave: -1 }, fthora: "diatonic-pa" });
+    expect(signatures.find((c) => c.id === "signature:plagal-fourth")).toMatchObject({ base: { name: "Ni", octave: 0 }, fthora: "diatonic-ni-low" });
+  });
+
   it("has a Neume Card for every Neume with a name, first in the Deck", () => {
     const neumes = cardsOf("neumes").filter((c) => c.kind === "neume");
 

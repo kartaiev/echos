@@ -66,6 +66,11 @@ A sign that names the Degree and Genus at a point in the score (plural: Martyrie
 _Avoid_: key signature, clef
 _Greek_: μαρτυρία, μαρτυρίες
 
+**Modal Signature**:
+The sign at the beginning of a piece that names its Mode: the word Mode (ἦχος), the sign of the Mode, the Base, and the Fthora that fixes the Scale of the Base.
+_Avoid_: key signature, mode key, initial martyria
+_Greek_: αρκτική μαρτυρία
+
 ### Modes
 
 **Mode**:
@@ -143,9 +148,9 @@ _Avoid_: flashcard, quiz, question
 _Greek_: κάρτα
 
 **Deck**:
-The Cards on one kind of sign: Neumes (their names and the intervals they write), Fthores or Martyries; or on the Attractions, each in the Modes and the turn of the melody where it happens.
+The Cards on one kind of sign: Neumes (their names and the intervals they write), Fthores, Martyries or Modal Signatures; or on the Attractions, each in the Modes and the turn of the melody where it happens.
 _Avoid_: set, collection, topic
-_Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Φθορές, Μαρτυρίες, Έλξεις)
+_Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Φθορές, Μαρτυρίες, Αρκτικές μαρτυρίες, Έλξεις)
 
 **Melody Path**:
 A drawing on the answer of an Attraction Card: the Degrees the melody passes in that situation, in order, with arrows, and the Degree asked about moved the way it is sung. It pictures the rule; it is not a melody from a book.

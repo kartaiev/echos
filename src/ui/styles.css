@@ -1700,6 +1700,44 @@ a {
   font-size: 0.7em;
 }
 
+/*
+ * A Modal Signature reads as one line of a book: the word and the Base in the text's own letters, the sign of the
+ * Mode and the Fthora in the font of the Ladder, all on one baseline. The signs of the Modes reach about 1.2em above
+ * the baseline and 0.3em under it, so the line is that tall and nothing is clipped.
+ */
+.flashcard__signature {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: 0.25em;
+  margin: 0.2em 0;
+  padding: 0.9em 0 0.3em;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.2rem;
+  line-height: 1;
+  color: var(--text);
+}
+
+.flashcard__glyphs {
+  font-family: "Neanes", serif;
+  font-size: 1.6em;
+  font-variant-numeric: normal;
+}
+
+/* The sign of the 2nd Mode is drawn high, its ink from 0.36em to 0.97em up; moved down, it stands on the line. */
+.flashcard__glyphs--second {
+  position: relative;
+  top: 0.32em;
+}
+
+/* A Fthora is drawn to sit above a Neume (its ink from 0.63em to 1.31em up); moved down, it stands on the line. */
+.flashcard__glyphs--fthora {
+  position: relative;
+  top: 0.62em;
+  font-size: 1.3em;
+}
+
 /* An Attraction Card has no sign: its face is the Mode and the turn of the melody, in words. */
 .flashcard__situation {
   display: flex;
