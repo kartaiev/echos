@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { deckStanding, startReview, type CardProgressRecord, type CardReview, type Grade } from "../core/cards/cardReview";
 import { DECK_IDS, DECKS, type AttractionCard, type Card, type DeckId } from "../core/cards/decks";
 import { currentLanguage, degreeLabel, t } from "../i18n/translations";
-import { fthoraGlyph, martyriaGlyphs, neumeGlyph } from "./martyriaGlyphs";
+import { fthoraGlyph, martyriaGlyphs, modeSignGlyphs, neumeGlyph } from "./martyriaGlyphs";
 import { MelodyPath } from "./MelodyPath";
 
 interface CardsPageProps {
@@ -53,6 +53,17 @@ function CardFace({ card }: { card: Card }) {
       </span>
     );
   }
+  if (card.kind === "signature") {
+    // Written as in a book: the word, the sign of the Mode, the Base by name (in the octave of the line), its Fthora.
+    return (
+      <span className="flashcard__signature" aria-hidden="true">
+        <span className="flashcard__word">{t("cards.signatureWord")}</span>
+        <span className={`flashcard__glyphs flashcard__glyphs--${card.mode}`}>{modeSignGlyphs(card.mode)}</span>
+        <span className="flashcard__word">{t(`degree.${card.base.name}`)}</span>
+        <span className="flashcard__glyphs flashcard__glyphs--fthora">{fthoraGlyph(card.fthora)}</span>
+      </span>
+    );
+  }
   if (card.kind === "fthora") {
     return (
       <span className="flashcard__sign" aria-hidden="true">
@@ -92,6 +103,18 @@ function CardAnswer({ card }: { card: Card }) {
     );
   }
   if (card.kind === "neume") return <p className="flashcard__answer">{t(`neume.${card.neume}`)}</p>;
+  if (card.kind === "signature") {
+    const fthora = t("cards.fthoraAnswer", {
+      genus: t(`genus.${card.fthoraGenus}`),
+      degree: degreeLabel(card.fthoraDegree.name, card.fthoraDegree.octave),
+    });
+    return (
+      <>
+        <p className="flashcard__answer">{t(`mode.${card.mode}`)}</p>
+        <p className="flashcard__also">{t("cards.signatureBase", { degree: degreeLabel(card.base.name, card.base.octave), fthora })}</p>
+      </>
+    );
+  }
   if (card.kind === "interval") {
     const [first, ...rest] = card.steps.map(stepLabel);
     return (

@@ -1,6 +1,7 @@
 import { ATTRACTION_RULES, ATTRACTION_RULES_SOURCE, type AttractionRule, type AttractionRuleId, type AttractionScope, type PathNote } from "../theory/attractionRules";
 import { FTHORA_GENERA, FTHORES, type FthoraGenus, type FthoraSign } from "../theory/fthora";
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
+import { MODAL_SIGNATURES, type ModalSignature } from "../theory/modalSignatures";
 import { MODE_VARIANTS } from "../theory/modeVariants";
 import { INTERVAL_NEUMES, NEUME_NAMES, type NeumeName, type NeumeSign } from "../theory/neumes";
 import { buildScale, degreeId, positionAt, type DegreePosition } from "../theory/scale";
@@ -23,6 +24,15 @@ export interface MartyriaCard {
   genus: GenusId;
   degree: DegreePosition;
   martyria: Martyria;
+}
+
+/** A Modal Signature to read: the Mode it opens, with its Base and Fthora. */
+export interface SignatureCard extends ModalSignature {
+  kind: "signature";
+  id: string;
+  /** The Genus of the Fthora and the Degree it is named after, as the Fthora Cards name it. */
+  fthoraGenus: FthoraGenus;
+  fthoraDegree: DegreePosition;
 }
 
 /** A Neume to name. */
@@ -58,9 +68,9 @@ export interface AttractionCard extends Omit<AttractionRule, "id" | "reviewStatu
   aboveKe?: number;
 }
 
-export type Card = NeumeCard | IntervalCard | FthoraCard | MartyriaCard | AttractionCard;
+export type Card = NeumeCard | IntervalCard | FthoraCard | MartyriaCard | SignatureCard | AttractionCard;
 
-export const DECK_IDS = ["neumes", "fthores", "martyries", "attractions"] as const;
+export const DECK_IDS = ["neumes", "fthores", "martyries", "signatures", "attractions"] as const;
 export type DeckId = (typeof DECK_IDS)[number];
 
 export interface Deck {
@@ -99,6 +109,17 @@ const martyriaCards: MartyriaCard[] = GENUS_IDS.flatMap((genus) =>
   })),
 );
 
+const signatureCards: SignatureCard[] = MODAL_SIGNATURES.value.map((signature) => {
+  const named = fthoraCards.find((card) => card.sign === signature.fthora)!;
+  return {
+    kind: "signature" as const,
+    id: `signature:${signature.mode}`,
+    ...signature,
+    fthoraGenus: named.genus,
+    fthoraDegree: named.degrees[0]!,
+  };
+});
+
 /** Zo above Ke in the Diatonic, read off the Tuning System, and the Zo lowered by its Attraction. */
 const DIATONIC = PMC_1881.genera.diatonic.value;
 const NATURAL_ZO_ABOVE_KE = DIATONIC.intervals[DEGREE_NAMES.indexOf("Ke") - DEGREE_NAMES.indexOf(DIATONIC.from)]!;
@@ -130,6 +151,7 @@ export const DECKS: Record<DeckId, Deck> = {
   neumes: { id: "neumes", cards: neumeCards, source: INTERVAL_NEUMES.source },
   fthores: { id: "fthores", cards: fthoraCards, source: FTHORES.source },
   martyries: { id: "martyries", cards: martyriaCards, source: MARTYRIA.diatonic.source },
+  signatures: { id: "signatures", cards: signatureCards, source: MODAL_SIGNATURES.source },
   attractions: { id: "attractions", cards: attractionCards, source: ATTRACTION_RULES_SOURCE },
 };
 

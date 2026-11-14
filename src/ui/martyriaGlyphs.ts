@@ -1,4 +1,5 @@
 import type { FthoraSign, Martyria, RootSign } from "../core/practice/PracticeSession";
+import type { ModeId } from "../core/theory/modeVariants";
 import type { NeumeSign } from "../core/theory/neumes";
 import type { DegreeName } from "../core/theory/tuningSystems";
 
@@ -99,3 +100,21 @@ const NEUME_SIGNS: Record<NeumeSign, number> = {
 };
 
 export const neumeGlyph = (sign: NeumeSign) => String.fromCodePoint(NEUME_SIGNS[sign]);
+
+/**
+ * The sign of a Mode in a Modal Signature, in the Neanes font (SBMuFL "mode..." glyphs): the plagal Modes put
+ * the plagal sign before their own.
+ */
+const PLAGAL = 0xe2f0;
+const MODE_SIGNS: Record<ModeId, readonly number[]> = {
+  first: [0xe2a0],
+  second: [0xe2a8],
+  third: [0xe2b0],
+  fourth: [0xe2b8],
+  "plagal-first": [PLAGAL, 0xe2c0],
+  "plagal-second": [PLAGAL, 0xe2c8],
+  grave: [0xe2d0],
+  "plagal-fourth": [PLAGAL, 0xe2d8],
+};
+
+export const modeSignGlyphs = (mode: ModeId) => String.fromCodePoint(...MODE_SIGNS[mode]);
