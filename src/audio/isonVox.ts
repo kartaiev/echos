@@ -7,7 +7,7 @@ import type { PlayingSound } from "./AudioOutput";
  * - The analog part is one oscillator, a saw mixed with a pulse whose width breathes slowly (the pulse is the saw
  *   minus itself delayed, so the width is a delay time), through a resonant low-pass and an "a"-like vowel peak.
  * - The choir part is five voices on "a", a few cents apart and drifting slowly, an octave above them quietly, and
- *   whispered air; a breath at the start.
+ *   whispered air.
  * - Both go through a stereo chorus (two delay lines swung in opposite directions) and a small room.
  *
  * The analog oscillator sits exactly on the pitch and nothing moves it; the choir voices are spread evenly around
@@ -54,13 +54,6 @@ const AIR_BANDS: Band[] = [
   [7000, 3000, 0.5],
 ];
 const AIR_LEVEL = 0.12 * CHOIR;
-/** The breath at the start. */
-const BREATH_BANDS: Band[] = [
-  [1800, 1200, 1],
-  [3500, 1800, 0.7],
-];
-const BREATH_LEVEL = 0.5 * CHOIR;
-const BREATH_DECAY_S = 0.12;
 
 /** Chorus: delay time and swing in seconds, its rate, and how much of it is heard. */
 const CHORUS_DELAY_S = 0.0035 + 0.0025 * CHOIR;
@@ -73,8 +66,13 @@ const ROOM_S = 1.4 + 1.6 * CHOIR;
 const ROOM_DARK_HZ = 3500 + 5500 * CHOIR;
 const ROOM_LEVEL = 0.18 + 0.27 * CHOIR;
 
-const ATTACK_S = 0.12 + 0.78 * CHOIR;
-const RELEASE_S = 0.25;
+/**
+ * The swell in: a long S-curve (sine squared), almost silent for the first moments and gathering slowly, so the
+ * Ison comes in like a choir taking a breath rather than with a hit. The fade out is the same curve, shorter.
+ */
+const SWELL_S = 1.5;
+const RELEASE_S = 0.6;
+const CURVE_POINTS = 64;
 /** Overall level, so the vox is about as loud as the soft tone and leaves room for a Degree and a click. */
 const OUTPUT_GAIN = 0.28;
 const VOLUME_GLIDE_S = 0.05;
@@ -186,6 +184,11 @@ function room(ctx: BaseAudioContext) {
   return buffer;
 }
 
+/** A sine-squared curve from `from` to `to`: gentle at both ends. */
+function sCurve(from: number, to: number) {
+  return Float32Array.from({ length: CURVE_POINTS }, (_, i) => from + (to - from) * Math.sin(((i / (CURVE_POINTS - 1)) * Math.PI) / 2) ** 2);
+}
+
 /** The Ison's vox on a given context, at `frequency`, held until stopped. */
 export function playIsonVox(ctx: BaseAudioContext, frequency: number, volume: number, startMs = 0): PlayingSound {
   const start = ctx.currentTime + startMs / 1000;
@@ -237,26 +240,23 @@ export function playIsonVox(ctx: BaseAudioContext, frequency: number, volume: nu
   sources.push(octave);
   choir.connect(dry);
 
-  // Air, swelling slowly, and the breath that starts the sound.
+  // Air, swelling slowly.
   const air = ctx.createGain();
   air.gain.value = AIR_LEVEL * 0.8;
   sway(ctx, air.gain, 0.4, AIR_LEVEL * 0.2, start, sources);
   bandedNoise(ctx, AIR_BANDS, air, start, sources);
   air.connect(dry);
-  const breath = ctx.createGain();
-  breath.gain.setValueAtTime(BREATH_LEVEL, start);
-  breath.gain.setTargetAtTime(0, start, BREATH_DECAY_S);
-  bandedNoise(ctx, BREATH_BANDS, breath, start, sources);
-  breath.connect(dry);
 
   // The student's volume, then the swell in and the fade out.
   const loudness = ctx.createGain();
   loudness.gain.value = volume;
+  const swell = ctx.createGain();
+  swell.gain.value = 0;
+  swell.gain.setValueCurveAtTime(sCurve(0, OUTPUT_GAIN), start, SWELL_S);
+  // The fade out has a gain of its own, so stopping never has to cut into the swell's curve.
   const envelope = ctx.createGain();
-  envelope.gain.setValueAtTime(0, start);
-  // An eased swell: slow at first, like a voice coming in.
-  envelope.gain.setTargetAtTime(OUTPUT_GAIN, start, ATTACK_S / 3);
-  dry.connect(loudness).connect(envelope);
+  envelope.gain.value = 1;
+  dry.connect(loudness).connect(swell).connect(envelope);
 
   // Chorus: the dry sound in the middle, two swung delay lines left and right; the room behind.
   const merger = ctx.createChannelMerger(2);
@@ -290,9 +290,7 @@ export function playIsonVox(ctx: BaseAudioContext, frequency: number, volume: nu
       if (stopped) return;
       stopped = true;
       const now = ctx.currentTime;
-      envelope.gain.cancelScheduledValues(now);
-      envelope.gain.setValueAtTime(envelope.gain.value, now);
-      envelope.gain.linearRampToValueAtTime(0, now + RELEASE_S);
+      envelope.gain.setValueCurveAtTime(sCurve(1, 0), now, RELEASE_S);
       for (const source of sources) source.stop(now + RELEASE_S);
       // Let the room ring out, then let go of the nodes.
       setTimeout(() => output.disconnect(), (RELEASE_S + ROOM_S + 0.1) * 1000);

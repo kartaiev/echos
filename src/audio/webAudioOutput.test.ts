@@ -9,7 +9,13 @@ class FakeParam {
   exponentialRampToValueAtTime() {}
   setTargetAtTime() {}
   cancelScheduledValues() {}
+  curve: { values: number[]; at: number; duration: number } | null = null;
+  setValueCurveAtTime(values: Float32Array, at: number, duration: number) {
+    this.curve = { values: Array.from(values), at, duration };
+  }
 }
+
+let gains: FakeParam[] = [];
 
 class FakeNode {
   connect<T>(target: T): T {
@@ -48,7 +54,9 @@ class FakeAudioContext {
     return osc;
   }
   createGain() {
-    return Object.assign(new FakeNode(), { gain: new FakeParam() });
+    const gain = new FakeParam();
+    gains.push(gain);
+    return Object.assign(new FakeNode(), { gain });
   }
   createBiquadFilter() {
     return Object.assign(new FakeNode(), { type: "", frequency: new FakeParam(), Q: new FakeParam(), gain: new FakeParam() });
@@ -84,6 +92,7 @@ class FakeAudioContext {
 describe("Web Audio output", () => {
   beforeEach(() => {
     oscillators = [];
+    gains = [];
     vi.stubGlobal("AudioContext", FakeAudioContext);
     vi.stubGlobal("window", { addEventListener() {}, setInterval: () => 0 });
     vi.stubGlobal("document", { addEventListener() {}, hidden: false });
@@ -142,6 +151,23 @@ describe("Web Audio output", () => {
     output.playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "ou", volume: 0.6 });
 
     expect(oscillators.map((o) => [o.frequency.value, o.detune.value, o.wave])).toEqual(onA);
+  });
+
+  it("brings the Ison in with a slow swell, almost silent at first, not with a hit", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+
+    createWebAudioOutput().playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "a", volume: 0.6 });
+
+    const swells = gains.flatMap((g) => (g.curve ? [g.curve] : []));
+    expect(swells).toHaveLength(1);
+    const { values, duration } = swells[0]!;
+    expect(duration).toBeGreaterThanOrEqual(1);
+    const full = values[values.length - 1]!;
+    expect(values[0]).toBe(0);
+    // Every step is up: no jump, no dip.
+    for (let i = 1; i < values.length; i++) expect(values[i]!).toBeGreaterThanOrEqual(values[i - 1]!);
+    // Slow at first: a tenth of the way in it is still about 30 dB down.
+    expect(values[Math.round(values.length / 10)]!).toBeLessThan(full * 0.04);
   });
 
   it("keeps the soft tone for the Degrees and the intonation", async () => {
