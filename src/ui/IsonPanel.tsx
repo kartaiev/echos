@@ -55,8 +55,7 @@ interface IsonVoicePanelProps {
 }
 
 /**
- * The Ison's loudness. The vowel it sings is kept but not offered while the sound is the soft tone, which sings no
- * vowel; it comes back with a sung voice.
+ * The Ison's loudness. The vowel it sings is kept but not offered: the Ison's vox sings one vowel, "a", for now.
  */
 export function IsonVoicePanel({ ison, onChangeVoice }: IsonVoicePanelProps) {
   return (

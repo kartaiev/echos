@@ -1,9 +1,10 @@
 import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest } from "./AudioOutput";
 import { applyAudioSession } from "./audioSession";
+import { playIsonVox } from "./isonVox";
 
 /**
- * The soft tone: a fundamental with a few overtones, with no vibrato or drift, so its pitch is exact and
- * intervals can be checked by ear. It sings no vowel; a sung voice comes later from recordings.
+ * The soft tone of the Degrees and the intonation: a fundamental with a few overtones, with no vibrato or drift, so
+ * its pitch is exact and intervals can be checked by ear. The Ison has a voice of its own (`isonVox.ts`).
  */
 const SOFT_TONE_HARMONICS = [1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03];
 
@@ -235,6 +236,11 @@ function playTone(ctx: AudioContext, sound: SoundRequest): PlayingSound {
   };
 }
 
+/** One sound on a given context: the Ison's vox, or the soft tone. */
+function playVoice(ctx: AudioContext, sound: SoundRequest): PlayingSound {
+  return sound.kind === "ison" ? playIsonVox(ctx, sound.frequency, sound.volume, sound.startMs) : playTone(ctx, sound);
+}
+
 /** Real sound in the browser. */
 export function createWebAudioOutput(): AudioOutput {
   listenForUnlock();
@@ -245,10 +251,10 @@ export function createWebAudioOutput(): AudioOutput {
     isRunning: () => context === null || context.state === "running",
     playSound(sound: SoundRequest): PlayingSound {
       let current = sound;
-      let voice = playTone(getContext(), current);
+      let voice = playVoice(getContext(), current);
       // A sound held until stopped (the Ison) starts again on a fresh context; a timed one is over by then.
       const held: Lasting | null =
-        sound.durationMs === null ? { moveTo: (ctx) => (voice = playTone(ctx, { ...current, startMs: 0 })) } : null;
+        sound.durationMs === null ? { moveTo: (ctx) => (voice = playVoice(ctx, { ...current, startMs: 0 })) } : null;
       if (held) lasting.add(held);
       return {
         stop() {
