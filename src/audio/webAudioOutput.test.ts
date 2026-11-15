@@ -20,6 +20,7 @@ class FakeNode {
 }
 
 class FakeOscillator extends FakeNode {
+  periodic: { harmonics: number[] } | null = null;
   type = "sine";
   frequency = new FakeParam();
   detune = new FakeParam();
@@ -27,6 +28,7 @@ class FakeOscillator extends FakeNode {
   setPeriodicWave(wave: { harmonics: number[] }) {
     this.type = "custom";
     this.wave = wave.harmonics;
+    this.periodic = wave;
   }
   start() {}
   stop() {}
@@ -49,8 +51,25 @@ class FakeAudioContext {
     return Object.assign(new FakeNode(), { gain: new FakeParam() });
   }
   createBiquadFilter() {
-    return Object.assign(new FakeNode(), { type: "", frequency: new FakeParam(), Q: new FakeParam() });
+    return Object.assign(new FakeNode(), { type: "", frequency: new FakeParam(), Q: new FakeParam(), gain: new FakeParam() });
   }
+  createDelay() {
+    return Object.assign(new FakeNode(), { delayTime: new FakeParam() });
+  }
+  createBuffer(channels: number, length: number, sampleRate: number) {
+    const data = Array.from({ length: channels }, () => new Float32Array(length));
+    return { numberOfChannels: channels, length, sampleRate, getChannelData: (c: number) => data[c]! };
+  }
+  createBufferSource() {
+    return Object.assign(new FakeNode(), { buffer: null, loop: false, start() {}, stop() {} });
+  }
+  createConvolver() {
+    return Object.assign(new FakeNode(), { buffer: null, normalize: true });
+  }
+  createChannelMerger() {
+    return new FakeNode();
+  }
+  sampleRate = 48000;
   createPeriodicWave(_real: Float32Array, imag: Float32Array) {
     return { harmonics: Array.from(imag, (a) => Math.round(a * 1000) / 1000).slice(1) };
   }
@@ -90,13 +109,47 @@ describe("Web Audio output", () => {
     expect(tone!.wave).toEqual([1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03]);
   });
 
-  it("sounds the Ison the same way, whatever vowel the student chose", async () => {
+  it("sings the Ison as a vox whose pitch is exactly the Degree's: the voices around it are tuned evenly above and below", async () => {
     const { createWebAudioOutput } = await import("./webAudioOutput");
 
-    createWebAudioOutput().playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "ou", volume: 0.6 });
+    createWebAudioOutput().playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "a", volume: 0.6 });
+
+    const voices = oscillators.filter((o) => o.frequency.value === 196);
+    // The analog oscillator, plus a small choir drifting a few cents either side of the same pitch.
+    expect(voices.length).toBeGreaterThan(1);
+    const [analog, ...choir] = voices;
+    expect(analog!.detune.value).toBe(0);
+    expect(analog!.detune.modulatedBy).toEqual([]);
+    expect(analog!.frequency.modulatedBy).toEqual([]);
+    expect(choir.reduce((sum, o) => sum + o.detune.value, 0)).toBe(0);
+    for (const voice of choir) expect(Math.abs(voice.detune.value)).toBeLessThanOrEqual(10);
+    // Only slow movements sway it: nothing near an audible rate touches the pitch.
+    const sways = oscillators.filter((o) => o.frequency.value < 1);
+    expect(sways.length).toBeGreaterThan(0);
+    // An octave above shines over it, quietly.
+    expect(oscillators.some((o) => o.frequency.value === 392)).toBe(true);
+    // Every tone of the vox is richer than the soft tone.
+    for (const voice of voices) expect(voice.wave!.length).toBeGreaterThan(7);
+  });
+
+  it("sings the Ison the same whatever vowel the student chose, while the vowel is not offered", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+
+    output.playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "a", volume: 0.6 });
+    const onA = oscillators.map((o) => [o.frequency.value, o.detune.value, o.wave]);
+    oscillators = [];
+    output.playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "ou", volume: 0.6 });
+
+    expect(oscillators.map((o) => [o.frequency.value, o.detune.value, o.wave])).toEqual(onA);
+  });
+
+  it("keeps the soft tone for the Degrees and the intonation", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+
+    createWebAudioOutput().playSound({ kind: "intonation", frequency: 146.83, durationMs: 800, vowel: "a", volume: 1 });
 
     expect(oscillators).toHaveLength(1);
     expect(oscillators[0]!.wave).toEqual([1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03]);
-    expect(oscillators[0]!.frequency.value).toBe(196);
   });
 });
