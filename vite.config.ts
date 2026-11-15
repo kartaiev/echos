@@ -11,7 +11,7 @@ function offlineServiceWorker(): Plugin {
     name: "echos-offline-service-worker",
     apply: "build",
     generateBundle(_, bundle) {
-      const publicFiles = ["manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+      const publicFiles = ["manifest.webmanifest", "favicon.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
       const files = ["./", ...Object.keys(bundle).filter((f) => f !== "sw.js"), ...publicFiles].sort();
       const hash = fnv1a();
       for (const name of Object.keys(bundle).sort()) {
