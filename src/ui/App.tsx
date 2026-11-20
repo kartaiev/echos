@@ -12,6 +12,7 @@ import type { GenusId } from "../core/theory/tuningSystems";
 import { chronosMs } from "../core/practice/metronomeSettings";
 import { degreeLabel, setLanguage, t, type Language } from "../i18n/translations";
 import { Ladder, useLadderLayout } from "./Ladder";
+import type { LadderSides } from "./ladderPlacement";
 import { useMetronomeCount } from "./MetronomePanel";
 import { ModesPage } from "./ModesPage";
 import { CardsPage } from "./CardsPage";
@@ -28,6 +29,7 @@ import {
   loadIsonVoice,
   loadLanguage,
   loadTheme,
+  loadLadderSides,
   loadMetronomeSettings,
   loadModeVariant,
   loadPitchSettings,
@@ -35,6 +37,7 @@ import {
   saveIsonVoice,
   saveLanguage,
   saveTheme,
+  saveLadderSides,
   saveMetronomeSettings,
   saveModeVariant,
   savePitchSettings,
@@ -88,6 +91,7 @@ export function App() {
   const [cardProgress, setCardProgress] = useState<CardProgressRecord>(() => loadCardProgress() ?? {});
   // How the ladder is drawn is a matter of the screen, not of practice, so it lives in the UI.
   const layout = useLadderLayout();
+  const [ladderSides, setLadderSides] = useState<LadderSides>(() => loadLadderSides() ?? "both");
   const pitch = session.pitchSettings();
   const ison = session.ison();
   const ladder = session.ladder();
@@ -225,6 +229,11 @@ export function App() {
           onChangeLanguage={changeLanguage}
           theme={theme}
           onChangeTheme={changeTheme}
+          ladderSides={ladderSides}
+          onChangeLadderSides={(sides) => {
+            setLadderSides(sides);
+            saveLadderSides(sides);
+          }}
         />
       ) : view === "cards" ? (
         <CardsPage
@@ -283,6 +292,7 @@ export function App() {
           <Ladder
             ladder={ladder}
             layout={layout}
+            sides={ladderSides}
             isonDegreeId={ison.degreeId}
             beat={count}
             chronosMs={chronosMs(metronome.chronoiPerMinute)}

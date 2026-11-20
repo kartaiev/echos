@@ -4,6 +4,7 @@ import { isModeVariantKey, type ModeVariantKey } from "../core/theory/modeVarian
 import { isPitchSettings, type PitchSettings } from "../core/practice/pitchSettings";
 import { isLanguage, type Language } from "../i18n/translations";
 import { isTheme, type Theme } from "./theme";
+import { isLadderSides, type LadderSides } from "./ladderPlacement";
 import { isMetronomeSettings, type MetronomeSettings } from "../core/practice/metronomeSettings";
 
 const PITCH_KEY = "echos.pitchSettings.v1";
@@ -12,6 +13,7 @@ const MODE_VARIANT_KEY = "echos.modeVariant.v1";
 const METRONOME_KEY = "echos.metronome.v1";
 const LANGUAGE_KEY = "echos.language.v1";
 const THEME_KEY = "echos.theme.v1";
+const LADDER_SIDES_KEY = "echos.ladderSides.v1";
 const CARD_PROGRESS_KEY = "echos.cardProgress.v1";
 
 /** A value saved on this device, or undefined when there is none, it is invalid, or storage is unavailable. */
@@ -46,6 +48,9 @@ export const saveMetronomeSettings = (settings: MetronomeSettings) => save(METRO
 export const loadLanguage = () => load(LANGUAGE_KEY, isLanguage);
 export const saveLanguage = (language: Language) => save(LANGUAGE_KEY, language);
 export const loadTheme = () => load(THEME_KEY, isTheme);
-export const saveTheme = (theme: Theme) => save(THEME_KEY, theme);/** One record for every Deck: Card ids do not repeat across Decks. */
+export const saveTheme = (theme: Theme) => save(THEME_KEY, theme);
+export const loadLadderSides = () => load(LADDER_SIDES_KEY, isLadderSides);
+export const saveLadderSides = (sides: LadderSides) => save(LADDER_SIDES_KEY, sides);
+/** One record for every Deck: Card ids do not repeat across Decks. */
 export const loadCardProgress = () => load(CARD_PROGRESS_KEY, isCardProgressRecord);
 export const saveCardProgress = (progress: CardProgressRecord) => save(CARD_PROGRESS_KEY, progress);
