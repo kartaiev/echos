@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent } from "react";
 import type { Ladder as LadderModel, VoiceReading } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
+import { placeKeys, type LadderSides } from "./ladderPlacement";
 import { fthoraGlyph, martyriaGlyphs } from "./martyriaGlyphs";
 
 /** How long a Degree must be held to count as a long press instead of a tap; the hold ring in styles.css matches it. */
@@ -13,6 +14,8 @@ const MOVE_TOLERANCE_PX = 10;
  * screen is narrower, the keyboard scrolls inside its own strip.
  */
 const MIN_PX_PER_MORIA = 4.6;
+/** Keys on one side stand at equal steps; the keyboard is never narrower than this many pixels a step. */
+const MIN_PX_PER_STEP = 54;
 /** Room at both ends of the keyboard for half a key. */
 const KEYBOARD_PAD_PX = 40;
 /** The ring that answers a tap; it fades on its own, so it never stays on the last Degree like a state. */
@@ -58,6 +61,8 @@ export function useLadderLayout(): LadderLayout {
 interface LadderProps {
   ladder: LadderModel;
   layout: LadderLayout;
+  /** Keys on both sides of the rail at their moria, or on one side at equal steps with lines to the rail. */
+  sides: LadderSides;
   isonDegreeId: string | null;
   /** The chronos the metronome is on (1 is the accent), or null while it is stopped; the rail pulses with it. */
   beat: number | null;
@@ -77,11 +82,12 @@ interface LadderProps {
 /**
  * The Scale ladder, distances in proportion to moria: vertical with the lowest Degree at the bottom, or
  * horizontal with the lowest on the left. Degrees alternate on both sides of the rail so that small intervals
- * (4 moria) still leave room to tap. A tap plays a Degree; a long press is reported separately (it sets or
+ * (4 moria) still leave room to tap; or, on one side, the keys stand at equal steps and a line joins each to its
+ * place on the rail. A tap plays a Degree; a long press is reported separately (it sets or
  * stops the Ison).
  */
 export function Ladder(props: LadderProps) {
-  const { ladder, layout, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice } = props;
+  const { ladder, layout, sides, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice } = props;
   // The Degree being held: a ring closes in on it while the long press counts down.
   const [holdingId, setHoldingId] = useState<string | null>(null);
   const hintId = useId();
@@ -93,13 +99,21 @@ export function Ladder(props: LadderProps) {
   const pulse = useRef<HTMLDivElement>(null);
   const { lowestMoria, highestMoria } = ladder.drawingRange;
   const horizontal = layout === "horizontal";
-  const position = (moria: number): CSSProperties => {
-    const share = (moria - lowestMoria) / (highestMoria - lowestMoria);
-    return horizontal
+  const oneSide = sides === "one";
+  const places = placeKeys(
+    ladder.degrees.map((d) => d.moria),
+    ladder.drawingRange,
+    sides,
+  );
+  const steps = Math.max(1, ladder.degrees.length - 1);
+  const at = (share: number): CSSProperties =>
+    horizontal
       ? { left: `calc(${KEYBOARD_PAD_PX}px + (100% - ${2 * KEYBOARD_PAD_PX}px) * ${share})` }
       : { bottom: `${share * 100}%` };
-  };
-  const keyboardWidth = (highestMoria - lowestMoria) * MIN_PX_PER_MORIA + 2 * KEYBOARD_PAD_PX;
+  const position = (moria: number) => at((moria - lowestMoria) / (highestMoria - lowestMoria));
+  const keyboardWidth = oneSide
+    ? steps * MIN_PX_PER_STEP + 2 * KEYBOARD_PAD_PX
+    : (highestMoria - lowestMoria) * MIN_PX_PER_MORIA + 2 * KEYBOARD_PAD_PX;
 
   /*
    * The metronome is seen where the eyes already are: with each chronos a wide band flashes along the rail and the
@@ -217,7 +231,7 @@ export function Ladder(props: LadderProps) {
   return (
     <div ref={strip} className={`ladder-strip ladder-strip--${layout}`}>
       <div
-        className={`ladder ladder--${layout}`}
+        className={`ladder ladder--${layout}${oneSide ? " ladder--one-side" : ""}`}
         role="group"
         aria-label={t("ladder.label")}
         aria-describedby={hintId}
@@ -228,6 +242,7 @@ export function Ladder(props: LadderProps) {
           ...(horizontal ? { minWidth: keyboardWidth } : {}),
           // The keys are sized to the closest pair on one side, which depends on how many moria the ladder spans.
           ["--moria-span" as string]: highestMoria - lowestMoria,
+          ["--steps" as string]: steps,
         }}
       >
         {/* How to play it, for those who cannot see the rings: a tap plays, a hold sets the Ison. */}
@@ -236,6 +251,28 @@ export function Ladder(props: LadderProps) {
         </p>
         <div ref={pulse} className="ladder__pulse" aria-hidden="true" />
         <div ref={rail} className="ladder__rail" />
+        {/* One side: a line from each key to its true place on the rail, a short run at each end and a slope between. */}
+        {oneSide && (
+          <svg className="ladder__leaders" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            {places.map((place, index) => {
+              const degree = ladder.degrees[index]!;
+              const lit = degree.id === isonDegreeId || voice?.degreeId === degree.id;
+              // In the box's own units, 0 to 100: across from the rail to the keys, and along the ladder.
+              const rail = place.rail * 100;
+              const key = place.key * 100;
+              const points = horizontal
+                ? [[rail, 100], [rail, 80], [key, 20], [key, 0]]
+                : [[0, 100 - rail], [20, 100 - rail], [80, 100 - key], [100, 100 - key]];
+              return (
+                <polyline
+                  key={index}
+                  className={lit ? "is-lit" : undefined}
+                  points={points.map(([x, y]) => `${x},${y}`).join(" ")}
+                />
+              );
+            })}
+          </svg>
+        )}
         {/* The voice on the rail, moving as the student sings. */}
         {voice && <span className="ladder__voice" style={position(voice.moria)} aria-hidden="true" />}
         {ladder.degrees.map((degree, index) => {
@@ -261,7 +298,9 @@ export function Ladder(props: LadderProps) {
             ...(isIson ? [t("ladder.isonMark")] : []),
             ...(pivotSign ? [t("fthora.mark")] : []),
           ];
-          const side = horizontal ? (index % 2 === 0 ? "is-below" : "is-above") : index % 2 === 0 ? "is-left" : "is-right";
+          const place = places[index]!;
+          const first = place.side === "first";
+          const side = horizontal ? (first ? "is-below" : "is-above") : first ? "is-left" : "is-right";
           const classes = [
             "ladder__degree",
             side,
@@ -278,7 +317,7 @@ export function Ladder(props: LadderProps) {
               <button
                 type="button"
                 className={classes.filter(Boolean).join(" ")}
-                style={position(degree.moria)}
+                style={at(place.key)}
                 data-degree={degree.id}
                 tabIndex={degree.id === tabbableId ? 0 : -1}
                 aria-label={[t("ladder.playDegree", { degree: spokenName }), ...spoken].join(", ")}

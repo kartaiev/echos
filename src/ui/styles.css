@@ -1563,6 +1563,115 @@ a {
   }
 }
 
+/*
+ * One side (a choice in Settings): the keys stand at equal steps in one column right of the rail, or in one row
+ * above it on a keyboard, wide whatever the interval. A thin line joins each key to its true place on the rail,
+ * which keeps the moria, the numbers between Degrees, the voice and the metronome's pulse.
+ */
+.ladder--vertical.ladder--one-side {
+  --rail-x: 36px;
+  --keys-x: 96px;
+  /* Never so short that a key is under about 34px: a small phone scrolls a little instead. */
+  --one-height: max(var(--ladder-height), var(--steps) * 40px);
+  height: var(--one-height);
+}
+
+.ladder--vertical.ladder--one-side .ladder__rail,
+.ladder--vertical.ladder--one-side .ladder__pulse,
+.ladder--vertical.ladder--one-side .ladder__interval,
+.ladder--vertical.ladder--one-side .ladder__voice {
+  left: var(--rail-x);
+}
+
+.ladder--vertical.ladder--one-side .ladder__degree {
+  left: var(--keys-x);
+  right: 0;
+  width: auto;
+  height: min(48px, var(--one-height) / var(--steps) - 6px);
+}
+
+.ladder--vertical.ladder--one-side .ladder__ghost.is-right {
+  left: calc(var(--rail-x) + 2px);
+}
+
+.ladder--one-side .ladder__degree::after {
+  display: none;
+}
+
+.ladder__leaders {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ladder--vertical .ladder__leaders {
+  left: var(--rail-x);
+  width: calc(var(--keys-x) - var(--rail-x));
+  top: 0;
+  bottom: 0;
+  height: 100%;
+}
+
+.ladder__leaders polyline {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 0.2s;
+}
+
+.ladder__leaders polyline.is-lit {
+  stroke: var(--cinnabar);
+  stroke-width: 2px;
+}
+
+.ladder--horizontal.ladder--one-side {
+  --rail-y: 22px;
+  --leader: 36px;
+  height: calc(var(--key-height) + var(--leader) + var(--rail-y) + 12px);
+}
+
+.ladder--horizontal.ladder--one-side .ladder__rail,
+.ladder--horizontal.ladder--one-side .ladder__pulse,
+.ladder--horizontal.ladder--one-side .ladder__interval,
+.ladder--horizontal.ladder--one-side .ladder__voice {
+  top: calc(100% - var(--rail-y));
+}
+
+.ladder--horizontal.ladder--one-side .ladder__degree {
+  bottom: calc(var(--rail-y) + var(--leader));
+  width: calc((100% - 80px) / var(--steps) - 6px);
+  min-width: 0;
+}
+
+/* A key a step wide: the longest mark, "Dominant", fits in smaller, tighter letters. */
+.ladder--horizontal.ladder--one-side .ladder__marks {
+  font-size: 0.56rem;
+  letter-spacing: 0;
+}
+
+.ladder--horizontal.ladder--one-side .ladder__degree {
+  padding-inline: 2px;
+}
+
+.ladder--horizontal.ladder--one-side .ladder__ghost.is-above {
+  bottom: calc(var(--rail-y) + 2px);
+}
+
+.ladder--horizontal .ladder__leaders {
+  left: 40px;
+  right: 40px;
+  bottom: var(--rail-y);
+  width: calc(100% - 80px);
+  height: var(--leader);
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .ladder--horizontal.ladder--one-side {
+    --leader: 22px;
+  }
+}
+
 /* Cards: a Deck per row, then one Card at a time with the sign large, as on the page of a score. */
 .cards h2 {
   margin: 20px 0 8px;

@@ -4,6 +4,7 @@ import type { NoteName } from "../core/theory/westernPitch";
 import { LANGUAGES, noteLabel, t, type Language } from "../i18n/translations";
 import { Segmented } from "./Segmented";
 import { THEMES, type Theme } from "./theme";
+import { LADDER_SIDES, type LadderSides } from "./ladderPlacement";
 
 interface SettingsPageProps {
   pitch: PitchState;
@@ -13,9 +14,12 @@ interface SettingsPageProps {
   onChangeLanguage: (language: Language) => void;
   theme: Theme;
   onChangeTheme: (theme: Theme) => void;
+  ladderSides: LadderSides;
+  onChangeLadderSides: (sides: LadderSides) => void;
 }
 
-export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLanguage, theme, onChangeTheme }: SettingsPageProps) {
+export function SettingsPage(props: SettingsPageProps) {
+  const { pitch, onChange, onPlayNi, language, onChangeLanguage, theme, onChangeTheme, ladderSides, onChangeLadderSides } = props;
   const { referencePitch, register } = pitch;
   const choices = NI_NOTE_CHOICES.includes(referencePitch.note) ? NI_NOTE_CHOICES : [...NI_NOTE_CHOICES, referencePitch.note];
   const fine = referencePitch.fineHz;
@@ -99,6 +103,17 @@ export function SettingsPage({ pitch, onChange, onPlayNi, language, onChangeLang
           label={t("settings.theme")}
           render={(th) => t(`theme.${th}`)}
           onChange={onChangeTheme}
+        />
+      </fieldset>
+
+      <fieldset className="settings__group">
+        <legend>{t("settings.ladder")}</legend>
+        <Segmented
+          options={LADDER_SIDES}
+          value={ladderSides}
+          label={t("settings.ladder")}
+          render={(sides) => t(`ladderSides.${sides}`)}
+          onChange={onChangeLadderSides}
         />
       </fieldset>
     </section>
