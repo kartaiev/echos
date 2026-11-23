@@ -10,8 +10,10 @@ class FakeParam {
   setTargetAtTime() {}
   cancelScheduledValues() {}
   curve: { values: number[]; at: number; duration: number } | null = null;
+  curves: { values: number[]; at: number; duration: number }[] = [];
   setValueCurveAtTime(values: Float32Array, at: number, duration: number) {
     this.curve = { values: Array.from(values), at, duration };
+    this.curves.push(this.curve);
   }
 }
 
@@ -77,6 +79,9 @@ class FakeAudioContext {
   createChannelMerger() {
     return new FakeNode();
   }
+  createChannelSplitter() {
+    return new FakeNode();
+  }
   sampleRate = 48000;
   createPeriodicWave(_real: Float32Array, imag: Float32Array) {
     return { harmonics: Array.from(imag, (a) => Math.round(a * 1000) / 1000).slice(1) };
@@ -118,26 +123,21 @@ describe("Web Audio output", () => {
     expect(tone!.wave).toEqual([1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03]);
   });
 
-  it("sings the Ison as a vox whose pitch is exactly the Degree's: the voices around it are tuned evenly above and below", async () => {
+  it("sings the Ison as a male choir whose pitch is centred evenly on the Degree", async () => {
     const { createWebAudioOutput } = await import("./webAudioOutput");
 
     createWebAudioOutput().playSound({ kind: "ison", frequency: 196, durationMs: null, vowel: "a", volume: 0.6 });
 
     const voices = oscillators.filter((o) => o.frequency.value === 196);
-    // The analog oscillator, plus a small choir drifting a few cents either side of the same pitch.
-    expect(voices.length).toBeGreaterThan(1);
-    const [analog, ...choir] = voices;
-    expect(analog!.detune.value).toBe(0);
-    expect(analog!.detune.modulatedBy).toEqual([]);
-    expect(analog!.frequency.modulatedBy).toEqual([]);
-    expect(choir.reduce((sum, o) => sum + o.detune.value, 0)).toBe(0);
-    for (const voice of choir) expect(Math.abs(voice.detune.value)).toBeLessThanOrEqual(10);
-    // Only slow movements sway it: nothing near an audible rate touches the pitch.
+    // Seven voices spread symmetrically around the Degree's exact pitch.
+    expect(voices).toHaveLength(7);
+    expect(voices.reduce((sum, o) => sum + o.detune.value, 0)).toBeCloseTo(0, 5);
+    for (const voice of voices) expect(Math.abs(voice.detune.value)).toBeLessThanOrEqual(10);
+    // Slow movements sway pitch and breath; nothing near an audible rate modulates the pitch.
     const sways = oscillators.filter((o) => o.frequency.value < 1);
     expect(sways.length).toBeGreaterThan(0);
-    // An octave above shines over it, quietly.
-    expect(oscillators.some((o) => o.frequency.value === 392)).toBe(true);
-    // Every tone of the vox is richer than the soft tone.
+    expect(oscillators.filter((o) => o.frequency.value !== 196).every((o) => o.frequency.value < 10)).toBe(true);
+    // Every voice of the vox is richer than the soft tone.
     for (const voice of voices) expect(voice.wave!.length).toBeGreaterThan(7);
   });
 
@@ -168,6 +168,28 @@ describe("Web Audio output", () => {
     for (let i = 1; i < values.length; i++) expect(values[i]!).toBeGreaterThanOrEqual(values[i - 1]!);
     // Slow at first: a tenth of the way in it is still about 30 dB down.
     expect(values[Math.round(values.length / 10)]!).toBeLessThan(full * 0.04);
+  });
+
+  it("crossfades rapidly (~80 ms) when switching the Ison from one Degree to another while sounding", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+
+    const first = output.playSound({ kind: "ison", frequency: 130.81, durationMs: null, vowel: "o", volume: 0.6 });
+    first.stop();
+    const gainsBeforeSecond = gains.length;
+    const second = output.playSound({ kind: "ison", frequency: 146.83, durationMs: null, vowel: "o", volume: 0.6 });
+
+    const firstReleases = gains
+      .slice(0, gainsBeforeSecond)
+      .flatMap((g) => g.curves)
+      .filter((c) => c.values[0] === 1);
+    expect(firstReleases[firstReleases.length - 1]!.duration).toBeLessThanOrEqual(0.1);
+
+    const secondSwells = gains.slice(gainsBeforeSecond).flatMap((g) => g.curves);
+    expect(secondSwells).toHaveLength(1);
+    expect(secondSwells[0]!.duration).toBeLessThanOrEqual(0.1);
+    expect(secondSwells[0]!.values[0]).toBe(0);
+    second.stop();
   });
 
   it("keeps the soft tone for the Degrees and the intonation", async () => {

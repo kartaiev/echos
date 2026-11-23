@@ -1,119 +1,122 @@
 import type { PlayingSound } from "./AudioOutput";
 
 /**
- * The Ison's voice: a synthesizer vox, two thirds analog and one third choir, built live from Web Audio nodes so it
- * holds as long as the student wants, on any pitch, and needs no recordings.
+ * The Ison's voice: a seven-voice male choir singing "o", built live from Web Audio nodes so it holds as long
+ * as the student wants, on any pitch, and needs no recordings.
  *
- * - The analog part is one oscillator, a saw mixed with a pulse whose width breathes slowly (the pulse is the saw
- *   minus itself delayed, so the width is a delay time), through a resonant low-pass and an "a"-like vowel peak.
- * - The choir part is five voices on "a", a few cents apart and drifting slowly, an octave above them quietly, and
- *   whispered air.
- * - Both go through a stereo chorus (two delay lines swung in opposite directions) and a small room.
- *
- * The analog oscillator sits exactly on the pitch and nothing moves it; the choir voices are spread evenly around
- * it, so what is heard is centred on the Degree.
+ * - Seven male glottal voices are spread symmetrically around the Degree's pitch across the stereo field (with
+ *   subtle arrival-time offsets and independent harmonic phases), each drifting gently and breathing at its own
+ *   slow pace, so the ensemble stays centred strictly on the Degree.
+ * - The choir passes through stereo male "o" formant resonators (F1, F2, F3) and a soft low-pass filter, then
+ *   an opposing stereo chorus and a light stone room.
+ * - Starting from silence swells in gently over 1.5 s; switching directly from one Degree to another while the
+ *   Ison is already sounding crossfades in 80 ms so the pitch changes cleanly right on the beat even at quick tempi.
  */
 
-/** How much of the sound is the choir (the rest is the analog vox). */
-const CHOIR = 0.35;
-const ANALOG = 1 - CHOIR;
-/** Choir voices, in cents from the pitch; spread evenly so their centre is the pitch itself. */
-const CHOIR_DETUNE = [-7, -3, 0, 3, 7];
-/** How far each choir voice drifts, in cents, and how slowly (Hz), each at its own pace. */
-const CHOIR_DRIFT_CENTS = 1.5;
-const CHOIR_DRIFT_HZ = [0.13, 0.19, 0.16, 0.22, 0.14];
-const OCTAVE_LEVEL = 0.18;
-const OCTAVE_DRIFT_CENTS = 2;
-
-/** The vowel "a" of a man's voice: formant centre, half-width and level. */
-const A_FORMANTS: Formant[] = [
-  [700, 110, 1],
-  [1150, 130, 0.6],
-  [2500, 200, 0.3],
-  [3300, 300, 0.18],
-  [4200, 400, 0.1],
-];
-/** The analog vox's own vowel peaks. */
-const ANALOG_FORMANTS: Formant[] = [
-  [520, 140, 1],
-  [950, 160, 0.7],
-  [2400, 300, 0.12],
-];
-const ANALOG_CUTOFF_HZ = 1150;
-const ANALOG_RESONANCE = 2.2;
-/** The pulse share of the analog oscillator, and how its width moves. */
-const PULSE = 0.45;
-const PULSE_WIDTH = 0.5;
-const PULSE_WIDTH_SWING = 0.35;
-const PULSE_WIDTH_RATE_HZ = 0.35;
-
-/** Whispered air: bands of noise, quietly. */
-const AIR_BANDS: Band[] = [
-  [2600, 1000, 1],
-  [4200, 1400, 0.8],
-  [7000, 3000, 0.5],
-];
-const AIR_LEVEL = 0.12 * CHOIR;
-
-/** Chorus: delay time and swing in seconds, its rate, and how much of it is heard. */
-const CHORUS_DELAY_S = 0.0035 + 0.0025 * CHOIR;
-const CHORUS_SWING_S = 0.0017 + 0.0008 * CHOIR;
-const CHORUS_RATE_HZ = 0.5 - 0.23 * CHOIR;
-const CHORUS_DRY = 0.7;
-const CHORUS_WET = 0.6 - 0.1 * CHOIR;
-/** Room: length, how dark, how loud. */
-const ROOM_S = 1.4 + 1.6 * CHOIR;
-const ROOM_DARK_HZ = 3500 + 5500 * CHOIR;
-const ROOM_LEVEL = 0.18 + 0.27 * CHOIR;
-
-/**
- * The swell in: a long S-curve (sine squared), almost silent for the first moments and gathering slowly, so the
- * Ison comes in like a choir taking a breath rather than with a hit. The fade out is the same curve, shorter.
- */
+/** Gentle swell from silence; fast legato crossfade when moving to another Degree while sounding. */
 const SWELL_S = 1.5;
 const RELEASE_S = 0.6;
+const LEGATO_CROSSFADE_S = 0.08;
+/** A new Ison started within this window after the last one stopped is treated as a Degree switch. */
+const LEGATO_HANDOFF_MS = 120;
+
 const CURVE_POINTS = 64;
-/** Overall level, so the vox is about as loud as the soft tone and leaves room for a Degree and a click. */
-const OUTPUT_GAIN = 0.28;
 const VOLUME_GLIDE_S = 0.05;
-/** Harmonics stop below this, well under what any device plays back. */
-const TOP_HZ = 9000;
+const TOP_HZ = 5600;
+const ROOM_SECONDS = 3.3;
+const ROOM_DARK_HZ = 1750;
+/** Overall level, calibrated so the Ison blends warmly under the Degrees and metronome clicks. */
+const OUTPUT_GAIN = 0.36;
 
-type Formant = [centre: number, halfWidth: number, level: number];
-type Band = [centre: number, width: number, level: number];
+// Tuned by ear (vowel=48, brightness=75, breath=0, width=99, reverb=22, warmth=0).
+const VOWEL = 0.48;
+const BRIGHTNESS = 0.75;
+const WIDTH = 0.99;
+const REVERB = 0.22;
+const WARMTH = 0.0;
 
-function formant(hz: number, formants: Formant[], tilt = 0) {
-  const peaks = formants.reduce((sum, [centre, halfWidth, level]) => sum + level / (1 + ((hz - centre) / halfWidth) ** 2), 0);
-  return peaks * (Math.max(hz, 1) / 100) ** -tilt;
+interface SingerSpec {
+  detuneCents: number;
+  pan: number;
+  haasDelayS: number;
+  level: number;
+  driftRate1: number;
+  driftRate2: number;
+  driftCents: number;
+  tremorHz: number;
+  tremorCents: number;
+  breathRateHz: number;
+  breathDepth: number;
+  seed: number;
+  isCenter?: boolean;
 }
 
-/** Amplitudes of harmonics 1, 2, 3, … of a tone at `hz`, shaped by `shape`, scaled to a root-mean-square of 1. */
-function harmonics(hz: number, shape: (k: number, harmonicHz: number) => number) {
-  const count = Math.max(1, Math.floor(TOP_HZ / hz));
-  const amps = Array.from({ length: count }, (_, i) => shape(i + 1, (i + 1) * hz));
-  const rms = Math.sqrt(amps.reduce((sum, a) => sum + a * a, 0) / 2) || 1;
-  return amps.map((a) => a / rms);
+/** Seven male voices spread symmetrically around 0 cents (detune sum = 0). */
+const SINGERS: readonly SingerSpec[] = [
+  { detuneCents: -7.0, pan: -0.78, haasDelayS: 0.017, level: 0.82, driftRate1: 0.11, driftRate2: 0.27, driftCents: 1.25, tremorHz: 4.8, tremorCents: 0.38, breathRateHz: 0.095, breathDepth: 0.26, seed: 11 },
+  { detuneCents: -4.2, pan: -0.48, haasDelayS: 0.01, level: 0.92, driftRate1: 0.15, driftRate2: 0.33, driftCents: 1.1, tremorHz: 5.1, tremorCents: 0.35, breathRateHz: 0.135, breathDepth: 0.22, seed: 23 },
+  { detuneCents: -1.8, pan: -0.22, haasDelayS: 0.004, level: 1.0, driftRate1: 0.13, driftRate2: 0.31, driftCents: 0.9, tremorHz: 5.0, tremorCents: 0.3, breathRateHz: 0.165, breathDepth: 0.18, seed: 31 },
+  { detuneCents: 0, pan: 0, haasDelayS: 0, level: 1.0, driftRate1: 0.09, driftRate2: 0.24, driftCents: 0.55, tremorHz: 4.9, tremorCents: 0.25, breathRateHz: 0.115, breathDepth: 0.14, seed: 37, isCenter: true },
+  { detuneCents: 1.8, pan: 0.22, haasDelayS: 0.005, level: 1.0, driftRate1: 0.16, driftRate2: 0.36, driftCents: 0.9, tremorHz: 5.3, tremorCents: 0.3, breathRateHz: 0.145, breathDepth: 0.18, seed: 47 },
+  { detuneCents: 4.2, pan: 0.48, haasDelayS: 0.011, level: 0.92, driftRate1: 0.14, driftRate2: 0.29, driftCents: 1.1, tremorHz: 5.2, tremorCents: 0.35, breathRateHz: 0.125, breathDepth: 0.22, seed: 53 },
+  { detuneCents: 7.0, pan: 0.78, haasDelayS: 0.018, level: 0.82, driftRate1: 0.12, driftRate2: 0.34, driftCents: 1.25, tremorHz: 4.7, tremorCents: 0.38, breathRateHz: 0.105, breathDepth: 0.26, seed: 71 },
+];
+
+/** Remembers the Ison that just stopped so an immediate Degree switch crossfades cleanly in 80 ms. */
+interface FadingVoice {
+  ctx: BaseAudioContext;
+  stoppedAtMs: number;
+  shortenRelease: () => void;
+}
+let lastStopped: FadingVoice | null = null;
+
+function nowMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
 }
 
-function wave(ctx: BaseAudioContext, amps: number[]) {
-  const imag = new Float32Array([0, ...amps]);
-  return ctx.createPeriodicWave(new Float32Array(imag.length), imag, { disableNormalization: true });
+/** Deterministic per-singer harmonic phase so voices blend without synthetic phasing sweeps. */
+function harmonicPhase(seed: number, k: number): number {
+  const x = Math.sin(seed * 127.1 + k * 311.7) * 43758.5453123;
+  return (x - Math.floor(x)) * Math.PI * 2;
 }
 
-/** The analog oscillator's saw, already through its filter and vowel. */
-function analogSaw(hz: number) {
-  const lowPass = (f: number) => {
-    const w = f / ANALOG_CUTOFF_HZ;
-    return 1 / ((1 - w * w) ** 2 + (w / ANALOG_RESONANCE) ** 2);
-  };
-  return harmonics(hz, (k, f) => (1 / k) * lowPass(f) * (0.35 + formant(f, ANALOG_FORMANTS)) * (f > 90 ? 1 : 0.3));
+/** Glottal flow derivative harmonics scaled to an RMS of 1. */
+function glottalWave(ctx: BaseAudioContext, fundamentalHz: number, seed: number): PeriodicWave {
+  const count = Math.max(2, Math.min(52, Math.floor(TOP_HZ / fundamentalHz)));
+  const amps = new Float64Array(count);
+  let sumSq = 0;
+  for (let i = 0; i < count; i++) {
+    const k = i + 1;
+    const f = k * fundamentalHz;
+    const chest = k <= 2 ? 1.28 - 0.12 * k : 1;
+    const returnRoll = 1 / Math.sqrt(1 + (f / 2500) ** 2);
+    const lowTrim = f < 70 ? 0.65 + (0.35 * f) / 70 : 1;
+    const amp = (chest / k ** 1.28) * returnRoll * lowTrim;
+    amps[i] = amp;
+    sumSq += amp * amp;
+  }
+  const rms = Math.sqrt(sumSq / 2) || 1;
+  const real = new Float32Array(count + 1);
+  const imag = new Float32Array(count + 1);
+  for (let i = 0; i < count; i++) {
+    const k = i + 1;
+    const norm = amps[i]! / rms;
+    const phi = harmonicPhase(seed, k);
+    real[k] = norm * Math.cos(phi);
+    imag[k] = norm * Math.sin(phi);
+  }
+  return ctx.createPeriodicWave(real, imag, { disableNormalization: true });
 }
-
-const choirVoice = (hz: number) => harmonics(hz, (_, f) => formant(f, A_FORMANTS, 0.15));
-const octaveVoice = (hz: number) => harmonics(hz, (_, f) => formant(f, A_FORMANTS, 0.4));
 
 /** A slow sine that swings `param` by ±`depth` around its value. */
-function sway(ctx: BaseAudioContext, param: AudioParam, rateHz: number, depth: number, at: number, nodes: AudioScheduledSourceNode[]) {
+function sway(
+  ctx: BaseAudioContext,
+  param: AudioParam,
+  rateHz: number,
+  depth: number,
+  at: number,
+  nodes: AudioScheduledSourceNode[],
+) {
   const lfo = ctx.createOscillator();
   lfo.frequency.value = rateHz;
   const amount = ctx.createGain();
@@ -121,62 +124,57 @@ function sway(ctx: BaseAudioContext, param: AudioParam, rateHz: number, depth: n
   lfo.connect(amount).connect(param);
   lfo.start(at);
   nodes.push(lfo);
-  return amount;
 }
 
-/** White noise, made once per context and looped. */
-const noises = new WeakMap<BaseAudioContext, AudioBuffer>();
-function noise(ctx: BaseAudioContext) {
-  let buffer = noises.get(ctx);
-  if (!buffer) {
-    buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-    noises.set(ctx, buffer);
-  }
-  return buffer;
-}
-
-/** White noise through bands, scaled so it comes out at a root-mean-square of about 1. */
-function bandedNoise(ctx: BaseAudioContext, bands: Band[], output: AudioNode, at: number, nodes: AudioScheduledSourceNode[]) {
-  const source = ctx.createBufferSource();
-  source.buffer = noise(ctx);
-  source.loop = true;
-  const nyquist = ctx.sampleRate / 2;
-  // Uniform noise has a root-mean-square of 1/√3; a band lets through about (π/2)·width/nyquist of its power.
-  const power = bands.reduce((sum, [, width, level]) => sum + level * level * (Math.PI / 2) * (width / nyquist), 0);
-  const scale = 1 / (Math.sqrt(power) / Math.sqrt(3));
-  for (const [centre, width, level] of bands) {
-    const band = ctx.createBiquadFilter();
-    band.type = "bandpass";
-    band.frequency.value = centre;
-    band.Q.value = centre / width;
-    const gain = ctx.createGain();
-    gain.gain.value = level * scale;
-    source.connect(band).connect(gain).connect(output);
-  }
-  source.start(at);
-  nodes.push(source);
-}
-
-/** A small room: stereo decaying noise, darkened, made once per context. */
+/** A stone room: stereo early reflections and a warm darkened tail, made once per context. */
 const rooms = new WeakMap<BaseAudioContext, AudioBuffer>();
-function room(ctx: BaseAudioContext) {
+function room(ctx: BaseAudioContext): AudioBuffer {
   let buffer = rooms.get(ctx);
   if (!buffer) {
-    const length = Math.floor(ROOM_S * ctx.sampleRate);
-    buffer = ctx.createBuffer(2, length, ctx.sampleRate);
-    const decay = ROOM_S / 6.9; // 60 dB down at the end
-    const smooth = Math.exp((-2 * Math.PI * ROOM_DARK_HZ) / ctx.sampleRate);
-    for (let c = 0; c < 2; c++) {
-      const data = buffer.getChannelData(c);
+    const sr = ctx.sampleRate;
+    const length = Math.floor(ROOM_SECONDS * sr);
+    buffer = ctx.createBuffer(2, length, sr);
+    const decay = ROOM_SECONDS / 6.5;
+    const smooth = Math.exp((-2 * Math.PI * ROOM_DARK_HZ) / sr);
+    const tailFadeSamples = Math.floor(0.065 * sr);
+
+    const earlyL: readonly [number, number][] = [
+      [16, 0.24],
+      [27, -0.21],
+      [41, 0.18],
+      [58, -0.15],
+      [76, 0.12],
+    ];
+    const earlyR: readonly [number, number][] = [
+      [19, 0.23],
+      [32, -0.2],
+      [46, 0.17],
+      [64, -0.14],
+      [84, 0.11],
+    ];
+
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
       let a = 0;
       let b = 0;
+      let c = 0;
       for (let i = 0; i < length; i++) {
-        // Two gentle low-pass steps darken it.
-        a = smooth * a + (1 - smooth) * (Math.random() * 2 - 1);
+        const t = i / sr;
+        const n = Math.random() * 2 - 1;
+        a = smooth * a + (1 - smooth) * n;
         b = smooth * b + (1 - smooth) * a;
-        data[i] = b * Math.exp(-i / ctx.sampleRate / decay);
+        c = 0.88 * c + 0.12 * b;
+        const env = Math.exp(-t / decay) * Math.min(1, i / tailFadeSamples);
+        data[i] = (0.45 * b + 0.55 * c) * env;
+      }
+      const reflections = ch === 0 ? earlyL : earlyR;
+      for (const [ms, amp] of reflections) {
+        const idx = Math.floor((ms / 1000) * sr);
+        if (idx + 2 < length) {
+          data[idx] = (data[idx] ?? 0) + amp * 0.25;
+          data[idx + 1] = (data[idx + 1] ?? 0) + amp * 0.5;
+          data[idx + 2] = (data[idx + 2] ?? 0) + amp * 0.25;
+        }
       }
     }
     rooms.set(ctx, buffer);
@@ -185,8 +183,22 @@ function room(ctx: BaseAudioContext) {
 }
 
 /** A sine-squared curve from `from` to `to`: gentle at both ends. */
-function sCurve(from: number, to: number) {
-  return Float32Array.from({ length: CURVE_POINTS }, (_, i) => from + (to - from) * Math.sin(((i / (CURVE_POINTS - 1)) * Math.PI) / 2) ** 2);
+function sCurve(from: number, to: number): Float32Array {
+  return Float32Array.from(
+    { length: CURVE_POINTS },
+    (_, i) => from + (to - from) * Math.sin(((i / (CURVE_POINTS - 1)) * Math.PI) / 2) ** 2,
+  );
+}
+
+/** Routes a mono voice into a stereo ChannelMerger with constant-power panning (-1..+1). */
+function connectPanned(ctx: BaseAudioContext, source: AudioNode, merger: ChannelMergerNode, pan: number, gainValue = 1) {
+  const angle = ((pan + 1) * Math.PI) / 4;
+  const left = ctx.createGain();
+  const right = ctx.createGain();
+  left.gain.value = Math.cos(angle) * gainValue;
+  right.gain.value = Math.sin(angle) * gainValue;
+  source.connect(left).connect(merger, 0, 0);
+  source.connect(right).connect(merger, 0, 1);
 }
 
 /** The Ison's vox on a given context, at `frequency`, held until stopped. */
@@ -194,106 +206,186 @@ export function playIsonVox(ctx: BaseAudioContext, frequency: number, volume: nu
   const start = ctx.currentTime + startMs / 1000;
   const sources: AudioScheduledSourceNode[] = [];
 
-  // Everything sounding meets here, before the chorus and the room.
-  const dry = ctx.createGain();
-
-  // The analog vox: the saw, and the pulse as the saw minus itself delayed by the pulse width.
-  const analog = ctx.createOscillator();
-  analog.setPeriodicWave(wave(ctx, analogSaw(frequency)));
-  analog.frequency.value = frequency;
-  const period = 1 / frequency;
-  const widthDelay = ctx.createDelay(0.05);
-  widthDelay.delayTime.value = PULSE_WIDTH * period;
-  sway(ctx, widthDelay.delayTime, PULSE_WIDTH_RATE_HZ, PULSE_WIDTH_SWING * period, start, sources);
-  const saw = ctx.createGain();
-  const pulse = PULSE / Math.PI;
-  saw.gain.value = ANALOG * (1 - PULSE + pulse);
-  const delayed = ctx.createGain();
-  delayed.gain.value = -ANALOG * pulse;
-  analog.connect(saw).connect(dry);
-  analog.connect(widthDelay).connect(delayed).connect(dry);
-  analog.start(start);
-  sources.push(analog);
-
-  // The choir: voices spread around the pitch, each drifting a little on its own.
-  const choirWave = wave(ctx, choirVoice(frequency));
-  const choir = ctx.createGain();
-  choir.gain.value = CHOIR / Math.sqrt(CHOIR_DETUNE.length);
-  for (const [i, cents] of CHOIR_DETUNE.entries()) {
-    const voice = ctx.createOscillator();
-    voice.setPeriodicWave(choirWave);
-    voice.frequency.value = frequency;
-    voice.detune.value = cents;
-    sway(ctx, voice.detune, CHOIR_DRIFT_HZ[i]!, CHOIR_DRIFT_CENTS, start, sources);
-    voice.connect(choir);
-    voice.start(start);
-    sources.push(voice);
+  // If the previous Ison stopped moments ago on this context, crossfade rapidly to the new Degree.
+  let legato = false;
+  if (lastStopped && lastStopped.ctx === ctx && nowMs() - lastStopped.stoppedAtMs <= LEGATO_HANDOFF_MS) {
+    legato = true;
+    lastStopped.shortenRelease();
   }
-  const octave = ctx.createOscillator();
-  octave.setPeriodicWave(wave(ctx, octaveVoice(frequency * 2)));
-  octave.frequency.value = frequency * 2;
-  sway(ctx, octave.detune, 0.21, OCTAVE_DRIFT_CENTS, start, sources);
-  const octaveLevel = ctx.createGain();
-  octaveLevel.gain.value = OCTAVE_LEVEL * Math.sqrt(CHOIR_DETUNE.length);
-  octave.connect(octaveLevel).connect(choir);
-  octave.start(start);
-  sources.push(octave);
-  choir.connect(dry);
+  lastStopped = null;
 
-  // Air, swelling slowly.
-  const air = ctx.createGain();
-  air.gain.value = AIR_LEVEL * 0.8;
-  sway(ctx, air.gain, 0.4, AIR_LEVEL * 0.2, start, sources);
-  bandedNoise(ctx, AIR_BANDS, air, start, sources);
-  air.connect(dry);
+  const reg = frequency > 250 ? 1 + Math.min(0.14, (frequency - 250) / 1400) : 1;
+  const f1 = (325 + VOWEL * 220) * reg;
+  const f2 = (600 + VOWEL * 390) * reg;
+  const f3 = (2200 + VOWEL * 320) * reg;
+  const velvetHz = 680 * Math.pow(4200 / 680, BRIGHTNESS);
+  const f3GainVal = 0.015 + BRIGHTNESS * BRIGHTNESS * 0.24;
+  const centerLevel = 1.0 - WIDTH * 0.42;
+  const outerLevel = WIDTH * 0.92;
+  const chorusWet = WIDTH * 0.52;
+  const roomWet = REVERB * 1.1;
+  const roomDry = 1.0 - REVERB * 0.24;
+  const chestShelfDb = -2.5 + WARMTH * 10.0;
 
-  // The student's volume, then the swell in and the fade out.
+  const centerBus = ctx.createChannelMerger(2);
+  const outerBus = ctx.createChannelMerger(2);
+  const centerGain = ctx.createGain();
+  centerGain.gain.value = centerLevel;
+  const outerGain = ctx.createGain();
+  outerGain.gain.value = outerLevel;
+
+  const outerNorm = 1 / Math.sqrt(SINGERS.filter((s) => !s.isCenter).reduce((s, v) => s + v.level * v.level, 0) || 1);
+
+  for (const singer of SINGERS) {
+    const osc = ctx.createOscillator();
+    osc.setPeriodicWave(glottalWave(ctx, frequency, singer.seed));
+    osc.frequency.value = frequency;
+    osc.detune.value = singer.detuneCents;
+
+    sway(ctx, osc.detune, singer.driftRate1, singer.driftCents * 0.65, start, sources);
+    sway(ctx, osc.detune, singer.driftRate2, singer.driftCents * 0.35, start, sources);
+    sway(ctx, osc.detune, singer.tremorHz, singer.tremorCents, start, sources);
+
+    const voiceGain = ctx.createGain();
+    const baseLevel = singer.isCenter ? 1 : singer.level * outerNorm;
+    voiceGain.gain.value = baseLevel;
+    sway(ctx, voiceGain.gain, singer.breathRateHz, baseLevel * singer.breathDepth, start, sources);
+
+    let chainEnd: AudioNode = osc.connect(voiceGain);
+    if (singer.haasDelayS > 0) {
+      const haas = ctx.createDelay(0.05);
+      haas.delayTime.value = singer.haasDelayS;
+      chainEnd = chainEnd.connect(haas);
+    }
+    connectPanned(ctx, chainEnd, singer.isCenter ? centerBus : outerBus, singer.pan, 1);
+    osc.start(start);
+    sources.push(osc);
+  }
+
+  const choirSum = ctx.createGain();
+  centerBus.connect(centerGain).connect(choirSum);
+  outerBus.connect(outerGain).connect(choirSum);
+
+  // Male "o" vocal tract: parallel chest path and F1, F2, F3 formant resonators.
+  const tractOut = ctx.createGain();
+
+  const chestPath = ctx.createBiquadFilter();
+  chestPath.type = "lowpass";
+  chestPath.frequency.value = 290;
+  chestPath.Q.value = 0.6;
+  const chestGain = ctx.createGain();
+  chestGain.gain.value = 0.52;
+  choirSum.connect(chestPath).connect(chestGain).connect(tractOut);
+
+  const f1Filter = ctx.createBiquadFilter();
+  f1Filter.type = "bandpass";
+  f1Filter.frequency.value = f1;
+  f1Filter.Q.value = 3.1;
+  const f1Gain = ctx.createGain();
+  f1Gain.gain.value = 1.45;
+  choirSum.connect(f1Filter).connect(f1Gain).connect(tractOut);
+
+  const f2Filter = ctx.createBiquadFilter();
+  f2Filter.type = "bandpass";
+  f2Filter.frequency.value = f2;
+  f2Filter.Q.value = 3.6;
+  const f2Gain = ctx.createGain();
+  f2Gain.gain.value = 0.92;
+  choirSum.connect(f2Filter).connect(f2Gain).connect(tractOut);
+
+  const f3Filter = ctx.createBiquadFilter();
+  f3Filter.type = "bandpass";
+  f3Filter.frequency.value = f3;
+  f3Filter.Q.value = 5.5;
+  const f3Gain = ctx.createGain();
+  f3Gain.gain.value = f3GainVal;
+  choirSum.connect(f3Filter).connect(f3Gain).connect(tractOut);
+
+  const warmthShelf = ctx.createBiquadFilter();
+  warmthShelf.type = "lowshelf";
+  warmthShelf.frequency.value = 280;
+  warmthShelf.gain.value = chestShelfDb;
+
+  const velvetLP = ctx.createBiquadFilter();
+  velvetLP.type = "lowpass";
+  velvetLP.frequency.value = velvetHz;
+  velvetLP.Q.value = 0.55;
+  sway(ctx, velvetLP.frequency, 0.14, 30, start, sources);
+
   const loudness = ctx.createGain();
   loudness.gain.value = volume;
+
   const swell = ctx.createGain();
   swell.gain.value = 0;
-  swell.gain.setValueCurveAtTime(sCurve(0, OUTPUT_GAIN), start, SWELL_S);
+  swell.gain.setValueCurveAtTime(sCurve(0, OUTPUT_GAIN), start, legato ? LEGATO_CROSSFADE_S : SWELL_S);
+
   // The fade out has a gain of its own, so stopping never has to cut into the swell's curve.
   const envelope = ctx.createGain();
   envelope.gain.value = 1;
-  dry.connect(loudness).connect(swell).connect(envelope);
 
-  // Chorus: the dry sound in the middle, two swung delay lines left and right; the room behind.
-  const merger = ctx.createChannelMerger(2);
+  tractOut.connect(warmthShelf).connect(velvetLP).connect(loudness).connect(swell).connect(envelope);
+
+  // Stereo-preserving opposing chorus.
+  const splitter = ctx.createChannelSplitter(2);
+  envelope.connect(splitter);
+  const chorusOut = ctx.createChannelMerger(2);
   for (const [channel, direction] of [
     [0, 1],
     [1, -1],
   ] as const) {
-    const side = ctx.createGain();
-    side.gain.value = CHORUS_DRY;
-    envelope.connect(side).connect(merger, 0, channel);
+    const drySide = ctx.createGain();
+    drySide.gain.value = 0.85;
+    splitter.connect(drySide, channel, 0);
+    drySide.connect(chorusOut, 0, channel);
+
     const line = ctx.createDelay(0.05);
-    line.delayTime.value = CHORUS_DELAY_S;
-    sway(ctx, line.delayTime, CHORUS_RATE_HZ, CHORUS_SWING_S * direction, start, sources);
-    const wet = ctx.createGain();
-    wet.gain.value = CHORUS_WET;
-    envelope.connect(line).connect(wet).connect(merger, 0, channel);
+    line.delayTime.value = 0.0068;
+    sway(ctx, line.delayTime, 0.26, 0.0023 * direction, start, sources);
+    const wetSide = ctx.createGain();
+    wetSide.gain.value = chorusWet;
+    splitter.connect(line, channel, 0);
+    line.connect(wetSide).connect(chorusOut, 0, channel);
   }
+
+  // Light stone room behind the choir.
+  const preDelay = ctx.createDelay(0.1);
+  preDelay.delayTime.value = 0.03;
   const reverb = ctx.createConvolver();
   reverb.buffer = room(ctx);
-  const roomLevel = ctx.createGain();
-  roomLevel.gain.value = ROOM_LEVEL;
-  envelope.connect(reverb).connect(roomLevel);
+  const wetGain = ctx.createGain();
+  wetGain.gain.value = roomWet;
+  const dryBus = ctx.createGain();
+  dryBus.gain.value = roomDry;
+
   const output = ctx.createGain();
-  merger.connect(output);
-  roomLevel.connect(output);
+  chorusOut.connect(dryBus).connect(output);
+  chorusOut.connect(preDelay).connect(reverb).connect(wetGain).connect(output);
   output.connect(ctx.destination);
 
   let stopped = false;
+  let disconnectTimer: ReturnType<typeof setTimeout> | undefined;
+
   return {
     stop() {
       if (stopped) return;
       stopped = true;
       const now = ctx.currentTime;
+      envelope.gain.cancelScheduledValues(now);
       envelope.gain.setValueCurveAtTime(sCurve(1, 0), now, RELEASE_S);
       for (const source of sources) source.stop(now + RELEASE_S);
-      // Let the room ring out, then let go of the nodes.
-      setTimeout(() => output.disconnect(), (RELEASE_S + ROOM_S + 0.1) * 1000);
+      disconnectTimer = setTimeout(() => output.disconnect(), (RELEASE_S + ROOM_SECONDS + 0.2) * 1000);
+
+      lastStopped = {
+        ctx,
+        stoppedAtMs: nowMs(),
+        shortenRelease() {
+          const t = ctx.currentTime;
+          envelope.gain.cancelScheduledValues(t);
+          envelope.gain.setValueCurveAtTime(sCurve(1, 0), t, LEGATO_CROSSFADE_S);
+          if (disconnectTimer !== undefined) clearTimeout(disconnectTimer);
+          disconnectTimer = setTimeout(() => output.disconnect(), (LEGATO_CROSSFADE_S + ROOM_SECONDS + 0.2) * 1000);
+        },
+      };
     },
     setVolume(next: number) {
       if (stopped) return;
