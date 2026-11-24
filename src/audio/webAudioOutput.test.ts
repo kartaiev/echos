@@ -43,9 +43,15 @@ class FakeOscillator extends FakeNode {
 }
 
 let oscillators: FakeOscillator[] = [];
+let contexts: FakeAudioContext[] = [];
 
 class FakeAudioContext {
   state = "running";
+  closed = false;
+  onstatechange: (() => void) | null = null;
+  constructor() {
+    contexts.push(this);
+  }
   currentTime = 0;
   outputLatency = 0;
   baseLatency = 0;
@@ -90,6 +96,7 @@ class FakeAudioContext {
     return Promise.resolve();
   }
   close() {
+    this.closed = true;
     return Promise.resolve();
   }
 }
@@ -98,6 +105,7 @@ describe("Web Audio output", () => {
   beforeEach(() => {
     oscillators = [];
     gains = [];
+    contexts = [];
     vi.stubGlobal("AudioContext", FakeAudioContext);
     vi.stubGlobal("window", { addEventListener() {}, setInterval: () => 0 });
     vi.stubGlobal("document", { addEventListener() {}, hidden: false });
@@ -199,5 +207,164 @@ describe("Web Audio output", () => {
 
     expect(oscillators).toHaveLength(1);
     expect(oscillators[0]!.wave).toEqual([1, 0.42, 0.24, 0.14, 0.08, 0.05, 0.03]);
+  });
+});
+
+describe("Web Audio output after an app switch", () => {
+  const ison = { kind: "ison", frequency: 130.81, durationMs: null, vowel: "o", volume: 0.6 } as const;
+  let pageListeners: Record<string, () => void>;
+  let windowListeners: Record<string, () => void>;
+  let page: { visibilityState: string; hidden: boolean; addEventListener(type: string, listener: () => void): void };
+
+  beforeEach(() => {
+    oscillators = [];
+    gains = [];
+    contexts = [];
+    pageListeners = {};
+    windowListeners = {};
+    vi.useFakeTimers();
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    page = {
+      visibilityState: "visible",
+      hidden: false,
+      addEventListener: (type, listener) => (pageListeners[type] = listener),
+    };
+    vi.stubGlobal("document", page);
+    vi.stubGlobal("window", {
+      addEventListener: (type: string, listener: () => void) => (windowListeners[type] = listener),
+      setInterval: () => 0,
+    });
+    vi.stubGlobal("navigator", {});
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  function leave() {
+    page.visibilityState = "hidden";
+    page.hidden = true;
+    pageListeners.visibilitychange!();
+  }
+
+  function comeBack() {
+    page.visibilityState = "visible";
+    page.hidden = false;
+    pageListeners.visibilitychange!();
+  }
+
+  const touch = () => windowListeners.pointerdown!();
+
+  it("rebuilds the Ison on the first touch when an interrupted context comes back saying it runs", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+
+    leave();
+    first!.state = "interrupted";
+    first!.onstatechange!();
+    first!.state = "running";
+    comeBack();
+
+    // iOS says it runs, but it went silent: the notice shows.
+    expect(output.isRunning()).toBe(false);
+
+    const voicesBefore = oscillators.length;
+    touch();
+    expect(contexts).toHaveLength(2);
+    expect(first!.closed).toBe(true);
+    expect(oscillators.length).toBeGreaterThan(voicesBefore);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("brings the metronome back on a fresh context the same way, with no Ison sounding", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playClickTrack({ intervalMs: 750, accentEvery: 4 });
+    const [first] = contexts;
+
+    leave();
+    first!.state = "interrupted";
+    first!.onstatechange!();
+    first!.state = "running";
+    comeBack();
+    expect(output.isRunning()).toBe(false);
+
+    const clicksBefore = oscillators.length;
+    touch();
+    expect(contexts).toHaveLength(2);
+    // The first click of the group is placed on the fresh context at once.
+    expect(oscillators.length).toBeGreaterThan(clicksBefore);
+    expect(oscillators[clicksBefore]!.frequency.value).toBe(1760);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("counts a context whose clock stands still after coming back as silent", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    leave();
+    comeBack();
+    vi.advanceTimersByTime(500);
+
+    expect(output.isRunning()).toBe(false);
+    touch();
+    expect(contexts).toHaveLength(2);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("in Safari, rebuilds a sounding Ison on the first touch after an app switch, without the notice", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    leave();
+    comeBack();
+    contexts[0]!.currentTime = 0.5;
+    vi.advanceTimersByTime(500);
+
+    expect(output.isRunning()).toBe(true);
+    touch();
+    expect(contexts).toHaveLength(2);
+  });
+
+  it("keeps a context that ran through the app switch in other browsers", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    leave();
+    comeBack();
+    contexts[0]!.currentTime = 0.5;
+    vi.advanceTimersByTime(500);
+    touch();
+
+    expect(contexts).toHaveLength(1);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("does not rebuild for an interruption long before the app switch, which has already passed", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+
+    first!.state = "interrupted";
+    first!.onstatechange!();
+    first!.state = "running";
+    vi.advanceTimersByTime(5000);
+    leave();
+    comeBack();
+    first!.currentTime = 0.5;
+    vi.advanceTimersByTime(500);
+    touch();
+
+    expect(contexts).toHaveLength(1);
+    expect(output.isRunning()).toBe(true);
   });
 });

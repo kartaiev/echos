@@ -45,6 +45,43 @@ const STUCK_AFTER_MS = 1000;
 let resumeAskedAt: number | null = null;
 
 /**
+ * An app switch on an iPhone interrupts the context, and on return iOS can report it "running" again while it stays
+ * silent: nothing looks stopped, so neither the notice nor the rebuild above would happen. So a context that comes
+ * back through an app switch is not trusted: the next gesture builds a fresh one and moves the lasting sounds to it.
+ * - `distrusted`: the next gesture replaces the context.
+ * - `knownSilent`: the context is known to have stopped (interrupted while away, or its clock stands still), so the
+ *   sound counts as held back and the "No sound" notice shows until a gesture replaces it.
+ */
+let distrusted = false;
+let knownSilent = false;
+/** When the page was last hidden, and when the context last left "running"; null if it has not since. */
+let hiddenAt: number | null = null;
+let leftRunningAt: number | null = null;
+/** An interruption this close before the page hides still belongs to the app switch. */
+const AROUND_HIDING_MS = 1000;
+/** How long after coming back the audio clock must have moved, if the context says it runs. */
+const CLOCK_CHECK_MS = 500;
+
+/** Safari (the only browser with navigator.audioSession) is where a context comes back silent. */
+const isSafari = () => "audioSession" in navigator;
+
+function watchState(ctx: AudioContext) {
+  ctx.onstatechange = () => {
+    if (ctx === context && ctx.state !== "running" && ctx.state !== "closed") leftRunningAt = performance.now();
+  };
+}
+
+/** A context that says it runs while its clock stands still is silent. */
+function checkClock(ctx: AudioContext) {
+  const before = ctx.currentTime;
+  setTimeout(() => {
+    if (ctx !== context || ctx.state !== "running" || ctx.currentTime !== before) return;
+    distrusted = true;
+    knownSilent = true;
+  }, CLOCK_CHECK_MS);
+}
+
+/**
  * Sounds that last until they are stopped (the Ison) and the metronome. A fresh context starts in silence, so each
  * of these is built again on it: the student hears what was sounding before the interruption.
  */
@@ -62,11 +99,16 @@ function getContext(fromGesture = false) {
   applyAudioSession();
   const stuck = fromGesture && context !== null && context.state !== "running" && resumeAskedAt !== null
     && performance.now() - resumeAskedAt > STUCK_AFTER_MS;
-  const replaced = context !== null && (stuck || context.state === "closed");
-  if (stuck) void context!.close().catch(() => {});
+  const untrusted = fromGesture && context !== null && distrusted;
+  const replaced = context !== null && (stuck || untrusted || context.state === "closed");
+  if (stuck || untrusted) void context!.close().catch(() => {});
   if (!context || replaced) {
     context = new AudioContext();
+    watchState(context);
     resumeAskedAt = null;
+    distrusted = false;
+    knownSilent = false;
+    leftRunningAt = null;
     if (replaced) for (const sound of lasting) sound.moveTo(context);
   }
   const ctx = context;
@@ -98,10 +140,20 @@ function listenForUnlock() {
     window.addEventListener(type, () => getContext(true), { capture: true });
   }
   // Coming back counts as asking: if the context is still stopped a second later, the next touch rebuilds it.
+  // Coming back from an interruption, or to a lasting sound in Safari, the next touch rebuilds it in any case.
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible" || !context) return;
+    if (document.visibilityState !== "visible") {
+      hiddenAt = performance.now();
+      return;
+    }
+    if (!context) return;
+    const interrupted = leftRunningAt !== null && hiddenAt !== null && leftRunningAt >= hiddenAt - AROUND_HIDING_MS;
+    leftRunningAt = null;
+    if (interrupted) knownSilent = true;
+    if (interrupted || (lasting.size > 0 && isSafari())) distrusted = true;
     if (context.state !== "running") resumeAskedAt ??= performance.now();
-    getContext();
+    const ctx = getContext();
+    if (lasting.size > 0) checkClock(ctx);
   });
 }
 
@@ -248,7 +300,7 @@ export function createWebAudioOutput(): AudioOutput {
   return {
     playClickTrack,
     // Before anything has been played there is nothing to hear yet, so nothing is held back either.
-    isRunning: () => context === null || context.state === "running",
+    isRunning: () => context === null || (context.state === "running" && !knownSilent),
     playSound(sound: SoundRequest): PlayingSound {
       let current = sound;
       let voice = playVoice(getContext(), current);
