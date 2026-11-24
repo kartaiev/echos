@@ -56,36 +56,6 @@
   font-display: block;
 }
 
-/*
- * GFS Didot, SIL Open Font License 1.1 (src/assets/fonts/OFL-GFSDidot.txt): the Greek book face chant books are
- * printed in, used for the name and the headings. Latin, Greek and polytonic Greek, each loaded only when needed.
- */
-@font-face {
-  font-family: "GFS Didot";
-  src: url("../assets/fonts/GFSDidot-latin.woff2") format("woff2");
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: "GFS Didot";
-  src: url("../assets/fonts/GFSDidot-greek.woff2") format("woff2");
-  font-display: swap;
-  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
-}
-
-@font-face {
-  font-family: "GFS Didot";
-  src: url("../assets/fonts/GFSDidot-greek-ext.woff2") format("woff2");
-  font-display: swap;
-  unicode-range: U+1F00-1FFF;
-}
-
-:root {
-  --book: "GFS Didot", "Iowan Old Style", Georgia, serif;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -2105,59 +2075,5 @@ a {
 
   .setup__fthora {
     padding-inline: 10px;
-  }
-}
-
-/*
- * The chant book. The name and the headings are set in the Greek book face, and a section heading opens on a red
- * initial as a rubric does.
- */
-.practice__header h1,
-.practice__body h2,
-.settings h2,
-.modes h2,
-.cards h2,
-.mode-card h3,
-.deck h3,
-.mode-jump button {
-  font-family: var(--book);
-  font-weight: 400;
-  font-synthesis: none;
-}
-
-.practice__header h1 {
-  font-size: 1.75rem;
-  line-height: 1;
-  letter-spacing: 0.01em;
-}
-
-.practice__body h2,
-.settings h2,
-.modes h2,
-.cards h2 {
-  font-size: 1.35rem;
-  line-height: 1.15;
-}
-
-.practice__body h2::first-letter,
-.settings h2::first-letter,
-.modes h2::first-letter,
-.cards h2::first-letter {
-  color: var(--cinnabar);
-}
-
-.mode-card h3,
-.deck h3 {
-  font-size: 1.25rem;
-  line-height: 1.2;
-}
-
-.mode-jump button {
-  font-size: 1.05rem;
-}
-
-@media (max-width: 400px) {
-  .practice__header h1 {
-    font-size: 1.45rem;
   }
 }
