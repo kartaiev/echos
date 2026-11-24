@@ -3,11 +3,9 @@
   "configurations": [
     {
       "name": "echos-dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/usr/local/bin/node",
       "runtimeArgs": [
-        "run",
-        "dev",
-        "--",
+        "node_modules/vite/bin/vite.js",
         "--port",
         "5173",
         "--strictPort",
@@ -17,11 +15,10 @@
     },
     {
       "name": "echos-preview",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/usr/local/bin/node",
       "runtimeArgs": [
-        "run",
+        "node_modules/vite/bin/vite.js",
         "preview",
-        "--",
         "--port",
         "4173",
         "--strictPort"
