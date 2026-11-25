@@ -367,4 +367,99 @@ describe("Web Audio output after an app switch", () => {
     expect(contexts).toHaveLength(1);
     expect(output.isRunning()).toBe(true);
   });
+  /** An iPhone's navigator.audioSession that the test can interrupt. */
+  function fakeSession() {
+    const listeners: Record<string, () => void> = {};
+    const types: string[] = [];
+    const session = {
+      state: "active",
+      _type: "auto",
+      get type() {
+        return this._type;
+      },
+      set type(value: string) {
+        this._type = value;
+        types.push(value);
+      },
+      addEventListener: (type: string, listener: () => void) => (listeners[type] = listener),
+    };
+    const interrupt = () => {
+      session.state = "interrupted";
+      listeners.statechange!();
+    };
+    return { session, types, interrupt };
+  }
+
+  it("finds a context that says it runs while its clock stands still, without any app switch", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    expect(output.isRunning()).toBe(true);
+    vi.advanceTimersByTime(800);
+    // The clock has not moved since the last look: the notice shows, and the next touch rebuilds.
+    expect(output.isRunning()).toBe(false);
+    touch();
+    expect(contexts).toHaveLength(2);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("does not count a moving clock as silent", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    output.isRunning();
+    vi.advanceTimersByTime(800);
+    contexts[0]!.currentTime = 0.8;
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("in Safari, takes the audio session's interruption as silence and asks for the session again on the rebuild", async () => {
+    const { session, types, interrupt } = fakeSession();
+    vi.stubGlobal("navigator", { audioSession: session });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    contexts[0]!.currentTime = 0.5;
+
+    interrupt();
+    expect(output.isRunning()).toBe(false);
+
+    types.length = 0;
+    touch();
+    expect(contexts).toHaveLength(2);
+    expect(types).toEqual(["auto", "playback"]);
+  });
+
+  it("in Safari, counts losing focus as leaving when the page never says it was hidden", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    windowListeners.blur!();
+    windowListeners.focus!();
+    touch();
+
+    expect(contexts).toHaveLength(2);
+  });
+
+  it("writes the switch and the rebuild into the sound log", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const { soundLogLines } = await import("./soundLog");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    leave();
+    comeBack();
+    touch();
+
+    const log = soundLogLines().join("\n");
+    expect(log).toMatch(/context 1 made \(first sound\)/);
+    expect(log).toMatch(/page away \(hidden\)/);
+    expect(log).toMatch(/page back \(visible\).*session playback\/active/);
+    expect(log).toMatch(/context 2 made \(after the page was away\)/);
+  });
 });

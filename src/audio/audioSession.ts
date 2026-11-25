@@ -5,12 +5,33 @@
  * here, so a tap that wakes the sound does not take the microphone away while Voice Check listens.
  */
 
+export interface PageAudioSession extends EventTarget {
+  type: string;
+  /** "active", "inactive" or "interrupted" (another app, a call). */
+  readonly state?: string;
+}
+
 let recording = false;
 
+export function audioSession(): PageAudioSession | undefined {
+  return (navigator as Navigator & { audioSession?: PageAudioSession }).audioSession;
+}
+
 export function applyAudioSession() {
-  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  const session = audioSession();
   const wanted = recording ? "play-and-record" : "playback";
   if (session && session.type !== wanted) session.type = wanted;
+}
+
+/**
+ * Asks for the session afresh: after another app has taken the sound, the page's session can stay interrupted, and
+ * every context the page makes then plays into nothing. Setting the type anew makes Safari set the session up again.
+ */
+export function renewAudioSession() {
+  const session = audioSession();
+  if (!session) return;
+  session.type = "auto";
+  applyAudioSession();
 }
 
 /** While the microphone is open (or being opened), the session plays and records. */
