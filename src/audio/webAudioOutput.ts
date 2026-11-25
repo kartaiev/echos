@@ -1,6 +1,7 @@
 import type { AudioOutput, ClickTrackRequest, PlayingClickTrack, PlayingSound, SoundRequest } from "./AudioOutput";
-import { applyAudioSession } from "./audioSession";
+import { applyAudioSession, audioSession, renewAudioSession } from "./audioSession";
 import { playIsonVox } from "./isonVox";
+import { logSound } from "./soundLog";
 
 /**
  * The soft tone of the Degrees and the intonation: a fundamental with a few overtones, with no vibrato or drift, so
@@ -65,10 +66,23 @@ const CLOCK_CHECK_MS = 500;
 /** Safari (the only browser with navigator.audioSession) is where a context comes back silent. */
 const isSafari = () => "audioSession" in navigator;
 
+/** Contexts are numbered in the sound log, so a rebuild can be told apart from the context it replaced. */
+const contextNumbers = new WeakMap<AudioContext, number>();
+let contextsMade = 0;
+const nameOf = (ctx: AudioContext) => `context ${contextNumbers.get(ctx) ?? "?"}`;
+
 function watchState(ctx: AudioContext) {
   ctx.onstatechange = () => {
+    logSound(`${nameOf(ctx)} ${ctx.state}`);
     if (ctx === context && ctx.state !== "running" && ctx.state !== "closed") leftRunningAt = performance.now();
   };
+}
+
+/** The sound is known to have stopped: the notice shows, and the next gesture builds a fresh context. */
+function markSilent(why: string) {
+  if (!knownSilent) logSound(`silent: ${why}`);
+  distrusted = true;
+  knownSilent = true;
 }
 
 /** A context that says it runs while its clock stands still is silent. */
@@ -76,9 +90,69 @@ function checkClock(ctx: AudioContext) {
   const before = ctx.currentTime;
   setTimeout(() => {
     if (ctx !== context || ctx.state !== "running" || ctx.currentTime !== before) return;
-    distrusted = true;
-    knownSilent = true;
+    markSilent(`${nameOf(ctx)} clock stands at ${before.toFixed(2)}`);
   }, CLOCK_CHECK_MS);
+}
+
+/**
+ * The clock as last looked at while a lasting sound plays; each look compares it with the one before, so a context
+ * that went silent while saying it runs is found whenever the notice asks, not only right after the page comes back.
+ */
+let clockSeen: { ctx: AudioContext; time: number; at: number } | null = null;
+const CLOCK_LOOK_GAP_MS = 300;
+function clockStandsStill(ctx: AudioContext) {
+  const at = performance.now();
+  const seen = clockSeen;
+  clockSeen = { ctx, time: ctx.currentTime, at };
+  return seen !== null && seen.ctx === ctx && at - seen.at >= CLOCK_LOOK_GAP_MS && ctx.currentTime === seen.time;
+}
+
+/**
+ * A short silent clip played inside the gesture that rebuilds the sound. Starting a media element from a touch is
+ * what an iPhone takes as the page wanting its sound back after another app took it; a new AudioContext alone may
+ * keep playing into a session that stays interrupted.
+ */
+let silentClip: HTMLAudioElement | null = null;
+function playSilentClip() {
+  if (typeof Audio === "undefined" || typeof Blob === "undefined" || typeof URL?.createObjectURL !== "function") return;
+  try {
+    if (!silentClip) {
+      silentClip = new Audio(URL.createObjectURL(new Blob([silentWav()], { type: "audio/wav" })));
+      silentClip.setAttribute("playsinline", "");
+    }
+    silentClip.currentTime = 0;
+    const playing = silentClip.play();
+    playing?.then(
+      () => logSound("silent clip played"),
+      (error: unknown) => logSound(`silent clip refused: ${String(error)}`),
+    );
+  } catch (error) {
+    logSound(`silent clip failed: ${String(error)}`);
+  }
+}
+
+/** A tenth of a second of silence as an 8 kHz, 8-bit mono WAV. */
+function silentWav() {
+  const rate = 8000;
+  const samples = 800;
+  const bytes = new Uint8Array(44 + samples);
+  const view = new DataView(bytes.buffer);
+  const text = (at: number, value: string) => [...value].forEach((c, i) => view.setUint8(at + i, c.charCodeAt(0)));
+  text(0, "RIFF");
+  view.setUint32(4, 36 + samples, true);
+  text(8, "WAVE");
+  text(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate, true);
+  view.setUint16(32, 1, true);
+  view.setUint16(34, 8, true);
+  text(36, "data");
+  view.setUint32(40, samples, true);
+  bytes.fill(0x80, 44);
+  return bytes;
 }
 
 /**
@@ -102,9 +176,19 @@ function getContext(fromGesture = false) {
   const untrusted = fromGesture && context !== null && distrusted;
   const replaced = context !== null && (stuck || untrusted || context.state === "closed");
   if (stuck || untrusted) void context!.close().catch(() => {});
+  if (replaced && isSafari()) {
+    // A fresh context does not help while the page's session stays interrupted: ask for the session again, and
+    // start a media element inside the gesture.
+    renewAudioSession();
+    playSilentClip();
+  }
   if (!context || replaced) {
+    const why = !context ? "first sound" : stuck ? "stuck" : untrusted ? "after the page was away" : "closed";
     context = new AudioContext();
+    contextNumbers.set(context, ++contextsMade);
+    logSound(`${nameOf(context)} made (${why}), ${context.state}, session ${sessionState()}`);
     watchState(context);
+    clockSeen = null;
     resumeAskedAt = null;
     distrusted = false;
     knownSilent = false;
@@ -141,20 +225,60 @@ function listenForUnlock() {
   }
   // Coming back counts as asking: if the context is still stopped a second later, the next touch rebuilds it.
   // Coming back from an interruption, or to a lasting sound in Safari, the next touch rebuilds it in any case.
+  // An app opened from the home screen does not always say it was hidden, so losing focus counts as leaving too.
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") {
-      hiddenAt = performance.now();
-      return;
-    }
-    if (!context) return;
-    const interrupted = leftRunningAt !== null && hiddenAt !== null && leftRunningAt >= hiddenAt - AROUND_HIDING_MS;
-    leftRunningAt = null;
-    if (interrupted) knownSilent = true;
-    if (interrupted || (lasting.size > 0 && isSafari())) distrusted = true;
-    if (context.state !== "running") resumeAskedAt ??= performance.now();
-    const ctx = getContext();
-    if (lasting.size > 0) checkClock(ctx);
+    if (document.visibilityState !== "visible") wentAway("hidden");
+    else cameBack("visible");
   });
+  window.addEventListener("pagehide", () => wentAway("pagehide"));
+  window.addEventListener("pageshow", () => cameBack("pageshow"));
+  window.addEventListener("blur", () => wentAway("blur"));
+  window.addEventListener("focus", () => cameBack("focus"));
+  // The iPhone's own word that another app or a call took the sound.
+  audioSession()?.addEventListener?.("statechange", () => {
+    const state = sessionState();
+    logSound(`session ${state}`);
+    if (state.endsWith("/interrupted") && lasting.size > 0) markSilent("session interrupted");
+  });
+}
+
+/** Whether the page has left and not come back yet. */
+let away = false;
+
+function wentAway(how: string) {
+  if (!away) logSound(`page away (${how})${context ? `, ${nameOf(context)} ${context.state}` : ""}`);
+  away = true;
+  hiddenAt = performance.now();
+}
+
+function cameBack(how: string) {
+  if (!away) return;
+  away = false;
+  const where = context ? `, ${nameOf(context)} ${context.state} at ${context.currentTime.toFixed(2)}` : "";
+  logSound(`page back (${how})${where}, session ${sessionState()}`);
+  if (!context) return;
+  const interrupted = leftRunningAt !== null && hiddenAt !== null && leftRunningAt >= hiddenAt - AROUND_HIDING_MS;
+  leftRunningAt = null;
+  if (interrupted) markSilent("interrupted while away");
+  if (lasting.size > 0 && sessionState().endsWith("/interrupted")) markSilent("session interrupted on return");
+  if (interrupted || (lasting.size > 0 && isSafari())) distrusted = true;
+  if (context.state !== "running") resumeAskedAt ??= performance.now();
+  const ctx = getContext();
+  if (lasting.size > 0) checkClock(ctx);
+}
+
+/** The iPhone's audio session as "type/state", or "none" outside Safari. */
+function sessionState() {
+  const session = audioSession();
+  return session ? `${session.type}/${session.state ?? "?"}` : "none";
+}
+
+/** One line on how the sound stands now, for the sound log in Settings. */
+export function soundStatus(): string {
+  const ctx = context ? `${nameOf(context)} ${context.state} at ${context.currentTime.toFixed(2)}` : "no context";
+  const page = typeof document === "undefined" ? "?" : document.visibilityState;
+  return `${ctx}; session ${sessionState()}; page ${page}; lasting ${lasting.size}; `
+    + `distrusted ${distrusted}; silent ${knownSilent}`;
 }
 
 function scheduleClick(ctx: AudioContext, output: AudioNode, at: number, accent: boolean) {
@@ -300,7 +424,13 @@ export function createWebAudioOutput(): AudioOutput {
   return {
     playClickTrack,
     // Before anything has been played there is nothing to hear yet, so nothing is held back either.
-    isRunning: () => context === null || (context.state === "running" && !knownSilent),
+    isRunning: () => {
+      if (context === null) return true;
+      if (context.state === "running" && lasting.size > 0 && clockStandsStill(context)) {
+        markSilent(`${nameOf(context)} clock stands at ${context.currentTime.toFixed(2)}`);
+      }
+      return context.state === "running" && !knownSilent;
+    },
     playSound(sound: SoundRequest): PlayingSound {
       let current = sound;
       let voice = playVoice(getContext(), current);

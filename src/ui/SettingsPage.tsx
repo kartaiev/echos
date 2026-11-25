@@ -3,6 +3,7 @@ import { MAX_FINE_ADJUSTMENT_HZ, NI_NOTE_CHOICES, REGISTERS, soundingNote } from
 import type { NoteName } from "../core/theory/westernPitch";
 import { LANGUAGES, noteLabel, t, type Language } from "../i18n/translations";
 import { Segmented } from "./Segmented";
+import { SoundLog } from "./SoundLog";
 import { THEMES, type Theme } from "./theme";
 import { LADDER_SIDES, type LadderSides } from "./ladderPlacement";
 
@@ -116,6 +117,8 @@ export function SettingsPage(props: SettingsPageProps) {
           onChange={onChangeLadderSides}
         />
       </fieldset>
+
+      <SoundLog />
     </section>
   );
 }

@@ -601,6 +601,26 @@ a {
   cursor: pointer;
 }
 
+.sound-log summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sound-log__copy {
+  margin-top: 12px;
+}
+
+.sound-log__text {
+  max-height: 320px;
+  margin: 12px 0 0;
+  overflow: auto;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
 .settings__result {
   display: flex;
   align-items: center;
