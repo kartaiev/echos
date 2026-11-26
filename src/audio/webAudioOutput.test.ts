@@ -95,6 +95,9 @@ class FakeAudioContext {
   resume() {
     return Promise.resolve();
   }
+  suspend() {
+    return Promise.resolve();
+  }
   close() {
     this.closed = true;
     return Promise.resolve();
@@ -317,20 +320,66 @@ describe("Web Audio output after an app switch", () => {
     expect(output.isRunning()).toBe(true);
   });
 
-  it("in Safari, rebuilds a sounding Ison on the first touch after an app switch, without the notice", async () => {
-    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+  it("in Safari, brings a sounding Ison back by itself on return, with no touch and no notice", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
     const { createWebAudioOutput } = await import("./webAudioOutput");
     const output = createWebAudioOutput();
     output.playSound(ison);
+    const [first] = contexts;
 
     leave();
     comeBack();
-    contexts[0]!.currentTime = 0.5;
-    vi.advanceTimersByTime(500);
+    expect(output.isRunning()).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    // Stopped and started again, the context that was allowed to sound is heard once more.
+    first!.currentTime = 1;
+    await vi.advanceTimersByTimeAsync(500);
 
+    expect(output.isRunning()).toBe(true);
+    expect(contexts).toHaveLength(1);
+    // Heard again, it is trusted again: a touch does not restart the Ison.
+    touch();
+    expect(contexts).toHaveLength(1);
+  });
+
+  it("in Safari, builds a fresh context by itself when the old one stays silent on return", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const voicesBefore = oscillators.length;
+
+    leave();
+    comeBack();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(contexts).toHaveLength(2);
+    expect(contexts[0]!.closed).toBe(true);
+    expect(oscillators.length).toBeGreaterThan(voicesBefore);
+    expect(output.isRunning()).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(0);
+    contexts[1]!.currentTime = 0.5;
+    await vi.advanceTimersByTimeAsync(500);
     expect(output.isRunning()).toBe(true);
     touch();
     expect(contexts).toHaveLength(2);
+  });
+
+  it("in Safari, asks for a touch only when nothing brings the sound back by itself", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playClickTrack({ intervalMs: 750, accentEvery: 4 });
+
+    leave();
+    comeBack();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(contexts).toHaveLength(2);
+    expect(output.isRunning()).toBe(false);
+    touch();
+    expect(contexts).toHaveLength(3);
+    expect(output.isRunning()).toBe(true);
   });
 
   it("keeps a context that ran through the app switch in other browsers", async () => {
