@@ -562,4 +562,37 @@ describe("Web Audio output after an app switch", () => {
     vi.advanceTimersByTime(3000);
     expect(first!.closed).toBe(true);
   });
+
+  it("in Safari, makes the context once more on the lift of the same touch when the first one stays suspended", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    leave();
+    comeBack();
+    FakeAudioContext.startState = "suspended";
+    windowListeners.pointerdown!();
+    expect(contexts).toHaveLength(2);
+    windowListeners.pointerup!();
+    expect(contexts).toHaveLength(3);
+    // Only once per touch.
+    windowListeners.touchend!();
+    windowListeners.click!();
+    expect(contexts).toHaveLength(3);
+  });
+
+  it("in Safari, does not make the context again in the same touch when it starts", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+
+    leave();
+    comeBack();
+    windowListeners.pointerdown!();
+    windowListeners.pointerup!();
+    windowListeners.click!();
+    expect(contexts).toHaveLength(2);
+  });
 });
