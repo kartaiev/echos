@@ -209,7 +209,7 @@ function makeContext(why: string) {
 
 /** A fresh context in place of the current one, with the lasting sounds moved onto it. */
 function replaceContext(why: string, inGesture: boolean) {
-  if (context && context.state !== "closed") void context.close().catch(() => {});
+  const old = context;
   if (isSafari()) {
     // A fresh context does not help while the page's session stays interrupted: ask for the session again, and
     // inside a gesture start a media element too.
@@ -218,7 +218,33 @@ function replaceContext(why: string, inGesture: boolean) {
   }
   const ctx = makeContext(why);
   for (const sound of lasting) sound.moveTo(ctx);
+  seeStarted(ctx, old);
   return ctx;
+}
+
+/** When a fresh context that has not started yet is asked again, counted from the one before. */
+const ASK_AGAIN_AFTER_MS = [250, 500, 750, 1500];
+
+/**
+ * Sees a fresh context through to running. On an iPhone it can stay suspended after the first ask, even inside a
+ * touch, so it is asked again a few times. The context it replaces is closed only once the fresh one runs (or the
+ * asking ends): closing it first lets go of the iPhone's audio session just as the fresh one asks for it, and the
+ * fresh one then never started without a second touch.
+ */
+function seeStarted(ctx: AudioContext, old: AudioContext | null) {
+  let asked = 0;
+  const look = () => {
+    if (ctx.state === "running" || ctx !== context || asked >= ASK_AGAIN_AFTER_MS.length) {
+      if (old && old.state !== "closed") void old.close().catch(() => {});
+      return;
+    }
+    if (asked > 0) {
+      logSound(`${nameOf(ctx)} still ${ctx.state}, asking again`);
+      void ctx.resume().catch(() => {});
+    }
+    setTimeout(look, ASK_AGAIN_AFTER_MS[asked++]);
+  };
+  look();
 }
 
 /**

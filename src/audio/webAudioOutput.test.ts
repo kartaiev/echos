@@ -46,7 +46,10 @@ let oscillators: FakeOscillator[] = [];
 let contexts: FakeAudioContext[] = [];
 
 class FakeAudioContext {
-  state = "running";
+  /** The state a new context starts in. */
+  static startState = "running";
+  state = FakeAudioContext.startState;
+  resumes = 0;
   closed = false;
   onstatechange: (() => void) | null = null;
   constructor() {
@@ -93,6 +96,7 @@ class FakeAudioContext {
     return { harmonics: Array.from(imag, (a) => Math.round(a * 1000) / 1000).slice(1) };
   }
   resume() {
+    this.resumes += 1;
     return Promise.resolve();
   }
   suspend() {
@@ -226,6 +230,7 @@ describe("Web Audio output after an app switch", () => {
     pageListeners = {};
     windowListeners = {};
     vi.useFakeTimers();
+    FakeAudioContext.startState = "running";
     vi.stubGlobal("AudioContext", FakeAudioContext);
     page = {
       visibilityState: "visible",
@@ -510,5 +515,51 @@ describe("Web Audio output after an app switch", () => {
     expect(log).toMatch(/page away \(hidden\)/);
     expect(log).toMatch(/page back \(visible\).*session playback\/active/);
     expect(log).toMatch(/context 2 made \(after the page was away\)/);
+  });
+
+  it("keeps the old context until a fresh one that starts suspended runs, and asks the fresh one again", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+
+    leave();
+    first!.state = "interrupted";
+    first!.onstatechange!();
+    first!.state = "running";
+    comeBack();
+
+    FakeAudioContext.startState = "suspended";
+    touch();
+    const fresh = contexts[1]!;
+    const asked = fresh.resumes;
+    // Closing the old one now would let go of the sound just as the fresh one asks for it.
+    expect(first!.closed).toBe(false);
+
+    vi.advanceTimersByTime(250 + 500);
+    expect(fresh.resumes).toBeGreaterThan(asked);
+    expect(first!.closed).toBe(false);
+
+    fresh.state = "running";
+    vi.advanceTimersByTime(750);
+    expect(first!.closed).toBe(true);
+  });
+
+  it("closes the old context in the end even if the fresh one never starts", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+
+    leave();
+    first!.state = "interrupted";
+    first!.onstatechange!();
+    first!.state = "running";
+    comeBack();
+    FakeAudioContext.startState = "suspended";
+    touch();
+
+    vi.advanceTimersByTime(3000);
+    expect(first!.closed).toBe(true);
   });
 });
