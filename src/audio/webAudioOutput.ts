@@ -168,34 +168,62 @@ const lasting = new Set<Lasting>();
  * The page's AudioContext, started if it is not running. Safari stops it as "interrupted" when the student switches
  * to another app or takes a call, and as "suspended" before the first gesture; both resume here.
  */
-function getContext(fromGesture = false) {
+function getContext(fromGesture = false, gesture: string | null = null) {
   // iPhones mute Web Audio when the ring/silent switch is on, unless the page says it plays media.
   applyAudioSession();
+  const now = performance.now();
+  if (gesture && context && context.state !== "running") {
+    logSound(`${gesture}${activation()}: ${nameOf(context)} ${context.state}`);
+  }
   const stuck = fromGesture && context !== null && context.state !== "running" && resumeAskedAt !== null
-    && performance.now() - resumeAskedAt > STUCK_AFTER_MS;
+    && now - resumeAskedAt > STUCK_AFTER_MS;
   const untrusted = fromGesture && context !== null && distrusted;
-  if (!context) makeContext("first sound");
-  else if (stuck || untrusted || context.state === "closed") {
-    replaceContext(stuck ? "stuck" : untrusted ? "after the page was away" : "closed", fromGesture);
+  // On an iPhone the first context made in a touch can stay suspended however often it is asked, while one made by
+  // the next touch starts. So a later event of the same touch makes it once more.
+  const sameTouch = gesture !== null && isSafari() && context !== null && context.state !== "running"
+    && madeIn !== null && madeIn.gesture !== gesture && !madeIn.again && now - madeIn.at < SAME_TOUCH_MS;
+  if (!context) makeContext("first sound", gesture);
+  else if (stuck || untrusted || sameTouch || context.state === "closed") {
+    const why = stuck ? "stuck" : untrusted ? "after the page was away" : sameTouch ? "again in the same touch" : "closed";
+    replaceContext(why, fromGesture, gesture);
+    if (sameTouch && madeIn) madeIn.again = true;
   }
   const ctx = context!;
   if (ctx.state === "running") {
     resumeAskedAt = null;
   } else {
-    if (fromGesture) resumeAskedAt ??= performance.now();
+    if (fromGesture) resumeAskedAt ??= now;
     ctx.resume().then(
       () => {
-        if (ctx === context && ctx.state === "running") resumeAskedAt = null;
+        if (ctx !== context) return;
+        if (ctx.state === "running") resumeAskedAt = null;
+        else logSound(`${nameOf(ctx)} resume answered, still ${ctx.state}`);
       },
-      () => {},
+      (error: unknown) => logSound(`${nameOf(ctx)} resume refused: ${String(error)}`),
     );
   }
   return ctx;
 }
 
-function makeContext(why: string) {
+/** The context made by a touch, and by which of its events; whether that touch has made one again already. */
+let madeIn: { gesture: string; at: number; again: boolean } | null = null;
+/** Events this close to the one that made the context belong to the same touch. */
+const SAME_TOUCH_MS = 700;
+
+/** Whether the browser counts this moment as the user's own action, where it says so. */
+function activation() {
+  const user = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+  return user ? (user.isActive ? " (active)" : " (not active)") : "";
+}
+
+function makeContext(why: string, gesture: string | null = null) {
   const ctx = new AudioContext();
   context = ctx;
+  if (gesture) {
+    if (!madeIn || madeIn.gesture === gesture || performance.now() - madeIn.at >= SAME_TOUCH_MS) {
+      madeIn = { gesture, at: performance.now(), again: false };
+    }
+  } else madeIn = null;
   contextNumbers.set(ctx, ++contextsMade);
   logSound(`${nameOf(ctx)} made (${why}), ${ctx.state}, session ${sessionState()}`);
   watchState(ctx);
@@ -208,7 +236,7 @@ function makeContext(why: string) {
 }
 
 /** A fresh context in place of the current one, with the lasting sounds moved onto it. */
-function replaceContext(why: string, inGesture: boolean) {
+function replaceContext(why: string, inGesture: boolean, gesture: string | null = null) {
   const old = context;
   if (isSafari()) {
     // A fresh context does not help while the page's session stays interrupted: ask for the session again, and
@@ -216,7 +244,7 @@ function replaceContext(why: string, inGesture: boolean) {
     renewAudioSession();
     if (inGesture) playSilentClip();
   }
-  const ctx = makeContext(why);
+  const ctx = makeContext(why, gesture);
   for (const sound of lasting) sound.moveTo(ctx);
   seeStarted(ctx, old);
   return ctx;
@@ -308,8 +336,8 @@ let unlockListening = false;
 function listenForUnlock() {
   if (unlockListening) return;
   unlockListening = true;
-  for (const type of ["pointerdown", "pointerup", "touchend", "keydown"]) {
-    window.addEventListener(type, () => getContext(true), { capture: true });
+  for (const type of ["pointerdown", "pointerup", "touchend", "click", "keydown"]) {
+    window.addEventListener(type, () => getContext(true, type), { capture: true });
   }
   // Coming back counts as asking: if the context is still stopped a second later, the next touch rebuilds it.
   // Coming back from an interruption, or to a lasting sound in Safari, the next touch rebuilds it in any case.
