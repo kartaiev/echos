@@ -174,28 +174,11 @@ function getContext(fromGesture = false) {
   const stuck = fromGesture && context !== null && context.state !== "running" && resumeAskedAt !== null
     && performance.now() - resumeAskedAt > STUCK_AFTER_MS;
   const untrusted = fromGesture && context !== null && distrusted;
-  const replaced = context !== null && (stuck || untrusted || context.state === "closed");
-  if (stuck || untrusted) void context!.close().catch(() => {});
-  if (replaced && isSafari()) {
-    // A fresh context does not help while the page's session stays interrupted: ask for the session again, and
-    // start a media element inside the gesture.
-    renewAudioSession();
-    playSilentClip();
+  if (!context) makeContext("first sound");
+  else if (stuck || untrusted || context.state === "closed") {
+    replaceContext(stuck ? "stuck" : untrusted ? "after the page was away" : "closed", fromGesture);
   }
-  if (!context || replaced) {
-    const why = !context ? "first sound" : stuck ? "stuck" : untrusted ? "after the page was away" : "closed";
-    context = new AudioContext();
-    contextNumbers.set(context, ++contextsMade);
-    logSound(`${nameOf(context)} made (${why}), ${context.state}, session ${sessionState()}`);
-    watchState(context);
-    clockSeen = null;
-    resumeAskedAt = null;
-    distrusted = false;
-    knownSilent = false;
-    leftRunningAt = null;
-    if (replaced) for (const sound of lasting) sound.moveTo(context);
-  }
-  const ctx = context;
+  const ctx = context!;
   if (ctx.state === "running") {
     resumeAskedAt = null;
   } else {
@@ -208,6 +191,85 @@ function getContext(fromGesture = false) {
     );
   }
   return ctx;
+}
+
+function makeContext(why: string) {
+  const ctx = new AudioContext();
+  context = ctx;
+  contextNumbers.set(ctx, ++contextsMade);
+  logSound(`${nameOf(ctx)} made (${why}), ${ctx.state}, session ${sessionState()}`);
+  watchState(ctx);
+  clockSeen = null;
+  resumeAskedAt = null;
+  distrusted = false;
+  knownSilent = false;
+  leftRunningAt = null;
+  return ctx;
+}
+
+/** A fresh context in place of the current one, with the lasting sounds moved onto it. */
+function replaceContext(why: string, inGesture: boolean) {
+  if (context && context.state !== "closed") void context.close().catch(() => {});
+  if (isSafari()) {
+    // A fresh context does not help while the page's session stays interrupted: ask for the session again, and
+    // inside a gesture start a media element too.
+    renewAudioSession();
+    if (inGesture) playSilentClip();
+  }
+  const ctx = makeContext(why);
+  for (const sound of lasting) sound.moveTo(ctx);
+  return ctx;
+}
+
+/**
+ * Brings a lasting sound back by itself when the singer returns from another app, so no touch is needed. First the
+ * context that was already allowed to sound: stopping and starting it again makes Safari ask for the audio session
+ * anew. If its clock still stands, a fresh context with the sounds moved onto it. Only if that stays silent too does
+ * the notice ask for a touch. Meanwhile the notice waits.
+ */
+let reviving = false;
+const REVIVE_CHECK_MS = 500;
+const REVIVE_STEP_MS = 1000;
+
+async function revive() {
+  if (reviving || !context) return;
+  reviving = true;
+  try {
+    const ctx = context;
+    logSound(`reviving ${nameOf(ctx)} (${ctx.state} at ${ctx.currentTime.toFixed(2)})`);
+    renewAudioSession();
+    await settle(ctx.suspend());
+    await settle(ctx.resume());
+    if (await sounds(ctx)) return revived(ctx, "resumed");
+    if (ctx !== context) return;
+    const fresh = replaceContext("on return", false);
+    await settle(fresh.resume());
+    if (await sounds(fresh)) return revived(fresh, "rebuilt");
+    if (fresh === context) markSilent("could not bring the sound back without a touch");
+  } finally {
+    reviving = false;
+  }
+}
+
+/** Waits for a context's suspend or resume, but not forever: an interrupted one may never answer. */
+function settle(promise: Promise<void>) {
+  return Promise.race([promise.catch(() => {}), new Promise<void>((done) => setTimeout(done, REVIVE_STEP_MS))]);
+}
+
+/** Whether the context is still the page's and its clock moves. */
+function sounds(ctx: AudioContext) {
+  const before = ctx.currentTime;
+  return new Promise<boolean>((done) =>
+    setTimeout(() => done(ctx === context && ctx.state === "running" && ctx.currentTime !== before), REVIVE_CHECK_MS),
+  );
+}
+
+function revived(ctx: AudioContext, how: string) {
+  if (ctx !== context) return;
+  distrusted = false;
+  knownSilent = false;
+  clockSeen = null;
+  logSound(`sound back by itself (${how}), ${nameOf(ctx)} at ${ctx.currentTime.toFixed(2)}`);
 }
 
 let unlockListening = false;
@@ -261,7 +323,12 @@ function cameBack(how: string) {
   leftRunningAt = null;
   if (interrupted) markSilent("interrupted while away");
   if (lasting.size > 0 && sessionState().endsWith("/interrupted")) markSilent("session interrupted on return");
-  if (interrupted || (lasting.size > 0 && isSafari())) distrusted = true;
+  // In Safari a context that comes back is not trusted until it is heard again: a touch before then rebuilds it.
+  if (interrupted || isSafari()) distrusted = true;
+  if (isSafari() && lasting.size > 0) {
+    void revive();
+    return;
+  }
   if (context.state !== "running") resumeAskedAt ??= performance.now();
   const ctx = getContext();
   if (lasting.size > 0) checkClock(ctx);
@@ -425,7 +492,7 @@ export function createWebAudioOutput(): AudioOutput {
     playClickTrack,
     // Before anything has been played there is nothing to hear yet, so nothing is held back either.
     isRunning: () => {
-      if (context === null) return true;
+      if (context === null || reviving) return true;
       if (context.state === "running" && lasting.size > 0 && clockStandsStill(context)) {
         markSilent(`${nameOf(context)} clock stands at ${context.currentTime.toFixed(2)}`);
       }
