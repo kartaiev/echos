@@ -14,7 +14,7 @@ export function SoundLog() {
 
   useEffect(() => {
     if (!open) return;
-    const refresh = () => setText([`now: ${soundStatus()}`, `${navigator.userAgent}`, "", ...soundLogLines()].join("\n"));
+    const refresh = () => setText([`build ${__BUILD__}`, `now: ${soundStatus()}`, `${navigator.userAgent}`, "", ...soundLogLines()].join("\n"));
     refresh();
     const stop = onSoundLog(refresh);
     const timer = window.setInterval(refresh, 1000);

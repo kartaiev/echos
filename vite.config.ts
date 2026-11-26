@@ -85,6 +85,8 @@ export default defineConfig({
   // Relative paths, so the same build works at a domain root, under /echos/ on GitHub Pages, or embedded.
   base: "./",
   plugins: [react(), offlineServiceWorker()],
+  // Which build is running, for the sound log: the commit on GitHub Pages, "dev" anywhere else.
+  define: { __BUILD__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) ?? "dev") },
   test: {
     include: ["src/**/*.test.ts"],
   },
