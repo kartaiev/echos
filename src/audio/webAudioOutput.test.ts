@@ -55,7 +55,19 @@ class FakeAudioContext {
   constructor() {
     contexts.push(this);
   }
-  currentTime = 0;
+  /** The new context's clock moves with time, as a context that really plays does. */
+  static startRendering = false;
+  renders = FakeAudioContext.startRendering;
+  suspends = 0;
+  private time = 0;
+  private since = Date.now();
+  get currentTime() {
+    return this.renders ? this.time + (Date.now() - this.since) / 1000 : this.time;
+  }
+  set currentTime(value: number) {
+    this.time = value;
+    this.since = Date.now();
+  }
   outputLatency = 0;
   baseLatency = 0;
   destination = new FakeNode();
@@ -100,6 +112,7 @@ class FakeAudioContext {
     return Promise.resolve();
   }
   suspend() {
+    this.suspends += 1;
     return Promise.resolve();
   }
   close() {
@@ -231,6 +244,7 @@ describe("Web Audio output after an app switch", () => {
     windowListeners = {};
     vi.useFakeTimers();
     FakeAudioContext.startState = "running";
+    FakeAudioContext.startRendering = false;
     vi.stubGlobal("AudioContext", FakeAudioContext);
     page = {
       visibilityState: "visible",
@@ -322,68 +336,6 @@ describe("Web Audio output after an app switch", () => {
     expect(output.isRunning()).toBe(false);
     touch();
     expect(contexts).toHaveLength(2);
-    expect(output.isRunning()).toBe(true);
-  });
-
-  it("in Safari, brings a sounding Ison back by itself on return, with no touch and no notice", async () => {
-    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
-    const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playSound(ison);
-    const [first] = contexts;
-
-    leave();
-    comeBack();
-    expect(output.isRunning()).toBe(true);
-    await vi.advanceTimersByTimeAsync(0);
-    // Stopped and started again, the context that was allowed to sound is heard once more.
-    first!.currentTime = 1;
-    await vi.advanceTimersByTimeAsync(500);
-
-    expect(output.isRunning()).toBe(true);
-    expect(contexts).toHaveLength(1);
-    // Heard again, it is trusted again: a touch does not restart the Ison.
-    touch();
-    expect(contexts).toHaveLength(1);
-  });
-
-  it("in Safari, builds a fresh context by itself when the old one stays silent on return", async () => {
-    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
-    const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playSound(ison);
-    const voicesBefore = oscillators.length;
-
-    leave();
-    comeBack();
-    await vi.advanceTimersByTimeAsync(500);
-    expect(contexts).toHaveLength(2);
-    expect(contexts[0]!.closed).toBe(true);
-    expect(oscillators.length).toBeGreaterThan(voicesBefore);
-    expect(output.isRunning()).toBe(true);
-
-    await vi.advanceTimersByTimeAsync(0);
-    contexts[1]!.currentTime = 0.5;
-    await vi.advanceTimersByTimeAsync(500);
-    expect(output.isRunning()).toBe(true);
-    touch();
-    expect(contexts).toHaveLength(2);
-  });
-
-  it("in Safari, asks for a touch only when nothing brings the sound back by itself", async () => {
-    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
-    const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playClickTrack({ intervalMs: 750, accentEvery: 4 });
-
-    leave();
-    comeBack();
-    await vi.advanceTimersByTimeAsync(1000);
-
-    expect(contexts).toHaveLength(2);
-    expect(output.isRunning()).toBe(false);
-    touch();
-    expect(contexts).toHaveLength(3);
     expect(output.isRunning()).toBe(true);
   });
 
@@ -486,113 +438,138 @@ describe("Web Audio output after an app switch", () => {
     expect(types).toEqual(["auto", "playback"]);
   });
 
-  it("in Safari, counts losing focus as leaving when the page never says it was hidden", async () => {
-    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
+  it("in Safari, brings the sound back by itself on return by stopping and starting the context it had", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+
+    leave();
+    comeBack();
+    // Stopped and started again, it plays.
+    first!.renders = true;
+    expect(output.isRunning()).toBe(true);
+    await vi.advanceTimersByTimeAsync(700);
+
+    expect(first!.suspends).toBe(1);
+    expect(contexts).toHaveLength(1);
+    expect(output.isRunning()).toBe(true);
+    // Heard again, it is trusted again: a touch does not restart the Ison.
+    touch();
+    expect(contexts).toHaveLength(1);
+  });
+
+  it("in Safari, closes the old context before it starts a fresh one, when restarting is not enough", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+    const voicesBefore = oscillators.length;
+
+    leave();
+    comeBack();
+    FakeAudioContext.startRendering = true;
+    await vi.advanceTimersByTimeAsync(700);
+    // Its clock still stood: a fresh context takes the Ison over, the old one closed so nothing else plays.
+    expect(contexts).toHaveLength(2);
+    expect(first!.closed).toBe(true);
+    expect(oscillators.length).toBeGreaterThan(voicesBefore);
+
+    await vi.advanceTimersByTimeAsync(700);
+    expect(contexts[1]!.suspends).toBe(1);
+    expect(output.isRunning()).toBe(true);
+    touch();
+    expect(contexts).toHaveLength(2);
+  });
+
+  it("in Safari, asks for a touch only when nothing brings the sound back by itself", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playClickTrack({ intervalMs: 750, accentEvery: 4 });
+
+    leave();
+    comeBack();
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(contexts).toHaveLength(2);
+    expect(output.isRunning()).toBe(false);
+    touch();
+    expect(contexts).toHaveLength(3);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("in Safari, leaves the sound to its recovery when touched meanwhile", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
     const { createWebAudioOutput } = await import("./webAudioOutput");
     const output = createWebAudioOutput();
     output.playSound(ison);
 
-    windowListeners.blur!();
-    windowListeners.focus!();
+    leave();
+    comeBack();
     touch();
-
-    expect(contexts).toHaveLength(2);
+    expect(contexts).toHaveLength(1);
   });
 
-  it("writes the switch and the rebuild into the sound log", async () => {
-    vi.stubGlobal("navigator", { audioSession: { type: "playback", state: "active" } });
+  it("in Safari, brings back a context that says it runs while its clock stands, with no app switch and no notice", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playSound(ison);
+    const [first] = contexts;
+
+    expect(output.isRunning()).toBe(true);
+    vi.advanceTimersByTime(800);
+    expect(output.isRunning()).toBe(true);
+    first!.renders = true;
+    await vi.advanceTimersByTimeAsync(700);
+
+    expect(first!.suspends).toBe(1);
+    expect(contexts).toHaveLength(1);
+    expect(output.isRunning()).toBe(true);
+  });
+
+  it("in Safari, counts losing focus as leaving when the page never says it was hidden", async () => {
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
     const { createWebAudioOutput } = await import("./webAudioOutput");
     const { soundLogLines } = await import("./soundLog");
     const output = createWebAudioOutput();
     output.playSound(ison);
 
-    leave();
-    comeBack();
-    touch();
+    windowListeners.blur!();
+    windowListeners.focus!();
 
     const log = soundLogLines().join("\n");
-    expect(log).toMatch(/context 1 made \(first sound\)/);
-    expect(log).toMatch(/page away \(hidden\)/);
-    expect(log).toMatch(/page back \(visible\).*session playback\/active/);
-    expect(log).toMatch(/context 2 made \(after the page was away\)/);
-  });
-
-  it("keeps the old context until a fresh one that starts suspended runs, and asks the fresh one again", async () => {
-    const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playSound(ison);
-    const [first] = contexts;
-
-    leave();
-    first!.state = "interrupted";
-    first!.onstatechange!();
-    first!.state = "running";
-    comeBack();
-
-    FakeAudioContext.startState = "suspended";
-    touch();
-    const fresh = contexts[1]!;
-    const asked = fresh.resumes;
-    // Closing the old one now would let go of the sound just as the fresh one asks for it.
-    expect(first!.closed).toBe(false);
-
-    vi.advanceTimersByTime(250 + 500);
-    expect(fresh.resumes).toBeGreaterThan(asked);
-    expect(first!.closed).toBe(false);
-
-    fresh.state = "running";
-    vi.advanceTimersByTime(750);
-    expect(first!.closed).toBe(true);
-  });
-
-  it("closes the old context in the end even if the fresh one never starts", async () => {
-    const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playSound(ison);
-    const [first] = contexts;
-
-    leave();
-    first!.state = "interrupted";
-    first!.onstatechange!();
-    first!.state = "running";
-    comeBack();
-    FakeAudioContext.startState = "suspended";
-    touch();
-
-    vi.advanceTimersByTime(3000);
-    expect(first!.closed).toBe(true);
+    expect(log).toMatch(/page away \(blur\)/);
+    expect(log).toMatch(/recovering context 1 \(back in the app\)/);
   });
 
   it("in Safari, makes the context once more on the lift of the same touch when the first one stays suspended", async () => {
     vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
-    const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playSound(ison);
-
-    leave();
-    comeBack();
     FakeAudioContext.startState = "suspended";
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    createWebAudioOutput();
+
     windowListeners.pointerdown!();
-    expect(contexts).toHaveLength(2);
+    expect(contexts).toHaveLength(1);
     windowListeners.pointerup!();
-    expect(contexts).toHaveLength(3);
+    expect(contexts).toHaveLength(2);
     // Only once per touch.
     windowListeners.touchend!();
     windowListeners.click!();
-    expect(contexts).toHaveLength(3);
+    expect(contexts).toHaveLength(2);
   });
 
   it("in Safari, does not make the context again in the same touch when it starts", async () => {
     vi.stubGlobal("navigator", { audioSession: { type: "playback" } });
     const { createWebAudioOutput } = await import("./webAudioOutput");
-    const output = createWebAudioOutput();
-    output.playSound(ison);
+    createWebAudioOutput();
 
-    leave();
-    comeBack();
     windowListeners.pointerdown!();
     windowListeners.pointerup!();
     windowListeners.click!();
-    expect(contexts).toHaveLength(2);
+    expect(contexts).toHaveLength(1);
   });
 });
