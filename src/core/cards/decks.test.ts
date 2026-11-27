@@ -71,10 +71,10 @@ describe("Decks", () => {
     expect(signatures.find((c) => c.id === "signature:plagal-fourth")).toMatchObject({ base: { name: "Ni", octave: 0 }, fthora: "diatonic-ni-low" });
   });
 
-  it("has a Neume Card for every Neume with a name, first in the Deck", () => {
-    const neumes = cardsOf("neumes").filter((c) => c.kind === "neume");
+  it("has a Neume Card for every Neume with a name, and nothing else", () => {
+    const neumes = cardsOf("neumes");
 
-    expect(neumes.map((c) => c.neume)).toEqual([
+    expect(neumes.map((c) => (c.kind === "neume" ? c.neume : c.kind))).toEqual([
       "ison",
       "oligon",
       "kentima",
@@ -86,28 +86,10 @@ describe("Decks", () => {
       "chamili",
       "running-elafron",
     ]);
-    expect(cardsOf("neumes")[0]).toMatchObject({ kind: "neume", id: "neume:ison" });
-  });
-
-  it("says on each Neume Card where the sign takes the melody when written alone", () => {
-    const motion = Object.fromEntries(cardsOf("neumes").flatMap((c) => (c.kind === "neume" ? [[c.neume, c.steps]] : [])));
-
-    expect(motion).toEqual({
-      ison: [0],
-      oligon: [1],
-      kentima: null,
-      kentimata: [1],
-      petasti: [1],
-      apostrofos: [-1],
-      elafron: [-2],
-      yporroi: [-1, -1],
-      chamili: [-4],
-      "running-elafron": [-1, -1],
-    });
   });
 
   it("has an Interval Card for every written form on the handout, with the steps it sings", () => {
-    const intervals = cardsOf("neumes").filter((c) => c.kind === "interval");
+    const intervals = cardsOf("intervals").filter((c) => c.kind === "interval");
 
     expect(intervals).toHaveLength(39);
     expect(intervals.find((c) => c.id === "interval:oligon-ypsili-right")).toMatchObject({ steps: [4], ornament: false });
@@ -116,8 +98,19 @@ describe("Decks", () => {
     expect(intervals.find((c) => c.id === "interval:petasti-oligon")).toMatchObject({ steps: [2], ornament: true });
   });
 
+  it("brings the intervals in simplest first: one sign, several signs, two notes, then the Petasti", () => {
+    const signs = cardsOf("intervals").map((c) => (c.kind === "interval" ? c.sign : null));
+
+    expect(signs.slice(0, 6)).toEqual(["ison", "oligon", "kentimata", "apostrofos", "elafron", "chamili"]);
+    expect(signs.slice(6, 9)).toEqual(["oligon-ison", "oligon-apostrofos", "oligon-kentima-middle"]);
+    expect(signs.at(18)).toBe("chamili-elafron-apostrofos");
+    expect(signs.slice(19, 21)).toEqual(["yporroi", "running-elafron"]);
+    expect(signs.slice(24, 26)).toEqual(["petasti", "petasti-ison"]);
+    expect(signs.at(-1)).toBe("petasti-chamili-elafron-apostrofos");
+  });
+
   it("covers every interval from up seven to down seven, plainly written and with the Petasti", () => {
-    const intervals = cardsOf("neumes").filter((c) => c.kind === "interval" && c.steps.length === 1);
+    const intervals = cardsOf("intervals").filter((c) => c.kind === "interval" && c.steps.length === 1);
     const reached = (ornament: boolean) =>
       [...new Set(intervals.filter((c) => c.kind === "interval" && c.ornament === ornament).map((c) => (c.kind === "interval" ? c.steps[0] : 0)))].sort(
         (a, b) => a! - b!,

@@ -148,9 +148,9 @@ _Avoid_: flashcard, quiz, question
 _Greek_: κάρτα
 
 **Deck**:
-The Cards on one kind of sign: Neumes (their names and the intervals they write), Fthores, Martyries or Modal Signatures; or on the Attractions, each in the Modes and the turn of the melody where it happens.
+The Cards on one kind of sign: Neumes (their names), the intervals the Neumes write, Fthores, Martyries or Modal Signatures; or on the Attractions, each in the Modes and the turn of the melody where it happens.
 _Avoid_: set, collection, topic
-_Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Φθορές, Μαρτυρίες, Αρκτικές μαρτυρίες, Έλξεις)
+_Greek_: σειρά καρτών (named by its sign: Χαρακτήρες, Διαστήματα, Φθορές, Μαρτυρίες, Αρκτικές μαρτυρίες, Έλξεις)
 
 **Melody Path**:
 A drawing on the answer of an Attraction Card: the Degrees the melody passes in that situation, in order, with arrows, and the Degree asked about moved the way it is sung. It pictures the rule; it is not a melody from a book.

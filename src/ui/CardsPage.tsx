@@ -83,12 +83,6 @@ function CardFace({ card }: { card: Card }) {
 /** One step of the melody in words: up or down so many Degrees, or the same Degree. */
 const stepLabel = (step: number) => (step === 0 ? t("cards.same") : t(step > 0 ? "cards.up" : "cards.down", { n: Math.abs(step) }));
 
-/** Every note the sign sings, in words: "Down 1, then down 1". */
-function motionLabel(steps: readonly number[]) {
-  const [first, ...rest] = steps.map(stepLabel);
-  return rest.reduce((said, next) => t("cards.then", { first: said, next: next.toLowerCase() }), first!);
-}
-
 function CardAnswer({ card }: { card: Card }) {
   if (card.kind === "attraction") {
     const turn = card.slightly && card.turn !== "natural" ? (`slightly-${card.turn}` as const) : card.turn;
@@ -108,18 +102,7 @@ function CardAnswer({ card }: { card: Card }) {
       </>
     );
   }
-  if (card.kind === "neume") {
-    return (
-      <>
-        <p className="flashcard__answer">{t(`neume.${card.neume}`)}</p>
-        {card.steps ? (
-          <p className="flashcard__answer flashcard__motion">{motionLabel(card.steps)}</p>
-        ) : (
-          <p className="flashcard__also">{t("cards.notAlone")}</p>
-        )}
-      </>
-    );
-  }
+  if (card.kind === "neume") return <p className="flashcard__answer">{t(`neume.${card.neume}`)}</p>;
   if (card.kind === "signature") {
     const fthora = t("cards.fthoraAnswer", {
       genus: t(`genus.${card.fthoraGenus}`),
@@ -133,9 +116,10 @@ function CardAnswer({ card }: { card: Card }) {
     );
   }
   if (card.kind === "interval") {
+    const [first, ...rest] = card.steps.map(stepLabel);
     return (
       <>
-        <p className="flashcard__answer">{motionLabel(card.steps)}</p>
+        <p className="flashcard__answer">{rest.reduce((said, next) => t("cards.then", { first: said, next: next.toLowerCase() }), first!)}</p>
         {card.ornament && <p className="flashcard__also">{t("cards.withPetasti")}</p>}
       </>
     );

@@ -1977,12 +1977,6 @@ a {
   color: var(--cinnabar);
 }
 
-/* Under the name of a Neume, where it takes the melody: as plain as the answer, in the colour of the text. */
-.flashcard__motion {
-  margin-top: 4px;
-  color: var(--text);
-}
-
 .flashcard__also {
   margin: 6px 0 0;
   color: var(--muted);

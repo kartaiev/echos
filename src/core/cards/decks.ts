@@ -3,7 +3,7 @@ import { FTHORA_GENERA, FTHORES, type FthoraGenus, type FthoraSign } from "../th
 import { MARTYRIA, martyriaOf, type Martyria } from "../theory/martyria";
 import { MODAL_SIGNATURES, type ModalSignature } from "../theory/modalSignatures";
 import { MODE_VARIANTS } from "../theory/modeVariants";
-import { INTERVAL_NEUMES, NEUME_NAMES, type NeumeName, type NeumeSign } from "../theory/neumes";
+import { INTERVAL_NEUMES, NEUME_NAMES, type IntervalNeume, type NeumeName, type NeumeSign } from "../theory/neumes";
 import { buildScale, degreeId, positionAt, type DegreePosition } from "../theory/scale";
 import { DEGREE_NAMES, GENUS_IDS, PMC_1881, type GenusId } from "../theory/tuningSystems";
 
@@ -35,12 +35,11 @@ export interface SignatureCard extends ModalSignature {
   fthoraDegree: DegreePosition;
 }
 
-/** A Neume to name, and where it takes the melody when written alone (none for the Kentima, never written alone). */
+/** A Neume to name. */
 export interface NeumeCard {
   kind: "neume";
   id: string;
   neume: NeumeName;
-  steps: readonly number[] | null;
 }
 
 /** A written interval to read: where the melody goes from the Degree before it. */
@@ -71,7 +70,7 @@ export interface AttractionCard extends Omit<AttractionRule, "id" | "reviewStatu
 
 export type Card = NeumeCard | IntervalCard | FthoraCard | MartyriaCard | SignatureCard | AttractionCard;
 
-export const DECK_IDS = ["neumes", "fthores", "martyries", "signatures", "attractions"] as const;
+export const DECK_IDS = ["neumes", "intervals", "fthores", "martyries", "signatures", "attractions"] as const;
 export type DeckId = (typeof DECK_IDS)[number];
 
 export interface Deck {
@@ -81,16 +80,31 @@ export interface Deck {
   source: string;
 }
 
-/** The names first, so the signs the intervals are built from are known before the intervals come up. */
-const neumeCards: (NeumeCard | IntervalCard)[] = [
-  ...NEUME_NAMES.map((neume) => ({
-    kind: "neume" as const,
-    id: `neume:${neume}`,
-    neume,
-    steps: INTERVAL_NEUMES.value.find(({ sign }) => sign === neume)?.steps ?? null,
-  })),
-  ...INTERVAL_NEUMES.value.map(({ sign, steps, ornament }) => ({ kind: "interval" as const, id: `interval:${sign}`, sign, steps, ornament })),
-];
+/** The name of each Neume; the intervals are a Deck of their own, so each Deck asks one thing. */
+const neumeCards: NeumeCard[] = NEUME_NAMES.map((neume) => ({ kind: "neume" as const, id: `neume:${neume}`, neume }));
+
+/**
+ * The order new interval Cards come in, simplest first: one note written with one sign (the Oligon, the Apostrofos),
+ * then one note written with several (the Kentima or Ypsili over the Oligon, the Chamili with the Elafron), then two
+ * notes, then the Petasti forms, an ornament. Within each, a sign that has a name of its own comes first, then the
+ * nearer intervals before the further, up before down.
+ */
+function learningOrder({ sign, steps, ornament }: IntervalNeume): number[] {
+  const kind = ornament ? 3 : steps.length > 1 ? 2 : (NEUME_NAMES as readonly string[]).includes(sign) ? 0 : 1;
+  const name = (NEUME_NAMES as readonly string[]).indexOf(sign);
+  const total = steps.reduce((sum, step) => sum + step, 0);
+  // Signs with a name of their own keep the order of the names: the Oligon before the Kentimata.
+  return [kind, name < 0 ? 1 : 0, Math.abs(total), total < 0 ? 1 : 0, name];
+}
+
+function byLearningOrder(a: IntervalNeume, b: IntervalNeume) {
+  const [x, y] = [learningOrder(a), learningOrder(b)];
+  return x.reduce((found, value, i) => found || value - y[i]!, 0);
+}
+
+const intervalCards: IntervalCard[] = [...INTERVAL_NEUMES.value]
+  .sort(byLearningOrder)
+  .map(({ sign, steps, ornament }) => ({ kind: "interval" as const, id: `interval:${sign}`, sign, steps, ornament }));
 
 const fthoraCards: FthoraCard[] = FTHORA_GENERA.flatMap((genus) =>
   (Object.entries(FTHORES.value[genus]) as [FthoraSign, readonly DegreePosition[]][]).map(([sign, degrees]) => ({
@@ -155,6 +169,7 @@ const attractionCards: AttractionCard[] = ATTRACTION_RULES.map(({ id, reviewStat
 
 export const DECKS: Record<DeckId, Deck> = {
   neumes: { id: "neumes", cards: neumeCards, source: INTERVAL_NEUMES.source },
+  intervals: { id: "intervals", cards: intervalCards, source: INTERVAL_NEUMES.source },
   fthores: { id: "fthores", cards: fthoraCards, source: FTHORES.source },
   martyries: { id: "martyries", cards: martyriaCards, source: MARTYRIA.diatonic.source },
   signatures: { id: "signatures", cards: signatureCards, source: MODAL_SIGNATURES.source },
