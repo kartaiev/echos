@@ -1,6 +1,8 @@
 # Cards on Leitner boxes, kept on the device
 
-The Cards come back on Leitner boxes. A Card remembered moves up a box and waits 1, 3, 7, 16, 35, then 75 days; a Card forgotten drops to the first box and comes back in the same Review, after three other Cards. A Review shows the Cards due (the most overdue first), then up to ten Cards never seen, in Deck order so the Diatonic signs come before the Chromatic ones; both are shuffled within their group.
+The Cards come back on Leitner boxes. A Card remembered moves up a box and waits 1, 3, 7, 16, 35, then 75 days; a Card forgotten drops to the first box and comes back in the same Review, after three other Cards. A Review shows the Cards due (the most overdue first), then up to ten Cards never seen, in Deck order so the Diatonic signs come before the Chromatic ones; both are shuffled within their group. Ten is the size of one Review, not of a day: when a Review is over, the student can take the next ten new Cards at once, as often as they like.
+
+A Card counts as learned while it was remembered the last time it was asked (its box is above the first), whether or not it is due again; a Card forgotten is not learned until it is remembered again.
 
 We chose two grades, "Forgot" and "Remembered", over the four of SM-2 or FSRS. A student naming a sign either knows it or does not, and two large buttons are easier to hit on a phone held in one hand. Leitner boxes are simple to explain on the page ("after a day, then three, then a week") and need no tuning; a finer schedule can replace them later without changing a Card.
 

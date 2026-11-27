@@ -62,7 +62,10 @@ export interface CardReview {
   progress(): CardProgressRecord;
 }
 
-/** A Review of one Deck: the Cards due today (the most overdue first), then new Cards up to the limit. */
+/**
+ * A Review of one Deck: the Cards due today (the most overdue first), then new Cards up to the limit. When it is over,
+ * the student may start another for the next new Cards, as many times as they like.
+ */
 export function startReview({ cards, progress, today, newLimit = NEW_CARDS_PER_REVIEW, order = shuffled }: ReviewOptions): CardReview {
   const due = cards.filter((id) => progress[id] && progress[id].due <= today);
   // Days compare as text; within a day the given order decides.
@@ -96,7 +99,7 @@ export interface DeckStanding {
   due: number;
   /** Never seen. */
   fresh: number;
-  /** Remembered and not due yet. */
+  /** Remembered the last time they were asked (due again or not); a Card forgotten is not learned until remembered. */
   learned: number;
   total: number;
   /** The first day after today a Card of the Deck is due, or null when none waits. */
@@ -109,7 +112,7 @@ export function deckStanding(cards: readonly string[], progress: CardProgressRec
   return {
     due: seen.filter((p) => p.due <= today).length,
     fresh: cards.length - seen.length,
-    learned: waiting.length,
+    learned: seen.filter((p) => p.box > 0).length,
     total: cards.length,
     nextDue: waiting[0] ?? null,
   };

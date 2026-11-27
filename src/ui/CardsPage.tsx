@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { deckStanding, startReview, type CardProgressRecord, type CardReview, type Grade } from "../core/cards/cardReview";
+import { deckStanding, NEW_CARDS_PER_REVIEW, startReview, type CardProgressRecord, type CardReview, type Grade } from "../core/cards/cardReview";
 import { DECK_IDS, DECKS, type AttractionCard, type Card, type DeckId } from "../core/cards/decks";
 import { currentLanguage, degreeLabel, t } from "../i18n/translations";
 import { fthoraGlyph, martyriaGlyphs, modeSignGlyphs, neumeGlyph } from "./martyriaGlyphs";
@@ -220,6 +220,12 @@ export function CardsPage({ progress, today, onProgress }: CardsPageProps) {
           <div className="flashcard flashcard--done" role="status">
             <p className="flashcard__answer">{t("cards.done")}</p>
             {standing.nextDue && <p className="flashcard__also">{t("cards.next", { date: dayLabel(standing.nextDue) })}</p>}
+            {/* No limit on a day: the student who wants more takes the next new Cards. */}
+            {standing.fresh > 0 && (
+              <button type="button" className="primary-button flashcard__more" onClick={() => start(running.deck)}>
+                {t("cards.more", { n: Math.min(standing.fresh, NEW_CARDS_PER_REVIEW) })}
+              </button>
+            )}
           </div>
         )}
       </section>
