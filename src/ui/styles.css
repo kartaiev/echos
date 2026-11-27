@@ -1998,6 +1998,12 @@ a {
   padding: 28px 16px;
 }
 
+/* After a Review, the next new Cards for a student who wants more today. */
+.flashcard__more {
+  margin-top: 16px;
+  width: 100%;
+}
+
 /* Voice Check: where the voice is, a dot on the rail that follows the singer. */
 .ladder__voice {
   position: absolute;

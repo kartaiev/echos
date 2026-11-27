@@ -131,7 +131,19 @@ describe("Deck standing", () => {
       gone: { box: 2, due: "2026-11-01" },
     };
 
-    expect(deckStanding(CARDS, progress, "2026-11-10")).toEqual({ due: 2, fresh: 3, learned: 1, total: 6, nextDue: "2026-11-30" });
+    expect(deckStanding(CARDS, progress, "2026-11-10")).toEqual({ due: 2, fresh: 3, learned: 2, total: 6, nextDue: "2026-11-30" });
+  });
+
+  it("still counts a Card learned when it comes due again, but not once it is forgotten", () => {
+    const remembered = startReview({ cards: ["a"], progress: {}, today: "2026-11-10", order: (ids) => [...ids] });
+    remembered.answer("remembered");
+
+    expect(deckStanding(["a"], remembered.progress(), "2026-11-11")).toMatchObject({ due: 1, learned: 1 });
+
+    const forgotten = startReview({ cards: ["a"], progress: remembered.progress(), today: "2026-11-11", order: (ids) => [...ids] });
+    forgotten.answer("forgot");
+
+    expect(deckStanding(["a"], forgotten.progress(), "2026-11-11")).toMatchObject({ due: 1, learned: 0 });
   });
 
   it("has no next date when nothing waits", () => {
