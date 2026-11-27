@@ -133,63 +133,133 @@ function getContext(fromGesture = false, gesture: string | null = null) {
   // iPhones mute Web Audio when the ring/silent switch is on, unless the page says it plays media.
   applyAudioSession();
   const now = performance.now();
+  const active = fromGesture && isUserActive();
+  // On iPhone Safari, touch pointerdown never carries user activation (isActive is false); creating or replacing a
+  // context there only makes a suspended one right before pointerup/touchend arrives with real activation.
+  if (gesture === "pointerdown" && !active) {
+    if (context && context.state !== "running") logSound(`${gesture}${activation()}: ${nameOf(context)} ${context.state}`);
+    return context;
+  }
   if (gesture && context && context.state !== "running") {
     logSound(`${gesture}${activation()}: ${nameOf(context)} ${context.state}`);
   }
-  const stuck = fromGesture && context !== null && context.state !== "running" && resumeAskedAt !== null
-    && now - resumeAskedAt > STUCK_AFTER_MS;
-  // While the sound is being brought back, a touch leaves it to that.
-  const untrusted = fromGesture && context !== null && distrusted && !recovering;
-  // On an iPhone the first context made in a touch can stay suspended however often it is asked, while one made by
-  // the next touch starts. So a later event of the same touch makes it once more.
-  const sameTouch = gesture !== null && isSafari() && context !== null && context.state !== "running"
-    && madeIn !== null && madeIn.gesture !== gesture && !madeIn.again && now - madeIn.at < SAME_TOUCH_MS;
-  if (!context) {
-    makeContext("first sound", gesture);
+  // touchstart fires at finger-down, before a long press timer can strip tap activation from touchend. Try starting
+  // the first context there, without closing an existing one or marking it as an active attempt if it stays silent.
+  if (gesture === "touchstart" && !active) {
+    if (!context) makeContext("first sound", gesture, false);
+    const ctx = context!;
+    if (ctx.state !== "running") {
+      nudge(ctx);
+      askResume(ctx);
+    }
+    return ctx;
   }
-  else if (stuck || untrusted || sameTouch || context.state === "closed") {
-    const why = stuck ? "stuck" : untrusted ? "after the page was away" : sameTouch ? "again in the same touch" : "closed";
-    replaceContext(why, gesture);
-    if (sameTouch && madeIn) madeIn.again = true;
+  // A non-activating lift (such as the end of a long press on iOS) must not tear down and churn contexts; just ask
+  // the current one to resume.
+  if (fromGesture && !active) {
+    if (context && context.state !== "running") {
+      nudge(context);
+      askResume(context);
+    }
+    return context;
+  }
+  const stuck = active && context !== null && context.state !== "running" && resumeAskedAt !== null
+    && now - resumeAskedAt > STUCK_AFTER_MS;
+  // A context made outside real user activation (on touchstart, from a long-press timer, or during recovery) can stay
+  // suspended in Safari even when asked later: the first truly active gesture replaces it at once.
+  const madeInactive = active && context !== null && context.state !== "running" && !madeActive && !recovering;
+  // While the sound is being brought back, a touch leaves it to that.
+  const untrusted = active && context !== null && distrusted && !recovering;
+  // Where pointerdown is active (or userActivation is absent) and still leaves the context suspended, the lift of
+  // the same touch makes it once more — never tearing down a context that a lift just created milliseconds earlier.
+  const sameTouch = gesture !== null && active && isSafari() && context !== null && context.state !== "running"
+    && madeIn !== null && (madeIn.gesture === "pointerdown" || madeIn.gesture === "touchstart")
+    && madeIn.gesture !== gesture && !madeIn.again && now - madeIn.at < SAME_TOUCH_MS;
+  if (!context) {
+    makeContext("first sound", gesture, active);
+  }
+  else if (stuck || madeInactive || untrusted || sameTouch || context.state === "closed") {
+    const why = stuck ? "stuck"
+      : madeInactive ? "outside a gesture"
+      : untrusted ? "after the page was away"
+      : sameTouch ? "again in the same touch"
+      : "closed";
+    replaceContext(why, gesture, active);
+    if ((sameTouch || madeInactive) && madeIn) madeIn.again = true;
   }
   const ctx = context!;
   if (ctx.state === "running") {
     resumeAskedAt = null;
   } else {
-    if (fromGesture) resumeAskedAt ??= now;
-    ctx.resume().then(
-      () => {
-        if (ctx !== context) return;
-        if (ctx.state === "running") resumeAskedAt = null;
-        else logSound(`${nameOf(ctx)} resume answered, still ${ctx.state}`);
-      },
-      (error: unknown) => logSound(`${nameOf(ctx)} resume refused: ${String(error)}`),
-    );
+    if (active) {
+      resumeAskedAt ??= now;
+      nudge(ctx);
+    }
+    askResume(ctx);
   }
   return ctx;
 }
 
+function askResume(ctx: AudioContext) {
+  ctx.resume().then(
+    () => {
+      if (ctx !== context) return;
+      if (ctx.state === "running") resumeAskedAt = null;
+      else logSound(`${nameOf(ctx)} resume answered, still ${ctx.state}`);
+    },
+    (error: unknown) => logSound(`${nameOf(ctx)} resume refused: ${String(error)}`),
+  );
+}
+
+/** Plays a single silent sample: iOS Safari sometimes keeps a new context suspended until a source starts inside the gesture. */
+function nudge(ctx: AudioContext) {
+  try {
+    const buffer = ctx.createBuffer(1, 1, ctx.sampleRate || 48000);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  } catch {
+    // Closed or non-standard context; resume() still runs.
+  }
+}
+
 /** The context made by a touch, and by which of its events; whether that touch has made one again already. */
 let madeIn: { gesture: string; at: number; again: boolean } | null = null;
+/** Whether the current context was created inside an activating user gesture. */
+let madeActive = false;
 /** Events this close to the one that made the context belong to the same touch. */
 const SAME_TOUCH_MS = 700;
 
+type UserActivationLike = { isActive: boolean };
+function userActivation(): UserActivationLike | undefined {
+  return (navigator as Navigator & { userActivation?: UserActivationLike }).userActivation;
+}
+
+/** Whether the browser counts this moment as an activating user gesture (true where the API is absent). */
+function isUserActive(): boolean {
+  const user = userActivation();
+  return user ? user.isActive : true;
+}
+
 /** Whether the browser counts this moment as the user's own action, where it says so. */
 function activation() {
-  const user = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+  const user = userActivation();
   return user ? (user.isActive ? " (active)" : " (not active)") : "";
 }
 
-function makeContext(why: string, gesture: string | null = null) {
+function makeContext(why: string, gesture: string | null = null, active = false) {
   const ctx = new AudioContext();
   context = ctx;
+  madeActive = active;
   if (gesture) {
     if (!madeIn || madeIn.gesture === gesture || performance.now() - madeIn.at >= SAME_TOUCH_MS) {
       madeIn = { gesture, at: performance.now(), again: false };
     }
   } else madeIn = null;
   contextNumbers.set(ctx, ++contextsMade);
-  logSound(`${nameOf(ctx)} made (${why}), ${ctx.state}, session ${sessionState()}`);
+  const via = gesture ? ` via ${gesture}${activation()}` : "";
+  logSound(`${nameOf(ctx)} made (${why}${via}), ${ctx.state}, session ${sessionState()}`);
   watchState(ctx);
   clockSeen = null;
   resumeAskedAt = null;
@@ -203,7 +273,7 @@ function makeContext(why: string, gesture: string | null = null) {
 const closing = new Set<Promise<void>>();
 
 /** A fresh context in place of the current one, with the lasting sounds moved onto it. */
-function replaceContext(why: string, gesture: string | null = null) {
+function replaceContext(why: string, gesture: string | null = null, active = false) {
   const old = context;
   if (old && old.state !== "closed") {
     const closed = old.close().catch(() => {});
@@ -212,9 +282,9 @@ function replaceContext(why: string, gesture: string | null = null) {
   }
   // Ask for the session afresh as well.
   if (isSafari()) renewAudioSession();
-  const ctx = makeContext(why, gesture);
+  const ctx = makeContext(why, gesture, active);
   for (const sound of lasting) sound.moveTo(ctx);
-  seeStarted(ctx);
+  if (active) seeStarted(ctx);
   return ctx;
 }
 
@@ -306,7 +376,7 @@ let unlockListening = false;
 function listenForUnlock() {
   if (unlockListening) return;
   unlockListening = true;
-  for (const type of ["pointerdown", "pointerup", "touchend", "click", "keydown"]) {
+  for (const type of ["touchstart", "pointerdown", "pointerup", "touchend", "click", "change", "keydown"]) {
     window.addEventListener(type, () => getContext(true, type), { capture: true });
   }
   // Coming back counts as asking: if the context is still stopped a second later, the next touch rebuilds it.
@@ -355,7 +425,7 @@ function cameBack(how: string) {
     return;
   }
   if (context.state !== "running") resumeAskedAt ??= performance.now();
-  const ctx = getContext();
+  const ctx = getContext()!;
   if (lasting.size > 0) checkClock(ctx);
 }
 
@@ -419,7 +489,8 @@ function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): Playing
   }
 
   const track: Lasting = { moveTo: startOn };
-  startOn(getContext());
+  const activeNow = Boolean(userActivation()?.isActive);
+  startOn(getContext(activeNow, activeNow ? "play" : null)!);
   lasting.add(track);
   let stopped = false;
 
@@ -524,7 +595,8 @@ export function createWebAudioOutput(): AudioOutput {
     },
     playSound(sound: SoundRequest): PlayingSound {
       let current = sound;
-      let voice = playVoice(getContext(), current);
+      const activeNow = Boolean(userActivation()?.isActive);
+      let voice = playVoice(getContext(activeNow, activeNow ? "play" : null)!, current);
       // A sound held until stopped (the Ison) starts again on a fresh context; a timed one is over by then.
       const held: Lasting | null =
         sound.durationMs === null ? { moveTo: (ctx) => (voice = playVoice(ctx, { ...current, startMs: 0 })) } : null;

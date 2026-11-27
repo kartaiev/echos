@@ -92,8 +92,11 @@ class FakeAudioContext {
     return { numberOfChannels: channels, length, sampleRate, getChannelData: (c: number) => data[c]! };
   }
   createBufferSource() {
-    return Object.assign(new FakeNode(), { buffer: null, loop: false, start() {}, stop() {} });
+    const source = Object.assign(new FakeNode(), { buffer: null, loop: false, started: 0, start() { this.started += 1; }, stop() {} });
+    this.bufferSources.push(source);
+    return source;
   }
+  bufferSources: { started: number }[] = [];
   createConvolver() {
     return Object.assign(new FakeNode(), { buffer: null, normalize: true });
   }
@@ -571,5 +574,93 @@ describe("Web Audio output after an app switch", () => {
     windowListeners.pointerup!();
     windowListeners.click!();
     expect(contexts).toHaveLength(1);
+  });
+
+  it("on iPhone, ignores inactive pointerdown and starts on the first active lift without churning contexts", async () => {
+    const userActivation = { isActive: false };
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" }, userActivation });
+    FakeAudioContext.startState = "suspended";
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    createWebAudioOutput();
+
+    // Touch pointerdown has no user activation on iOS: it must not create a doomed context.
+    windowListeners.pointerdown!();
+    expect(contexts).toHaveLength(0);
+
+    // Lift carries real user activation: makes one context, nudges it, and touchend/click leave it alone.
+    userActivation.isActive = true;
+    windowListeners.pointerup!();
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0]!.bufferSources).toHaveLength(1);
+    expect(contexts[0]!.bufferSources[0]!.started).toBe(1);
+
+    windowListeners.touchend!();
+    windowListeners.click!();
+    expect(contexts).toHaveLength(1);
+  });
+
+  it("on iPhone, tries starting on touchstart for a long press and replaces at once on the first active gesture if still suspended", async () => {
+    const userActivation = { isActive: false };
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" }, userActivation });
+    FakeAudioContext.startState = "suspended";
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    createWebAudioOutput();
+
+    // Finger touches the screen: touchstart tries to unlock before a long-press timer runs.
+    windowListeners.touchstart!();
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0]!.resumes).toBe(1);
+    expect(contexts[0]!.bufferSources[0]!.started).toBe(1);
+
+    // Inactive pointerdown and an inactive long-press lift do not churn contexts.
+    windowListeners.pointerdown!();
+    windowListeners.pointerup!();
+    windowListeners.touchend!();
+    expect(contexts).toHaveLength(1);
+
+    // The first truly active tap replaces the inactive context immediately (without waiting for STUCK_AFTER_MS).
+    windowListeners.touchstart!();
+    windowListeners.pointerdown!();
+    expect(contexts).toHaveLength(1);
+    userActivation.isActive = true;
+    windowListeners.pointerup!();
+    expect(contexts).toHaveLength(2);
+    expect(contexts[0]!.closed).toBe(true);
+    // touchend of that same lift does not kill the freshly created active context.
+    windowListeners.touchend!();
+    expect(contexts).toHaveLength(2);
+  });
+
+  it("on iPhone, keeps the context started on touchstart when it begins running immediately", async () => {
+    const userActivation = { isActive: false };
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" }, userActivation });
+    FakeAudioContext.startState = "suspended";
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    createWebAudioOutput();
+
+    windowListeners.touchstart!();
+    expect(contexts).toHaveLength(1);
+    contexts[0]!.state = "running";
+
+    userActivation.isActive = true;
+    windowListeners.pointerup!();
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0]!.closed).toBe(false);
+  });
+
+  it("on iPhone, unlocks on a select change event when a context was made outside a gesture", async () => {
+    const userActivation = { isActive: false };
+    vi.stubGlobal("navigator", { audioSession: { type: "playback" }, userActivation });
+    FakeAudioContext.startState = "suspended";
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+
+    output.playSound(ison);
+    expect(contexts).toHaveLength(1);
+
+    userActivation.isActive = true;
+    windowListeners.change!();
+    expect(contexts).toHaveLength(2);
+    expect(contexts[0]!.closed).toBe(true);
   });
 });
