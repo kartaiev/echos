@@ -8,3 +8,5 @@ The Neumes Deck is read off the Trisagion School handout "Interval Symbols" (Byz
 The names come first in the Deck, so a student meets the signs before the intervals built from them.
 
 The Ypsili has no Card of its own: the Neanes font draws it only as part of a combination, never alone, and a Card must show the sign as it is printed. Each Card draws one precomposed SBMuFL glyph, checked against the handout by eye; none is put together from parts.
+
+The names and the intervals are now two Decks (ADR-0021).
