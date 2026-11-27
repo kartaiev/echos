@@ -2,7 +2,7 @@
 
 The Neumes Deck is read off the Trisagion School handout "Interval Symbols" (ByzB 102), kept as sourced data in `src/core/theory/neumes.ts` like the other tables (ADR-0001, ADR-0010). It holds two kinds of Card:
 
-- the name of each Neume the handout names alone: Ison, Oligon, Kentima, Kentimata, Petasti, Apostrofos, Elafron, Yporroi, Chamili, Continuous Elafron;
+- the name of each Neume the handout names alone: Ison, Oligon, Kentima, Kentimata, Petasti, Apostrofos, Elafron, Yporroi, Chamili, Continuous Elafron; its answer also says where the sign takes the melody when written alone, read off the same handout (the Kentima, never written alone, says so instead);
 - where each written interval takes the melody: every form on the handout from up seven to down seven, the alternative forms each as a Card of its own, the two-note combinations (up one then up one, down one then up one, down one then down one), and the Petasti column, which the handout marks as an optional ornament.
 
 The names come first in the Deck, so a student meets the signs before the intervals built from them.

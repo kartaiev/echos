@@ -35,11 +35,12 @@ export interface SignatureCard extends ModalSignature {
   fthoraDegree: DegreePosition;
 }
 
-/** A Neume to name. */
+/** A Neume to name, and where it takes the melody when written alone (none for the Kentima, never written alone). */
 export interface NeumeCard {
   kind: "neume";
   id: string;
   neume: NeumeName;
+  steps: readonly number[] | null;
 }
 
 /** A written interval to read: where the melody goes from the Degree before it. */
@@ -82,7 +83,12 @@ export interface Deck {
 
 /** The names first, so the signs the intervals are built from are known before the intervals come up. */
 const neumeCards: (NeumeCard | IntervalCard)[] = [
-  ...NEUME_NAMES.map((neume) => ({ kind: "neume" as const, id: `neume:${neume}`, neume })),
+  ...NEUME_NAMES.map((neume) => ({
+    kind: "neume" as const,
+    id: `neume:${neume}`,
+    neume,
+    steps: INTERVAL_NEUMES.value.find(({ sign }) => sign === neume)?.steps ?? null,
+  })),
   ...INTERVAL_NEUMES.value.map(({ sign, steps, ornament }) => ({ kind: "interval" as const, id: `interval:${sign}`, sign, steps, ornament })),
 ];
 

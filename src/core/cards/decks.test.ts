@@ -89,6 +89,23 @@ describe("Decks", () => {
     expect(cardsOf("neumes")[0]).toMatchObject({ kind: "neume", id: "neume:ison" });
   });
 
+  it("says on each Neume Card where the sign takes the melody when written alone", () => {
+    const motion = Object.fromEntries(cardsOf("neumes").flatMap((c) => (c.kind === "neume" ? [[c.neume, c.steps]] : [])));
+
+    expect(motion).toEqual({
+      ison: [0],
+      oligon: [1],
+      kentima: null,
+      kentimata: [1],
+      petasti: [1],
+      apostrofos: [-1],
+      elafron: [-2],
+      yporroi: [-1, -1],
+      chamili: [-4],
+      "running-elafron": [-1, -1],
+    });
+  });
+
   it("has an Interval Card for every written form on the handout, with the steps it sings", () => {
     const intervals = cardsOf("neumes").filter((c) => c.kind === "interval");
 
