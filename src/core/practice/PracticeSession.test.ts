@@ -560,6 +560,17 @@ describe("Practice Session: Metronome", () => {
     expect(session.metronome().count).toBe(count);
   });
 
+  it("ungrouped, accents no click and counts the chronoi on from the start", () => {
+    const { audio, session } = setup();
+
+    session.setMetronome({ chronoiPerMinute: 80, grouping: 1 });
+    session.startMetronome();
+    audio.clickTracks[0]!.elapsedMs = 2250;
+
+    expect(audio.clickTracks[0]).toMatchObject({ intervalMs: 750, accentEvery: null });
+    expect(session.metronome().count).toBe(4);
+  });
+
   it("shows no count before the first click is heard", () => {
     const { audio, session } = setup();
 

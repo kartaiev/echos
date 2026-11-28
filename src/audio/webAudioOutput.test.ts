@@ -309,6 +309,16 @@ describe("Web Audio output after an app switch", () => {
     expect(output.isRunning()).toBe(true);
   });
 
+  it("sounds every click alike when there is no accent", async () => {
+    const { createWebAudioOutput } = await import("./webAudioOutput");
+    const output = createWebAudioOutput();
+    output.playClickTrack({ intervalMs: 100, accentEvery: null });
+
+    const clicks = oscillators.map((osc) => osc.frequency.value);
+    expect(clicks.length).toBeGreaterThan(1);
+    expect(clicks.every((hz) => hz === 1320)).toBe(true);
+  });
+
   it("brings the metronome back on a fresh context the same way, with no Ison sounding", async () => {
     const { createWebAudioOutput } = await import("./webAudioOutput");
     const output = createWebAudioOutput();

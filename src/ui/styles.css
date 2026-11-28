@@ -718,8 +718,13 @@ a {
   cursor: pointer;
 }
 
+/* None, 2, 3, 4: the word "None" takes the room it needs, the numbers stay square. */
 .segmented--grouping {
-  grid-template-columns: repeat(3, 48px);
+  grid-template-columns: auto repeat(3, 48px);
+}
+
+.segmented--grouping button:first-child {
+  padding: 0 12px;
 }
 
 .mode-card__cadence {

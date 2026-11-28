@@ -35,8 +35,8 @@ export interface AudioOutput {
 export interface ClickTrackRequest {
   /** Time from one click to the next. */
   intervalMs: number;
-  /** Every how many clicks the accent falls, counting the first click as accented. */
-  accentEvery: number;
+  /** Every how many clicks the accent falls, counting the first click as accented; null for no accent at all. */
+  accentEvery: number | null;
 }
 
 /** A click track that has started. */

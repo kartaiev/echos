@@ -39,7 +39,9 @@ interface MetronomeLaneProps {
  * while it runs, shows the chronos and stops it. The beat itself is drawn on the Ladder.
  */
 export function MetronomeLane({ metronome, count, tempoOpen, tempoPanelId, onStart, onStop, onToggleTempo }: MetronomeLaneProps) {
-  const { chronoiPerMinute: cpm, tempoPreset, running } = metronome;
+  const { chronoiPerMinute: cpm, tempoPreset, running, grouping } = metronome;
+  // Not grouped, no chronos is the first of a group: no accent and no count to show.
+  const grouped = grouping > 1;
   const caption = [t("metronome.title"), tempoPreset && t(`tempo.short.${tempoPreset}`)].filter(Boolean).join(" · ");
 
   return (
@@ -56,7 +58,7 @@ export function MetronomeLane({ metronome, count, tempoOpen, tempoPanelId, onSta
       </button>
       <button
         type="button"
-        className={"transport__beat" + (running ? " is-running" : "") + (count === 1 ? " is-accent" : "")}
+        className={"transport__beat" + (running ? " is-running" : "") + (grouped && count === 1 ? " is-accent" : "")}
         aria-label={running ? t("metronome.stopLabel") : t("metronome.startLabel")}
         aria-keyshortcuts="Space"
         onClick={running ? onStop : onStart}
@@ -65,7 +67,7 @@ export function MetronomeLane({ metronome, count, tempoOpen, tempoPanelId, onSta
           <>
             {/* Read aloud every chronos would drown the singer; the label says what the button does. */}
             <span className="transport__beat-count" aria-hidden="true">
-              {count ?? ""}
+              {grouped ? (count ?? "") : ""}
             </span>
             <span className="transport__beat-action" aria-hidden="true">
               {t("metronome.stop")}
@@ -187,7 +189,7 @@ export function TempoPanel({ metronome, presets, onChange, onChoosePreset }: Tem
           options={GROUPINGS}
           value={grouping}
           label={t("metronome.grouping")}
-          render={(n) => t("metronome.groupOf", { n })}
+          render={(n) => (n === 1 ? t("metronome.noGroups") : t("metronome.groupOf", { n }))}
           onChange={(g) => onChange({ grouping: g })}
         />
       </div>
