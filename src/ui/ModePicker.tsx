@@ -1,6 +1,7 @@
 import { MELOS_IDS, MODE_IDS, type ModeId, type ModeVariantKey } from "../core/theory/modeVariants";
 import { t } from "../i18n/translations";
 import { Segmented } from "./Segmented";
+import { SelectField } from "./SelectField";
 
 interface ModePickerProps {
   choice: ModeVariantKey | null;
@@ -14,7 +15,7 @@ export function ModePicker({ choice, onChoose, onLeave }: ModePickerProps) {
 
   return (
     <div className="mode-picker">
-      <select
+      <SelectField
         className="mode-picker__mode"
         value={choice?.mode ?? ""}
         aria-label={t("modePicker.mode")}
@@ -26,7 +27,7 @@ export function ModePicker({ choice, onChoose, onLeave }: ModePickerProps) {
             {t(`mode.${mode}`)}
           </option>
         ))}
-      </select>
+      </SelectField>
       {choice && (
         <Segmented
           options={MELOS_IDS}

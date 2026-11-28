@@ -6,6 +6,7 @@ import { Segmented } from "./Segmented";
 import { SoundLog } from "./SoundLog";
 import { THEMES, type Theme } from "./theme";
 import { LADDER_SIDES, type LadderSides } from "./ladderPlacement";
+import { SelectField } from "./SelectField";
 
 interface SettingsPageProps {
   pitch: PitchState;
@@ -45,7 +46,7 @@ export function SettingsPage(props: SettingsPageProps) {
         <legend>{t("settings.referencePitch")}</legend>
         <label className="settings__row">
           <span>{t("settings.niNote")}</span>
-          <select
+          <SelectField
             value={referencePitch.note}
             onChange={(e) => onChange({ referencePitch: { note: e.target.value as NoteName, fineHz: fine } })}
           >
@@ -54,7 +55,7 @@ export function SettingsPage(props: SettingsPageProps) {
                 {noteLabel(soundingNote(note, register))}
               </option>
             ))}
-          </select>
+          </SelectField>
         </label>
 
         <label className="settings__row">

@@ -1,5 +1,6 @@
 import type { IsonState, IsonVoice, LadderDegree } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
+import { SelectField } from "./SelectField";
 
 interface IsonLaneProps {
   ison: IsonState;
@@ -17,7 +18,8 @@ export function IsonLane({ ison, degrees, voiceOpen, voicePanelId, onSetIson, on
   return (
     <div className={"transport__lane" + (sounding ? " is-active" : "")}>
       <span className="transport__name">{t("ison.title")}</span>
-      <select
+      <SelectField
+        fieldClassName="transport__select-field"
         className="transport__select"
         value={ison.degreeId ?? ""}
         aria-label={t("ison.degree")}
@@ -29,7 +31,7 @@ export function IsonLane({ ison, degrees, voiceOpen, voicePanelId, onSetIson, on
             {degreeLabel(d.name, d.octave)}
           </option>
         ))}
-      </select>
+      </SelectField>
       <button
         type="button"
         className="transport__more"
