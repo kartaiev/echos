@@ -60,6 +60,11 @@
   box-sizing: border-box;
 }
 
+/* Room for the scrollbar is kept even while the page fits, so opening a panel that makes it scroll does not shift it. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -1004,18 +1009,25 @@ a {
 }
 
 /*
- * Voice and Tempo open a sheet above the bar, so they carry a drawn chevron like the Ison menu's: pointing up
- * while the sheet is closed, down while it is open.
+ * One chevron for everything that opens something, drawn the same in every browser and set the same distance in
+ * from the border. Voice and Tempo open a sheet above the bar, so theirs points up while the sheet is closed and down
+ * while it is open; a menu (SelectField) opens below, so its chevron points down. A native select's own arrow is
+ * turned off for it.
  */
-.transport__more {
+.transport__more,
+.select-field {
   position: relative;
-  padding-right: 28px;
 }
 
-.transport__more::after {
+.transport__more {
+  padding-right: 34px;
+}
+
+.transport__more::after,
+.select-field::after {
   content: "";
   position: absolute;
-  right: 11px;
+  right: 14px;
   top: 50%;
   width: 6px;
   height: 6px;
@@ -1024,11 +1036,34 @@ a {
   border-left: 2px solid currentColor;
   transform: rotate(45deg);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 
-.transport__more[aria-expanded="true"]::after {
+.transport__more[aria-expanded="true"]::after,
+.select-field::after {
   margin-top: -5px;
   transform: rotate(225deg);
+}
+
+.select-field {
+  display: inline-grid;
+  color: var(--text);
+}
+
+.select-field select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  padding-right: 34px;
+}
+
+.mode-picker .select-field {
+  display: grid;
+}
+
+.transport__select-field {
+  flex: 1;
+  min-width: 0;
 }
 
 .transport__tempo {
@@ -1037,7 +1072,7 @@ a {
   flex: 1;
   min-width: 0;
   min-height: 48px;
-  padding: 2px 28px 2px 10px;
+  padding: 2px 34px 2px 10px;
   text-align: left;
 }
 
