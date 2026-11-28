@@ -18,6 +18,33 @@ const CUT_OFF_S = 0.03;
 /** How quickly a volume change settles (time constant). */
 const VOLUME_GLIDE_S = 0.05;
 
+/**
+ * Everything the page plays goes through one bus per context: raised so a phone speaker carries it (about 7 dB for a
+ * Degree, 11 dB for the Ison at its usual volume, measured offline), then a limiter, so the Ison at full volume, a
+ * Degree and the clicks sounding together stay under full scale instead of clipping.
+ */
+const MASTER_GAIN = 2.5;
+const LIMIT_DB = -9;
+const buses = new WeakMap<BaseAudioContext, AudioNode>();
+
+function outputOf(ctx: BaseAudioContext): AudioNode {
+  let bus = buses.get(ctx);
+  if (!bus) {
+    const gain = ctx.createGain();
+    gain.gain.value = MASTER_GAIN;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = LIMIT_DB;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.2;
+    gain.connect(limiter).connect(ctx.destination);
+    bus = gain;
+    buses.set(ctx, bus);
+  }
+  return bus;
+}
+
 /** Clicks are short wooden-sounding blips; the accent is higher and louder. */
 const CLICK_HZ = 1320;
 const ACCENT_HZ = 1760;
@@ -482,7 +509,7 @@ function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): Playing
     ctx = next;
     first = ctx.currentTime + FIRST_CLICK_DELAY_S;
     output = ctx.createGain();
-    output.connect(ctx.destination);
+    output.connect(outputOf(ctx));
     index = 0;
     schedule();
     timer = window.setInterval(schedule, SCHEDULER_INTERVAL_MS);
@@ -543,7 +570,7 @@ function playTone(ctx: AudioContext, sound: SoundRequest): PlayingSound {
     envelope.gain.setValueAtTime(PEAK_GAIN, end);
     envelope.gain.linearRampToValueAtTime(0, end + RELEASE_S);
   }
-  envelope.connect(ctx.destination);
+  envelope.connect(outputOf(ctx));
 
   const loudness = ctx.createGain();
   loudness.gain.value = sound.volume;
@@ -577,7 +604,7 @@ function playTone(ctx: AudioContext, sound: SoundRequest): PlayingSound {
 
 /** One sound on a given context: the Ison's vox, or the soft tone. */
 function playVoice(ctx: AudioContext, sound: SoundRequest): PlayingSound {
-  return sound.kind === "ison" ? playIsonVox(ctx, sound.frequency, sound.volume, sound.startMs) : playTone(ctx, sound);
+  return sound.kind === "ison" ? playIsonVox(ctx, sound.frequency, sound.volume, sound.startMs, outputOf(ctx)) : playTone(ctx, sound);
 }
 
 /** Real sound in the browser. */

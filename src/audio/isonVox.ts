@@ -201,8 +201,14 @@ function connectPanned(ctx: BaseAudioContext, source: AudioNode, merger: Channel
   source.connect(right).connect(merger, 0, 1);
 }
 
-/** The Ison's vox on a given context, at `frequency`, held until stopped. */
-export function playIsonVox(ctx: BaseAudioContext, frequency: number, volume: number, startMs = 0): PlayingSound {
+/** The Ison's vox on a given context, at `frequency`, held until stopped, into `destination` (the speakers by default). */
+export function playIsonVox(
+  ctx: BaseAudioContext,
+  frequency: number,
+  volume: number,
+  startMs = 0,
+  destination: AudioNode = ctx.destination,
+): PlayingSound {
   const start = ctx.currentTime + startMs / 1000;
   const sources: AudioScheduledSourceNode[] = [];
 
@@ -360,7 +366,7 @@ export function playIsonVox(ctx: BaseAudioContext, frequency: number, volume: nu
   const output = ctx.createGain();
   chorusOut.connect(dryBus).connect(output);
   chorusOut.connect(preDelay).connect(reverb).connect(wetGain).connect(output);
-  output.connect(ctx.destination);
+  output.connect(destination);
 
   let stopped = false;
   let disconnectTimer: ReturnType<typeof setTimeout> | undefined;

@@ -36,6 +36,10 @@ class FakeAudioContext {
   createGain() {
     return Object.assign(new FakeNode(), { gain: new FakeParam() });
   }
+  createDynamicsCompressor() {
+    const param = () => new FakeParam();
+    return Object.assign(new FakeNode(), { threshold: param(), knee: param(), ratio: param(), attack: param(), release: param() });
+  }
   createPeriodicWave() {
     return {};
   }
