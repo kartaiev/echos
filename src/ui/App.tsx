@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createWebAudioOutput } from "../audio/webAudioOutput";
+import { createWebAudioOutput, soundStarted } from "../audio/webAudioOutput";
 import {
   createPracticeSession,
   type IsonVoice,
@@ -47,6 +47,9 @@ import {
 const VIEW_HASHES = { practice: "#practice", modes: "#modes", cards: "#cards", settings: "#pitch" } as const;
 type View = keyof typeof VIEW_HASHES;
 const VIEWS = Object.keys(VIEW_HASHES) as View[];
+
+/** Until the sound has started, a touch on a Degree is kept whole for the page (Ladder). */
+const soundLocked = () => !soundStarted();
 
 function viewFromHash(): View {
   return VIEWS.find((view) => VIEW_HASHES[view] === location.hash) ?? "practice";
@@ -301,6 +304,7 @@ export function App() {
               sound.checkSoon();
             }}
             onLongPress={(id) => actOnIson(() => session.toggleIson(id))}
+            soundLocked={soundLocked}
             onSpace={toggleMetronome}
             choosing={placing !== null}
             onChoose={(id) => setPlacing({ step: "genus", degreeId: id })}

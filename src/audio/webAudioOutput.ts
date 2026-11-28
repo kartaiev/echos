@@ -462,6 +462,11 @@ function sessionState() {
   return session ? `${session.type}/${session.state ?? "?"}` : "none";
 }
 
+/** Whether the page's sound has started at least once on a running context; until then a touch may need to be kept. */
+export function soundStarted(): boolean {
+  return context !== null && context.state === "running";
+}
+
 /** One line on how the sound stands now, for the sound log in Settings. */
 export function soundStatus(): string {
   const ctx = context ? `${nameOf(context)} ${context.state} at ${context.currentTime.toFixed(2)}` : "no context";

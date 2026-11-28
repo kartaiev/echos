@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent } from "react";
+import { logSound } from "../audio/soundLog";
 import type { Ladder as LadderModel, VoiceReading } from "../core/practice/PracticeSession";
 import { degreeLabel, t } from "../i18n/translations";
 import { placeKeys, type LadderSides } from "./ladderPlacement";
@@ -77,6 +78,8 @@ interface LadderProps {
   onChoose: (degreeId: string) => void;
   /** Voice Check: where the student's voice is now, or null when not listening or between notes. */
   voice: VoiceReading | null;
+  /** Whether the sound has not started yet, so a touch on a Degree is kept whole for the page (see below). */
+  soundLocked: () => boolean;
 }
 
 /**
@@ -87,7 +90,8 @@ interface LadderProps {
  * stops the Ison).
  */
 export function Ladder(props: LadderProps) {
-  const { ladder, layout, sides, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice } = props;
+  const { ladder, layout, sides, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice, soundLocked } =
+    props;
   // The Degree being held: a ring closes in on it while the long press counts down.
   const [holdingId, setHoldingId] = useState<string | null>(null);
   const hintId = useId();
@@ -137,6 +141,44 @@ export function Ladder(props: LadderProps) {
     );
     rail.current.animate([{ backgroundColor: color }, {}], timing);
   }, [beat, chronosMs, horizontal]);
+
+  /*
+   * An iPhone lets sound start only on the lift of a tap, and a long press (the Ison) is not counted as one, so a
+   * hold as the first touch after opening left the Ison silent. Until the sound has started, a touch on a Degree is
+   * kept whole for the page: its start is not left to the iPhone (no scrolling or system gesture from it), in the
+   * hope that the lift then counts. The click a kept touch no longer brings is made on the lift of a short one.
+   */
+  useEffect(() => {
+    const scroller = strip.current;
+    if (!scroller) return;
+    let kept: { key: HTMLButtonElement; at: number; x: number; y: number } | null = null;
+    const onStart = (e: TouchEvent) => {
+      const key = (e.target as Element).closest<HTMLButtonElement>(".ladder__degree");
+      const touch = e.touches[0];
+      if (!key || !touch || e.touches.length > 1 || !soundLocked()) return;
+      e.preventDefault();
+      kept = { key, at: performance.now(), x: touch.clientX, y: touch.clientY };
+      logSound("touch on a Degree kept for the page");
+    };
+    const onEnd = (e: TouchEvent) => {
+      const was = kept;
+      kept = null;
+      const touch = e.changedTouches[0];
+      if (!was || !touch) return;
+      const short = performance.now() - was.at < LONG_PRESS_MS;
+      const still = Math.hypot(touch.clientX - was.x, touch.clientY - was.y) <= MOVE_TOLERANCE_PX;
+      if (short && still) was.key.click();
+    };
+    const onCancel = () => (kept = null);
+    scroller.addEventListener("touchstart", onStart, { passive: false });
+    scroller.addEventListener("touchend", onEnd);
+    scroller.addEventListener("touchcancel", onCancel);
+    return () => {
+      scroller.removeEventListener("touchstart", onStart);
+      scroller.removeEventListener("touchend", onEnd);
+      scroller.removeEventListener("touchcancel", onCancel);
+    };
+  }, [soundLocked]);
 
   // A keyboard wider than the screen opens on the Ison, else the Base, else Ni.
   const focusId = isonDegreeId ?? ladder.degrees.find((d) => d.isBase)?.id ?? "Ni";
