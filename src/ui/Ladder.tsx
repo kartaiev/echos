@@ -67,6 +67,8 @@ interface LadderProps {
   isonDegreeId: string | null;
   /** The chronos the metronome is on (1 is the accent), or null while it is stopped; the rail pulses with it. */
   beat: number | null;
+  /** Whether the chronoi are grouped; if not, no chronos is accented. */
+  grouped: boolean;
   /** Length of a chronos, so a pulse fades before the next one. */
   chronosMs: number;
   onPlayDegree: (degreeId: string) => void;
@@ -90,7 +92,7 @@ interface LadderProps {
  * stops the Ison).
  */
 export function Ladder(props: LadderProps) {
-  const { ladder, layout, sides, isonDegreeId, beat, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice, soundLocked } =
+  const { ladder, layout, sides, isonDegreeId, beat, grouped, chronosMs, onPlayDegree, onLongPress, onSpace, choosing, onChoose, voice, soundLocked } =
     props;
   // The Degree being held: a ring closes in on it while the long press counts down.
   const [holdingId, setHoldingId] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export function Ladder(props: LadderProps) {
    */
   useEffect(() => {
     if (beat === null || !rail.current || !pulse.current) return;
-    const accent = beat === 1;
+    const accent = grouped && beat === 1;
     const style = getComputedStyle(rail.current);
     const color = style.getPropertyValue(accent ? "--cinnabar" : "--text").trim();
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -140,7 +142,7 @@ export function Ladder(props: LadderProps) {
       timing,
     );
     rail.current.animate([{ backgroundColor: color }, {}], timing);
-  }, [beat, chronosMs, horizontal]);
+  }, [beat, grouped, chronosMs, horizontal]);
 
   /*
    * An iPhone lets sound start only on the lift of a tap, and a long press (the Ison) is not counted as one, so a

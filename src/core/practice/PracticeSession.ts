@@ -192,7 +192,10 @@ export interface MetronomeState extends MetronomeSettings {
   running: boolean;
   /** The preset whose range holds the tempo, or null below the slowest. */
   tempoPreset: TempoPresetId | null;
-  /** Which Chronos of the group is sounding, from 1; null while stopped or before the first click is heard. */
+  /**
+   * Which Chronos of the group is sounding, from 1; not grouped, which chronos since the start. Null while stopped or
+   * before the first click is heard.
+   */
   count: number | null;
 }
 
@@ -363,7 +366,8 @@ export function createPracticeSession({
 
   function startClicks() {
     clicks?.stop();
-    clicks = audio.playClickTrack({ intervalMs: chronosMs(tempo.chronoiPerMinute), accentEvery: tempo.grouping });
+    const accentEvery = tempo.grouping === 1 ? null : tempo.grouping;
+    clicks = audio.playClickTrack({ intervalMs: chronosMs(tempo.chronoiPerMinute), accentEvery });
   }
 
   function stopClicks() {
@@ -382,7 +386,9 @@ export function createPracticeSession({
     if (!clicks) return null;
     const elapsed = clicks.elapsedMs();
     if (elapsed < 0) return null;
-    return (Math.floor(elapsed / chronosMs(tempo.chronoiPerMinute)) % tempo.grouping) + 1;
+    const chronos = Math.floor(elapsed / chronosMs(tempo.chronoiPerMinute));
+    // Not grouped, the count runs on (1, 2, 3 and so on), so each chronos is still a new beat to show.
+    return tempo.grouping === 1 ? chronos + 1 : (chronos % tempo.grouping) + 1;
   }
 
   function stopIson() {

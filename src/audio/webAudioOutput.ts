@@ -504,7 +504,7 @@ function playClickTrack({ intervalMs, accentEvery }: ClickTrackRequest): Playing
     const horizon = ctx.currentTime + (document.hidden ? HIDDEN_LOOKAHEAD_S : LOOKAHEAD_S);
     // Each click time is counted from the first, so small timer delays never add up to drift.
     for (let at = first + index * interval; at < horizon; at = first + index * interval) {
-      scheduleClick(ctx, output, at, index % accentEvery === 0);
+      scheduleClick(ctx, output, at, accentEvery !== null && index % accentEvery === 0);
       index += 1;
     }
   }

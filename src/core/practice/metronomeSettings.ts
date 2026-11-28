@@ -1,5 +1,8 @@
-/** Chronoi are counted in twos, threes or fours, with an accent on the first of each group. */
-export const GROUPINGS = [2, 3, 4] as const;
+/**
+ * Chronoi are counted in twos, threes or fours, with an accent on the first of each group; or not grouped (1), every
+ * chronos alike with no accent, for a melody whose groups change as it goes (two, then three, then two again).
+ */
+export const GROUPINGS = [1, 2, 3, 4] as const;
 export type Grouping = (typeof GROUPINGS)[number];
 
 export const MIN_CHRONOI_PER_MINUTE = 40;

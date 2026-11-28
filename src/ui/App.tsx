@@ -298,6 +298,7 @@ export function App() {
             sides={ladderSides}
             isonDegreeId={ison.degreeId}
             beat={count}
+            grouped={metronome.grouping > 1}
             chronosMs={chronosMs(metronome.chronoiPerMinute)}
             onPlayDegree={(id) => {
               session.playDegree(id);
